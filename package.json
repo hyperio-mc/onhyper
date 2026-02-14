@@ -1,0 +1,41 @@
+{
+  "name": "onhyper",
+  "version": "1.0.0",
+  "description": "OnHyper.io - Secure proxy service for publishing API-backed web apps",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest"
+  },
+  "keywords": [
+    "proxy",
+    "api-keys",
+    "secure",
+    "web-apps",
+    "static-hosting"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.7.0",
+    "hono": "^4.6.12",
+    "jsonwebtoken": "^9.0.2",
+    "lmdb": "^3.1.5"
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
