@@ -159,124 +159,189 @@ All endpoints support:
 
 ---
 
+## Tech Stack
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| Build Tool | **Vite** | Fast development, simple build |
+| Frontend | **Svelte** | Lightweight reactive UI |
+| API Framework | **Hono** | Fast, minimal API routes |
+| Content Storage | **LMDB** | App data (pages, content) |
+| User/Auth Storage | **SQLite** | Users, API keys, encrypted secrets |
+| Hosting | **Railway** | Simple deployment |
+
+**Design Philosophy:**
+- Lighter than Next.js - no server-side rendering complexity
+- Same API pattern as zenbin for consistency
+- LMDB for fast app content storage
+- SQLite for structured user/auth data with encryption
+
+---
+
 ## Technical Architecture
 
 ### System Components
 
 ```
 onhyper/
-├── apps/                      # Next.js frontend + API routes
-│   ├── pages/
-│   │   ├── index.jsx         # Landing page
-│   │   ├── signup.jsx        # Signup page
-│   │   ├── login.jsx         # Login page
-│   │   ├── dashboard.jsx     # User dashboard
-│   │   ├── keys.jsx          # API key management
-│   │   ├── apps/
-│   │   │   ├── new.jsx       # Create new app
-│   │   │   └── [id]/
-│   │   │       ├── edit.jsx  # Edit app
-│   │   │       └── view.jsx  # View app
-│   │   └── a/
-│   │       └── [slug].jsx    # Published app viewer
-│   ├── api/
-│   │   ├── auth/
-│   │   │   ├── signup.js     # Create account
-│   │   │   ├── login.js      # Login
-│   │   │   └── token.js      # JWT auth
-│   │   ├── secrets/
-│   │   │   ├── index.js      # List/create secrets
-│   │   │   └── [name].js     # Delete secret
-│   │   ├── apps/
-│   │   │   ├── index.js      # List/create apps
-│   │   │   └── [id].js       # Get/update/delete app
-│   │   └── proxy/
-│   │       └── [endpoint].js # Proxy endpoint
-│   └── lib/
-│       ├── auth.js           # Auth utilities
-│       ├── db.js             # Database client
-│       ├── encryption.js     # Secret encryption
-│       └── proxy.js          # Proxy logic
-├── prisma/
-│   └── schema.prisma         # Database schema
-└── package.json
+├── src/
+│   ├── frontend/                    # Svelte frontend
+│   │   ├── App.svelte              # Root component
+│   │   ├── routes/
+│   │   │   ├── Home.svelte         # Landing page
+│   │   │   ├── Login.svelte        # Login page
+│   │   │   ├── Signup.svelte       # Signup page
+│   │   │   ├── Dashboard.svelte    # User dashboard
+│   │   │   ├── Keys.svelte         # API key management
+│   │   │   ├── Apps/
+│   │   │   │   ├── New.svelte      # Create new app
+│   │   │   │   └── Edit.svelte     # Edit app
+│   │   │   └── View.svelte         # Published app viewer
+│   │   ├── components/
+│   │   │   ├── Editor.svelte       # Code editor component
+│   │   │   ├── Preview.svelte      # Live preview component
+│   │   │   └── Nav.svelte          # Navigation
+│   │   └── stores/
+│   │       ├── auth.js             # Auth state store
+│   │       └── apps.js             # Apps state store
+│   │
+│   ├── api/                        # Hono API routes
+│   │   ├── index.js               # API entry point
+│   │   ├── routes/
+│   │   │   ├── auth.js            # Signup, login, token
+│   │   │   ├── secrets.js         # List/create/delete secrets
+│   │   │   ├── apps.js            # List/create/update/delete apps
+│   │   │   └── proxy.js           # Proxy endpoint handler
+│   │   └── middleware/
+│   │       ├── auth.js            # JWT verification
+│   │       └── rateLimit.js       # Rate limiting
+│   │
+│   ├── lib/
+│   │   ├── db/
+│   │   │   ├── sqlite.js          # SQLite client for auth
+│   │   │   └── lmdb.js            # LMDB client for content
+│   │   ├── encryption.js          # Secret encryption (AES-256-GCM)
+│   │   └── proxy.js               # Proxy logic & config
+│   │
+│   └── main.js                    # Server entry point
+│
+├── data/
+│   ├── onhyper.db                 # SQLite database file
+│   └── lmdb/                      # LMDB database directory
+│
+├── package.json
+├── vite.config.js
+└── README.md
 ```
 
-### Database Schema
+### Data Storage Strategy
 
-```prisma
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String   // bcrypt hash
-  plan      Plan     @default(FREE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  secrets   Secret[]
-  apps      App[]
-  apiKeys   ApiKey[]
-}
+**LMDB (Content Storage):**
+- Fast key-value storage for app content
+- Stores: pages, HTML, CSS, JS for published apps
+- Simple, performant, no migrations needed
 
-model Secret {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  name      String   // e.g., "SCOUT_API_KEY"
-  value     String   // Encrypted
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  @@unique([userId, name])
-}
+**SQLite (User/Auth Storage):**
+- Structured storage for user data
+- Stores: users, API keys, secrets, usage records
+- Supports complex queries, relationships, indexes
+- Each API key encrypted with per-user salt
 
-model ApiKey {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  key       String   @unique // zb_live_xxx
-  plan      Plan
-  createdAt DateTime @default(now())
-  
-  usages    Usage[]
-}
+---
 
-model App {
-  id        String   @id @default(cuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  name      String
-  slug      String   @unique // URL-safe name
-  html      String   // Frontend HTML
-  css       String?  // Optional CSS
-  js        String?  // Optional JS
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  
-  usages    Usage[]
-}
+## Database Schema
 
-model Usage {
-  id        String   @id @default(cuid())
-  apiKeyId  String
-  apiKey    ApiKey   @relation(fields: [apiKeyId], references: [id])
-  appId     String?
-  app       App?     @relation(fields: [appId], references: [id])
-  endpoint  String   // Which proxy was used
-  status    Int      // HTTP status code
-  duration  Int      // Duration in ms
-  createdAt DateTime @default(now())
-}
+### SQLite Tables
 
-enum Plan {
-  FREE
-  HOBBY
-  PRO
-  BUSINESS
-}
+```sql
+-- Users table
+CREATE TABLE users (
+  id TEXT PRIMARY KEY,
+  email TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,  -- bcrypt hash
+  plan TEXT DEFAULT 'FREE',  -- FREE, HOBBY, PRO, BUSINESS
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Encrypted secrets (API keys)
+CREATE TABLE secrets (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,        -- e.g., "SCOUT_API_KEY"
+  value TEXT NOT NULL,       -- AES-256-GCM encrypted
+  salt TEXT NOT NULL,        -- Per-user salt for encryption
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  UNIQUE(user_id, name)
+);
+
+-- API keys for programmatic access
+CREATE TABLE api_keys (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  key TEXT UNIQUE NOT NULL,  -- zb_live_xxx
+  plan TEXT NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Published apps
+CREATE TABLE apps (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,  -- URL-safe name
+  html TEXT,                  -- Frontend HTML
+  css TEXT,                   -- Optional CSS
+  js TEXT,                    -- Optional JS
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Usage tracking
+CREATE TABLE usage (
+  id TEXT PRIMARY KEY,
+  api_key_id TEXT,
+  app_id TEXT,
+  endpoint TEXT NOT NULL,     -- Which proxy was used
+  status INTEGER,             -- HTTP status code
+  duration INTEGER,           -- Duration in ms
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (api_key_id) REFERENCES api_keys(id) ON DELETE SET NULL,
+  FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE SET NULL
+);
+
+-- Indexes for common queries
+CREATE INDEX idx_secrets_user ON secrets(user_id);
+CREATE INDEX idx_apps_user ON apps(user_id);
+CREATE INDEX idx_apps_slug ON apps(slug);
+CREATE INDEX idx_usage_api_key ON usage(api_key_id);
+CREATE INDEX idx_usage_app ON usage(app_id);
+CREATE INDEX idx_usage_created ON usage(created_at);
 ```
 
-### Proxy Configuration
+### LMDB Content Schema
+
+```javascript
+// Key patterns for LMDB storage
+const LMDB_KEYS = {
+  // App content: app:{appId}:content
+  appContent: (appId) => `app:${appId}:content`,
+  
+  // App metadata cache: app:{appId}:meta
+  appMeta: (appId) => `app:${appId}:meta`,
+  
+  // User's app list: user:{userId}:apps
+  userApps: (userId) => `user:${userId}:apps`,
+};
+```
+
+---
+
+## Proxy Configuration
 
 ```javascript
 // lib/proxy-config.js
@@ -314,26 +379,29 @@ export const PROXY_ENDPOINTS = {
 };
 ```
 
-### Proxy Implementation
+### Proxy Implementation (Hono)
 
 ```javascript
-// api/proxy/[endpoint].js
-import { PROXY_ENDPOINTS } from '@/lib/proxy-config';
-import { getSecret } from '@/lib/secrets';
-import { verifyAppAccess } from '@/lib/auth';
+// api/routes/proxy.js
+import { Hono } from 'hono';
+import { PROXY_ENDPOINTS } from '../lib/proxy-config.js';
+import { getSecret } from '../lib/secrets.js';
+import { verifyAppAccess } from '../lib/auth.js';
 
-export default async function handler(req, res) {
-  const { endpoint } = req.query;
+const app = new Hono();
+
+app.all('/:endpoint/*', async (c) => {
+  const endpoint = c.req.param('endpoint');
   const config = PROXY_ENDPOINTS[endpoint];
   
   if (!config) {
-    return res.status(404).json({ error: 'Unknown endpoint' });
+    return c.json({ error: 'Unknown endpoint' }, 404);
   }
   
   // Get app ID from header or query
-  const appId = req.headers['x-app-id'] || req.query.appId;
+  const appId = c.req.header('x-app-id') || c.req.query('appId');
   if (!appId) {
-    return res.status(401).json({ error: 'App ID required' });
+    return c.json({ error: 'App ID required' }, 401);
   }
   
   // Verify app exists and get owner
@@ -342,29 +410,34 @@ export default async function handler(req, res) {
   // Get user's secret for this endpoint
   const secret = await getSecret(userId, config.secretKey);
   if (!secret) {
-    return res.status(401).json({ 
+    return c.json({ 
       error: `No ${config.secretKey} configured. Add it in your dashboard.` 
-    });
+    }, 401);
   }
   
   // Build target URL
-  const targetUrl = config.target + req.url.replace(`/api/proxy/${endpoint}`, '');
+  const path = c.req.path.replace(`/proxy/${endpoint}`, '');
+  const targetUrl = config.target + path;
   
   // Forward request with injected auth
   const response = await fetch(targetUrl, {
-    method: req.method,
+    method: c.req.method,
     headers: {
-      ...req.headers,
+      ...Object.fromEntries(c.req.raw.headers),
       'authorization': config.authHeader(secret),
       'host': new URL(config.target).host
     },
-    body: ['GET', 'HEAD'].includes(req.method) ? undefined : req.body
+    body: ['GET', 'HEAD'].includes(c.req.method) ? undefined : await c.req.text()
   });
   
   // Stream response back
-  const data = await response.text();
-  res.status(response.status).send(data);
-}
+  return new Response(response.body, {
+    status: response.status,
+    headers: response.headers
+  });
+});
+
+export default app;
 ```
 
 ---
@@ -403,6 +476,7 @@ export default async function handler(req, res) {
 
 ### Secret Storage
 - Secrets encrypted at rest using AES-256-GCM
+- Each secret has a per-user salt for encryption
 - Encryption key stored in environment variable
 - Secrets never logged or returned in API responses
 - Secrets shown once on creation, then masked
@@ -463,18 +537,20 @@ export default async function handler(req, res) {
 ## Timeline
 
 ### Week 1-2: Core Infrastructure
-- [ ] Set up Next.js project with TypeScript
+- [ ] Set up Vite + Svelte project
+- [ ] Set up Hono API framework
 - [ ] Implement authentication (signup, login, JWT)
-- [ ] Database setup with Prisma
-- [ ] Secret encryption/decryption
+- [ ] Set up SQLite database with schema
+- [ ] Set up LMDB for content storage
+- [ ] Implement secret encryption/decryption
 
 ### Week 3: API Key Management
 - [ ] UI for adding/removing API keys
-- [ ] Encrypted storage
+- [ ] Encrypted storage with per-user salt
 - [ ] Key masking in display
 
 ### Week 4: Proxy Service
-- [ ] Implement proxy endpoint logic
+- [ ] Implement proxy endpoint logic in Hono
 - [ ] Add pre-configured endpoints (scout-atoms, ollama, etc.)
 - [ ] Request logging and usage tracking
 
@@ -488,7 +564,7 @@ export default async function handler(req, res) {
 - [ ] Pricing integration (Stripe)
 - [ ] Error handling
 - [ ] Documentation
-- [ ] Deploy to production
+- [ ] Deploy to Railway
 
 ---
 
@@ -514,15 +590,14 @@ If proxy-only is limiting, integrate CU for custom logic:
 
 ## Open Questions
 
-1. **Database choice** - Prisma with SQLite for MVP, Postgres for scale?
-2. **Hosting** - Railway (current), Vercel, or other?
-3. **Secret rotation** - Auto-rotate? Manual rotate?
-4. **App templates** - Provide starter templates for common use cases?
+1. **Secret rotation** - Auto-rotate? Manual rotate?
+2. **App templates** - Provide starter templates for common use cases?
+3. **Import/export** - Allow users to export their app data?
 
 ---
 
 ## References
 
-- ZenBin Portal (previous iteration): `hyperio-mc/zenbin-portal`
+- ZenBin Portal: `hyperio-mc/zenbin-portal` (API pattern reference)
 - CU Compute Unit: `twilson63/cu`
 - Scout OS Atoms API: `api.scoutos.com/atoms`
