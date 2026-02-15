@@ -2,6 +2,28 @@
 	import Nav from '$lib/components/Nav.svelte';
 	import Button from '$lib/components/Button.svelte';
 
+	// Code sample for the hero section (stored as string to avoid Svelte 5 parsing issues)
+	const codeSample = `<span class="text-gray-500">// Your AI agent publishes an app via our API</span>
+<span class="text-cyan-400">const</span> <span class="text-white">response</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-yellow-300">fetch</span><span class="text-gray-300">(</span><span class="text-green-400">"https://api.onhyper.io/v1/apps"</span><span class="text-gray-300">, {</span>
+  <span class="text-orange-300">method</span><span class="text-gray-300">:</span> <span class="text-green-400">"POST"</span><span class="text-gray-300">,</span>
+  <span class="text-orange-300">headers</span><span class="text-gray-300">: {</span>
+    <span class="text-green-400">"Authorization"</span><span class="text-gray-300">:</span> <span class="text-green-400">"Bearer {AGENT_TOKEN}"</span><span class="text-gray-300">,</span>
+    <span class="text-green-400">"Content-Type"</span><span class="text-gray-300">:</span> <span class="text-green-400">"application/json"</span>
+  <span class="text-gray-300">},</span>
+  <span class="text-orange-300">body</span><span class="text-gray-300">:</span> <span class="text-yellow-300">JSON</span><span class="text-gray-300">.</span><span class="text-yellow-300">stringify</span><span class="text-gray-300">({</span>
+    <span class="text-orange-300">name</span><span class="text-gray-300">:</span> <span class="text-green-400">"my-ai-tool"</span><span class="text-gray-300">,</span>
+    <span class="text-orange-300">files</span><span class="text-gray-300">: {</span>
+      <span class="text-green-400">"index.html"</span><span class="text-gray-300">:</span> <span class="text-green-400">"&lt;!DOCTYPE html&gt;..."</span><span class="text-gray-300">,</span>
+      <span class="text-green-400">"app.js"</span><span class="text-gray-300">:</span> <span class="text-green-400">"// Agent-generated code"</span>
+    <span class="text-gray-300">},</span>
+    <span class="text-orange-300">publish</span><span class="text-gray-300">:</span> <span class="text-cyan-400">true</span>
+  <span class="text-gray-300">})</span>
+<span class="text-gray-300">});</span>
+
+<span class="text-cyan-400">const</span> <span class="text-white">app</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-white">response</span><span class="text-gray-300">.</span><span class="text-yellow-300">json</span><span class="text-gray-300">();</span>
+<span class="text-gray-500">// → app.url: "https://my-ai-tool.onhyper.live"</span>
+<span class="text-gray-500">// Agent shipped it. You didn't touch a thing.</span>`;
+
 	const features = [
 		{
 			icon: '🤖',
@@ -182,26 +204,7 @@
 				
 				<!-- Code content -->
 				<div class="p-6 text-left">
-					<pre class="text-sm font-mono leading-relaxed overflow-x-auto"><code><span class="text-gray-500">// Your AI agent publishes an app via our API</span>
-<span class="text-cyan-400">const</span> <span class="text-white">response</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-yellow-300">fetch</span><span class="text-gray-300">(</span><span class="text-green-400">"https://api.onhyper.io/v1/apps"</span><span class="text-gray-300">, &#123;</span>
-  <span class="text-orange-300">method</span><span class="text-gray-300">:</span> <span class="text-green-400">"POST"</span><span class="text-gray-300">,</span>
-  <span class="text-orange-300">headers</span><span class="text-gray-300">: &#123;</span>
-    <span class="text-green-400">"Authorization"</span><span class="text-gray-300">:</span> <span class="text-green-400">"Bearer {AGENT_TOKEN}"</span><span class="text-gray-300">,</span>
-    <span class="text-green-400">"Content-Type"</span><span class="text-gray-300">:</span> <span class="text-green-400">"application/json"</span>
-  <span class="text-gray-300">&#125;,</span>
-  <span class="text-orange-300">body</span><span class="text-gray-300">:</span> <span class="text-yellow-300">JSON</span><span class="text-gray-300">.</span><span class="text-yellow-300">stringify</span><span class="text-gray-300">(&#123;</span>
-    <span class="text-orange-300">name</span><span class="text-gray-300">:</span> <span class="text-green-400">"my-ai-tool"</span><span class="text-gray-300">,</span>
-    <span class="text-orange-300">files</span><span class="text-gray-300">: &#123;</span>
-      <span class="text-green-400">"index.html"</span><span="text-gray-300">:</span> <span class="text-green-400">"&lt;html&gt;...&lt;/html&gt;"</span><span class="text-gray-300">,</span>
-      <span class="text-green-400">"app.js"</span><span class="text-gray-300">:</span> <span class="text-green-400">"// Agent-generated code"</span>
-    <span class="text-gray-300">&#125;,</span>
-    <span class="text-orange-300">publish</span><span class="text-gray-300">:</span> <span class="text-cyan-400">true</span>
-  <span class="text-gray-300">&#125;)</span>
-<span class="text-gray-300">&#125;);</span>
-
-<span class="text-cyan-400">const</span> <span class="text-white">app</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-white">response</span><span class="text-gray-300">.</span><span class="text-yellow-300">json</span><span class="text-gray-300">();</span>
-<span class="text-gray-500">// → app.url: "https://my-ai-tool.onhyper.live"</span>
-<span class="text-gray-500">// Agent shipped it. You didn't touch a thing.</span></code></pre>
+					<pre class="text-sm font-mono leading-relaxed overflow-x-auto"><code>{@html codeSample}</code></pre>
 				</div>
 			</div>
 		</div>

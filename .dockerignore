@@ -1,0 +1,42 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs (we'll build in the container)
+dist
+build
+.frontend/build
+.svelte-kit
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git
+.git
+.gitignore
+
+# IDE and dev files
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+**/__tests__
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+tmp
+temp
+.cache
