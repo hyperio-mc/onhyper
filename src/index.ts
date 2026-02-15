@@ -118,6 +118,15 @@ app.route('/unsubscribe', unsubscribe);
 
 // Serve static frontend files
 // This must come AFTER all API routes
+// Add no-cache headers to bust Railway edge caching
+app.use('/*', async (c, next) => {
+  await next();
+  // Add no-cache headers to all responses
+  if (c.res.headers.get('content-type')?.includes('text/html')) {
+    c.res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+    c.res.headers.set('Pragma', 'no-cache');
+  }
+});
 app.use('/*', serveStatic({ root: DIST_PATH }));
 
 // SPA fallback - serve index.html for unmatched routes (excluding API and proxy routes)
@@ -131,9 +140,14 @@ app.get('*', async (c) => {
   
   // For SPA routes, serve index.html
   try {
-    const indexHtml = await Bun.file(`${DIST_PATH}/index.html`).text();
-    return c.html(indexHtml);
-  } catch {
+    const fs = await import('fs/promises');
+    const indexHtml = await fs.readFile(`${DIST_PATH}/index.html`, 'utf-8');
+    return c.html(indexHtml, 200, {
+      'Cache-Control': 'no-store, no-cache, must-revalidate',
+      'Pragma': 'no-cache'
+    });
+  } catch (err) {
+    console.error('Failed to serve index.html:', err);
     // If no index.html, return a simple message (dev mode or build missing)
     return c.html(`
       <!DOCTYPE html>
@@ -143,10 +157,11 @@ app.get('*', async (c) => {
           <div style="text-align:center">
             <h1 style="color:#6366f1;font-size:48px;margin-bottom:16px">H</h1>
             <p style="color:#64748b">Frontend not built. Run <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">npm run build</code> in frontend/</p>
+            <p style="color:#94a3b8;font-size:14px;margin-top:8px">Path: ${DIST_PATH}</p>
           </div>
         </body>
       </html>
-    `);
+    `, 500);
   }
 });
 
