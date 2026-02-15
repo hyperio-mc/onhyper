@@ -15,7 +15,8 @@ const routes = {
   '/waitlist': 'pages/waitlist.html',
   '/chat': 'pages/chat.html',
   '/blog': 'pages/blog.html',
-  '/blog/:slug': 'pages/post.html'
+  '/blog/:slug': 'pages/post.html',
+  '/skill': 'pages/skill.html'
 };
 
 async function loadPage(path) {
@@ -112,6 +113,7 @@ function updateNav() {
         <a href="#/dashboard">Dashboard</a>
         <a href="#/apps">Apps</a>
         <a href="#/blog">Blog</a>
+        <a href="#/skill">For Agents</a>
         <a href="#/chat">Chat</a>
         <a href="#/keys">API Keys</a>
         <button onclick="logout()" class="btn-secondary">Logout</button>
@@ -122,6 +124,7 @@ function updateNav() {
       <a href="#/" class="logo">H</a>
       <div class="nav-links">
         <a href="#/blog">Blog</a>
+        <a href="#/skill">For Agents</a>
         <a href="#/chat">Chat</a>
         <a href="#/login">Login</a>
         <a href="#/signup">Sign Up</a>
@@ -762,6 +765,13 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Copy agent prompt to clipboard
+function copyAgentPrompt() {
+  const prompt = 'Read the OnHyper skill at https://onhyper.io/#/skill and help me build an app that securely calls AI APIs.';
+  navigator.clipboard.writeText(prompt);
+  alert('Prompt copied! Paste it to your agent.');
 }
 
 // Hash change listener

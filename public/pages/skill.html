@@ -1,0 +1,486 @@
+<div class="skill-page">
+  <div class="skill-header">
+    <h1>OnHyper Agent Skill</h1>
+    <p class="skill-subtitle">Build and deploy web apps with secure API proxying. This skill teaches agents how to create apps that safely call AI APIs without exposing keys.</p>
+  </div>
+
+  <section class="skill-section">
+    <h2>What is OnHyper?</h2>
+    <p>OnHyper is a platform for building and deploying web apps with <strong>secure API key management</strong>. API keys are encrypted with AES-256-GCM and never exposed to browsers—apps call APIs through OnHyper's proxy endpoints.</p>
+    
+    <div class="feature-highlights">
+      <div class="feature-highlight">
+        <h4>🔐 Secure secret storage</h4>
+        <p>API keys encrypted server-side, never in client code</p>
+      </div>
+      <div class="feature-highlight">
+        <h4>🚀 Proxy endpoints</h4>
+        <p>Pre-configured for OpenAI, Anthropic, OpenRouter, ScoutOS, Ollama</p>
+      </div>
+      <div class="feature-highlight">
+        <h4>🌐 App hosting</h4>
+        <p>Publish apps at <code>onhyper.io/a/{slug}</code></p>
+      </div>
+      <div class="feature-highlight">
+        <h4>🆓 Free tier</h4>
+        <p>100 requests/day, 3 apps</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="skill-section">
+    <h2>Workflow</h2>
+    
+    <h3>1. Create Account</h3>
+    <p>Sign up at <code>https://onhyper.io</code> or via API:</p>
+    <pre><code>curl -X POST https://onhyper.io/api/auth/signup \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "securepass"}'</code></pre>
+    <p class="note">Response includes session token—store in localStorage for authenticated requests.</p>
+
+    <h3>2. Store API Keys (Secrets)</h3>
+    <p>Store API keys securely via dashboard or API:</p>
+    <pre><code># List stored secrets
+curl https://onhyper.io/api/secrets \
+  -H "Authorization: Bearer &lt;session_token&gt;"
+
+# Store a new secret
+curl -X POST https://onhyper.io/api/secrets \
+  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"provider": "openai", "key": "sk-..."}'</code></pre>
+    <p>Supported providers: <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>scout-atoms</code>, <code>ollama</code></p>
+
+    <h3>3. Build App</h3>
+    <p>Create an HTML/CSS/JS app. Use fetch to call AI APIs through OnHyper's proxy.</p>
+
+    <h3>4. Publish App</h3>
+    <p>Via API:</p>
+    <pre><code># Create app
+curl -X POST https://onhyper.io/api/apps \
+  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "My App", "slug": "my-app", "html": "&lt;html&gt;...&lt;/html&gt;"}'
+
+# Publish app
+curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
+  -H "Authorization: Bearer &lt;session_token&gt;"</code></pre>
+    <p>App becomes available at <code>https://onhyper.io/a/{slug}</code></p>
+  </section>
+
+  <section class="skill-section">
+    <h2>Proxy Endpoints</h2>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Routes To</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/proxy/openai/*</code></td>
+          <td>OpenAI API (<code>api.openai.com</code>)</td>
+        </tr>
+        <tr>
+          <td><code>/proxy/anthropic/*</code></td>
+          <td>Anthropic API (<code>api.anthropic.com</code>)</td>
+        </tr>
+        <tr>
+          <td><code>/proxy/openrouter/*</code></td>
+          <td>OpenRouter API (<code>openrouter.ai/api/v1</code>)</td>
+        </tr>
+        <tr>
+          <td><code>/proxy/scout-atoms/*</code></td>
+          <td>ScoutOS Agents/Drive</td>
+        </tr>
+        <tr>
+          <td><code>/proxy/ollama/*</code></td>
+          <td>Ollama local LLM</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Proxy Usage</h3>
+    <p>Always include <code>X-App-Slug</code> header to identify your app:</p>
+    
+    <h4>OpenAI</h4>
+    <pre><code>fetch('https://onhyper.io/proxy/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-App-Slug': 'your-app-slug'
+  },
+  body: JSON.stringify({
+    model: 'gpt-4',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  })
+})</code></pre>
+
+    <h4>Anthropic Claude</h4>
+    <pre><code>fetch('https://onhyper.io/proxy/anthropic/v1/messages', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-App-Slug': 'your-app-slug',
+    'anthropic-version': '2023-06-01'
+  },
+  body: JSON.stringify({
+    model: 'claude-3-sonnet-20240229',
+    max_tokens: 1024,
+    messages: [{ role: 'user', content: 'Hello!' }]
+  })
+})</code></pre>
+
+    <h4>OpenRouter</h4>
+    <pre><code>fetch('https://onhyper.io/proxy/openrouter/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-App-Slug': 'your-app-slug'
+  },
+  body: JSON.stringify({
+    model: 'anthropic/claude-3-opus',
+    messages: [{ role: 'user', content: 'Hello!' }]
+  })
+})</code></pre>
+  </section>
+
+  <section class="skill-section">
+    <h2>API Reference</h2>
+    
+    <h3>Authentication</h3>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Method</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/api/auth/signup</code></td>
+          <td>POST</td>
+          <td>Create account</td>
+        </tr>
+        <tr>
+          <td><code>/api/auth/login</code></td>
+          <td>POST</td>
+          <td>Login, returns session token</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Secrets Management</h3>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Method</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/api/secrets</code></td>
+          <td>GET</td>
+          <td>List stored API keys</td>
+        </tr>
+        <tr>
+          <td><code>/api/secrets</code></td>
+          <td>POST</td>
+          <td>Store new API key</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Apps</h3>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Method</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/api/apps</code></td>
+          <td>GET</td>
+          <td>List your apps</td>
+        </tr>
+        <tr>
+          <td><code>/api/apps</code></td>
+          <td>POST</td>
+          <td>Create new app</td>
+        </tr>
+        <tr>
+          <td><code>/api/apps/:id</code></td>
+          <td>PUT</td>
+          <td>Update app content</td>
+        </tr>
+        <tr>
+          <td><code>/api/apps/:id</code></td>
+          <td>DELETE</td>
+          <td>Delete app</td>
+        </tr>
+        <tr>
+          <td><code>/api/apps/:id/publish</code></td>
+          <td>POST</td>
+          <td>Publish app live</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="skill-section">
+    <h2>Best Practices</h2>
+    <ol>
+      <li><strong>Always include <code>X-App-Slug</code> header</strong> — Required for proxy routing and rate limiting</li>
+      <li><strong>Use <code>Accept-Encoding: identity</code></strong> — For binary/streaming responses (audio, images)</li>
+      <li><strong>Store session token in localStorage</strong> — For authenticated requests throughout session:
+        <pre><code>localStorage.setItem('onhyper_token', response.token);</code></pre>
+      </li>
+      <li><strong>Handle rate limits</strong> — Free tier: 100 requests/day. Upgrade for higher limits.</li>
+      <li><strong>Unique slugs</strong> — App slugs must be unique across the platform. Consider adding random suffix.</li>
+    </ol>
+  </section>
+
+  <section class="skill-section">
+    <h2>Live Examples</h2>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>App</th>
+          <th>URL</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Simple Todo</td>
+          <td><code>onhyper.io/a/simple-todo-d0839b31</code></td>
+          <td>Basic todo app</td>
+        </tr>
+        <tr>
+          <td>AI Todo (Server)</td>
+          <td><code>onhyper.io/a/ai-todo-server-side-5db414b2</code></td>
+          <td>Todo with server-side storage</td>
+        </tr>
+        <tr>
+          <td>Support Chat</td>
+          <td><code>onhyper.io/#/chat</code></td>
+          <td>OnHyper support chat</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="skill-section">
+    <h2>Quick Start Template</h2>
+    <pre><code>&lt;!DOCTYPE html&gt;
+&lt;html&gt;
+&lt;head&gt;
+  &lt;title&gt;My AI App&lt;/title&gt;
+&lt;/head&gt;
+&lt;body&gt;
+  &lt;input type="text" id="prompt" placeholder="Ask anything..."&gt;
+  &lt;button onclick="callAI()"&gt;Send&lt;/button&gt;
+  &lt;pre id="response"&gt;&lt;/pre&gt;
+
+  &lt;script&gt;
+    const APP_SLUG = 'your-app-slug';
+
+    async function callAI() {
+      const prompt = document.getElementById('prompt').value;
+      const res = await fetch('https://onhyper.io/proxy/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-App-Slug': APP_SLUG
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await res.json();
+      document.getElementById('response').textContent = 
+        data.choices?.[0]?.message?.content || JSON.stringify(data, null, 2);
+    }
+  &lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;</code></pre>
+    <p>Upload this as your app's HTML content, set a unique slug, and publish. Your app is live with secure API access.</p>
+  </section>
+</div>
+
+<style>
+.skill-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.skill-header {
+  text-align: center;
+  padding: 2rem 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+
+.skill-header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.skill-subtitle {
+  color: var(--text-muted);
+  font-size: 1.1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.skill-section {
+  margin-bottom: 2.5rem;
+}
+
+.skill-section h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid var(--primary);
+  color: var(--text);
+}
+
+.skill-section h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 1.5rem 0 0.75rem;
+  color: var(--text);
+}
+
+.skill-section h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;
+  color: var(--text);
+}
+
+.skill-section p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+
+.skill-section .note {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.feature-highlights {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.feature-highlight {
+  background: var(--bg-alt);
+  padding: 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.feature-highlight h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.95rem;
+}
+
+.feature-highlight p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.api-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+}
+
+.api-table th,
+.api-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.api-table th {
+  background: var(--bg-alt);
+  font-weight: 600;
+}
+
+.api-table tr:hover {
+  background: var(--bg-alt);
+}
+
+.skill-section pre {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: 1rem;
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+
+.skill-section pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+.skill-section ol,
+.skill-section ul {
+  margin: 1rem 0;
+  padding-left: 1.5rem;
+}
+
+.skill-section li {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+.skill-section li pre {
+  margin: 0.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .skill-page {
+    padding: 1rem;
+  }
+  
+  .skill-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .skill-subtitle {
+    font-size: 1rem;
+  }
+  
+  .api-table {
+    font-size: 0.8rem;
+  }
+  
+  .api-table th,
+  .api-table td {
+    padding: 0.5rem 0.75rem;
+  }
+}
+</style>
