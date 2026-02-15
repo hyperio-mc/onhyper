@@ -119,8 +119,9 @@ app.route('/unsubscribe', unsubscribe);
 // This must come AFTER all API routes
 app.use('/*', async (c, next) => {
   await next();
-  // Add no-cache headers for HTML files
-  if (c.res.headers.get('content-type')?.includes('text/html')) {
+  const contentType = c.res.headers.get('content-type') || '';
+  // Add no-cache headers for all text-based files
+  if (contentType.includes('text/') || contentType.includes('application/javascript')) {
     c.res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     c.res.headers.set('Pragma', 'no-cache');
   }
