@@ -1,20 +1,20 @@
 <div class="hero">
   <h1>API Keys</h1>
-  <p>Store your API keys securely - they're encrypted and never exposed to browsers</p>
+  <p>Store your API keys securely. They're encrypted and never exposed to browsers.</p>
 </div>
 
 <div id="key-list">
   <p>Loading...</p>
 </div>
 
-<hr style="margin: 2rem 0; border-color: var(--border);">
+<hr>
 
 <h2>Add New Key</h2>
 <form id="key-form" onsubmit="addKey(event)">
   <div class="form-group">
-    <label for="key-name">Name</label>
+    <label for="key-name">API Provider</label>
     <select id="key-name" name="name" required>
-      <option value="">Select API...</option>
+      <option value="">Select...</option>
       <option value="OPENAI_API_KEY">OpenAI</option>
       <option value="ANTHROPIC_API_KEY">Anthropic</option>
       <option value="OPENROUTER_API_KEY">OpenRouter</option>
@@ -29,15 +29,8 @@
   <button type="submit" class="btn-primary">Add Key</button>
 </form>
 
-<div style="margin-top: 2rem; padding: 1rem; background: var(--bg-light); border-radius: 8px;">
-  <h3>💡 How to use in your apps</h3>
-  <p style="color: var(--text-muted); margin-top: 0.5rem;">
-    Your apps can call APIs through the proxy endpoints:
-  </p>
-  <code style="display: block; margin-top: 0.5rem;">
-    fetch('/proxy/openai/chat/completions', { method: 'POST', body: ... })
-  </code>
-  <p style="color: var(--text-muted); margin-top: 0.5rem;">
-    The proxy automatically injects your stored keys.
-  </p>
+<div class="info-box">
+  <h3>Using Your Keys in Apps</h3>
+  <p>Your apps call APIs through the proxy endpoints. Keys are injected server-side.</p>
+  <code>fetch('/proxy/openai/chat/completions', { method: 'POST', body: ... })</code>
 </div>
