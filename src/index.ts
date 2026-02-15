@@ -1,15 +1,14 @@
 /**
  * OnHyper.io - Secure Proxy Service for API-Backed Web Apps
  * 
- * Main entry point for the server.
- * Serves the SvelteKit frontend as static files alongside API routes.
+ * Backend API server - runs on port 3001
+ * Frontend (SvelteKit) runs on port 3000 and proxies API calls here
  */
 
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { serveStatic } from '@hono/node-server/serve-static';
 import { config } from './config.js';
 import { initDatabase, closeDatabase } from './lib/db.js';
 import { initLMDB, closeLMDB } from './lib/lmdb.js';
@@ -113,19 +112,6 @@ app.route('/a', render);
 // Unsubscribe routes (public)
 app.route('/unsubscribe', unsubscribe);
 
-// Serve SvelteKit frontend static files
-// This serves the built frontend from the 'frontend-build' directory
-app.use('/*', serveStatic({
-  root: './frontend-build',
-}));
-
-// Fallback to index.html for SPA routes (client-side routing)
-// This handles cases like /dashboard, /apps, etc. that don't have physical files
-app.get('*', serveStatic({
-  root: './frontend-build',
-  path: './index.html',
-}));
-
 // 404 handler
 app.notFound((c) => {
   return c.json({ error: 'Not found' }, 404);
@@ -146,10 +132,14 @@ async function main() {
     console.log(`SQLite database: ${config.sqlitePath}`);
     console.log(`LMDB database: ${config.lmdbPath}`);
 
+    // Use port 3001 for backend (frontend on 3000 proxies here)
+    const backendPort = 3001;
+    const host = config.host;
+
     const server = serve({
       fetch: app.fetch,
-      port: config.port,
-      hostname: config.host,
+      port: backendPort,
+      hostname: host,
     }, (info) => {
       console.log(`
 ╔═══════════════════════════════════════════════════════════════╗
@@ -165,10 +155,11 @@ async function main() {
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-Server running at http://${info.address}:${info.port} (single server mode)
+Backend API running at http://${info.address}:${backendPort}
+(Frontend on port 3000 proxies here)
 
 Endpoints:
-  GET  /                - Landing page (SvelteKit frontend)
+  GET  /health          - Health check
   GET  /api             - API documentation
   POST /api/auth/signup - Create account
   POST /api/auth/login  - Get JWT token
@@ -176,8 +167,6 @@ Endpoints:
   GET  /proxy           - List proxy endpoints
   ALL  /proxy/:ep/*     - Proxy to external API
   GET  /a/:slug         - Render published app
-
-Frontend files served from: ./frontend-build
 
 Configuration:
   Database: ${config.sqlitePath}

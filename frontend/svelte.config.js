@@ -1,21 +1,14 @@
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-node';
 
 /** @type {import('@sveltejs/kit').Config} */
 const config = {
 	kit: {
-		// Use adapter-static to build as static files served by Hono backend
+		// Use adapter-node for server-side rendering
+		// Runs as Node.js server, proxied through Hono backend
 		adapter: adapter({
-			// Precompress files for faster serving
-			pages: 'build',
-			assets: 'build',
-			fallback: 'index.html', // SPA fallback for client-side routing
-			precompress: true,
-			strict: false // Don't error on pages not found during crawling (SPA will handle them)
-		}),
-		// Prerender all pages for static hosting
-		prerender: {
-			entries: ['*'] // Prerender all reachable routes
-		}
+			// Output to build/ directory
+			out: 'build'
+		})
 	}
 };
 
