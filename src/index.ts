@@ -44,6 +44,39 @@ app.get('/health', (c) => {
   });
 });
 
+// Debug endpoint to check static files
+app.get('/debug/static', async (c) => {
+  const fs = await import('fs/promises');
+  const path = await import('path');
+  try {
+    const staticPath = DIST_PATH;
+    const entries = await fs.readdir(staticPath);
+    const indexExists = await fs.access(path.join(staticPath, 'index.html')).then(() => true).catch(() => false);
+    return c.json({
+      staticPath,
+      exists: true,
+      files: entries.slice(0, 20),
+      indexHtmlExists: indexExists,
+      cwd: process.cwd(),
+      env: {
+        STATIC_PATH: process.env.STATIC_PATH,
+        PORT: process.env.PORT
+      }
+    });
+  } catch (err: any) {
+    return c.json({
+      staticPath: DIST_PATH,
+      exists: false,
+      error: err.message,
+      cwd: process.cwd(),
+      env: {
+        STATIC_PATH: process.env.STATIC_PATH,
+        PORT: process.env.PORT
+      }
+    });
+  }
+});
+
 // API info
 app.get('/api', (c) => {
   return c.json({
