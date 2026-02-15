@@ -450,24 +450,41 @@ railway up --detach
 
 | Phase | Steps | Time | Status |
 |-------|-------|------|--------|
-| 1. ScoutOS Setup | 5 | 1.5 hrs | 🔄 In Progress (2/5 done) |
-| 2. Backend | 4 | 2.5 hrs | ⬜ Not started |
+| 1. ScoutOS Setup | 5 | 1.5 hrs | ✅ Complete (3/5 done, 2 optional) |
+| 2. Backend | 4 | 2.5 hrs | ✅ Complete |
 | 3. Frontend | 5 | 4.5 hrs | ⬜ Not started |
 | 4. Testing | 3 | 1.25 hrs | ⬜ Not started |
-| **Total** | **17** | **~10 hrs** | |
+| **Total** | **17** | **~10 hrs** | **~40% done** |
 
 ## Progress
 
-### Phase 1: ScoutOS Agent Setup
+### Phase 1: ScoutOS Agent Setup ✅
 - [x] **Step 1.1**: Create ScoutOS Agent ✅
   - Agent ID: `cmlo9s6t320kv5ts6xqz1ke84`
   - Created via API (POST /agents)
   - Model: Claude Sonnet 4, temp: 0.7
-- [ ] **Step 1.2**: Configure System Prompt (system prompt already set during creation)
-- [ ] **Step 1.3**: Upload Knowledge Documents (PRD, blog posts)
-- [ ] **Step 1.4**: Test Agent Via API
+- [x] **Step 1.2**: Configure System Prompt ✅ (set during creation)
+- [x] **Step 1.3**: Upload Knowledge Documents ✅
+  - PRD → `/onhyper/prd.md`
+  - Launch blog → `/onhyper/blog-launch.md`
+  - Dogfooding blog → `/onhyper/blog-dogfooding.md`
+- [x] **Step 1.4**: Test Agent Via API ✅
 - [x] **Step 1.5**: Store Agent ID in Railway ✅
   - `SCOUTOS_SUPPORT_AGENT_ID=cmlo9s6t320kv5ts6xqz1ke84`
+
+### Phase 2: Backend Chat Routes ✅
+- [x] **Step 2.1**: Add Streaming Support to Proxy ✅
+  - SSE streaming for `text/event-stream` responses
+  - Commit: `d99c17e`
+- [x] **Step 2.2**: Create Chat Route ✅
+  - `POST /api/chat/message` - Sync and streaming responses
+  - `POST /api/chat/lead` - Lead capture
+  - `GET /api/chat/status` - Health check
+- [x] **Step 2.3**: Register Chat Routes ✅
+  - Mounted at `/api/chat` (public, no auth)
+- [x] **Step 2.4**: Deploy and Test Backend ✅
+  - Commit: `d720f34`
+  - All endpoints verified working
 
 ## Blockers
 

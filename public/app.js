@@ -13,6 +13,7 @@ const routes = {
   '/apps': 'pages/apps.html',
   '/keys': 'pages/keys.html',
   '/waitlist': 'pages/waitlist.html',
+  '/chat': 'pages/chat.html',
   '/blog': 'pages/blog.html',
   '/blog/:slug': 'pages/post.html'
 };
@@ -111,6 +112,7 @@ function updateNav() {
         <a href="#/dashboard">Dashboard</a>
         <a href="#/apps">Apps</a>
         <a href="#/blog">Blog</a>
+        <a href="#/chat">Chat</a>
         <a href="#/keys">API Keys</a>
         <button onclick="logout()" class="btn-secondary">Logout</button>
       </div>
@@ -120,6 +122,7 @@ function updateNav() {
       <a href="#/" class="logo">H</a>
       <div class="nav-links">
         <a href="#/blog">Blog</a>
+        <a href="#/chat">Chat</a>
         <a href="#/login">Login</a>
         <a href="#/signup">Sign Up</a>
       </div>
@@ -147,6 +150,9 @@ function initPageHandlers(path, routeParams = {}) {
       break;
     case '/waitlist':
       setupWaitlistForm();
+      break;
+    case '/chat':
+      initChat();
       break;
     case '/blog':
       loadBlog();
@@ -471,6 +477,263 @@ function showError(message) {
   document.getElementById('app').prepend(error);
   
   setTimeout(() => error.remove(), 5000);
+}
+
+// Chat functionality
+let chatSessionId = null;
+let messageCount = 0;
+
+function initChat() {
+  // Get or create session ID
+  chatSessionId = localStorage.getItem('chat_session_id');
+  if (!chatSessionId) {
+    chatSessionId = crypto.randomUUID();
+    localStorage.setItem('chat_session_id', chatSessionId);
+  }
+  
+  // Get message count
+  messageCount = parseInt(localStorage.getItem('chat_message_count') || '0');
+  
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('send-btn');
+  const messages = document.getElementById('chat-messages');
+  
+  if (!input || !sendBtn || !messages) return;
+  
+  // Load history from localStorage
+  loadChatHistory();
+  
+  // Set up event listeners
+  sendBtn.addEventListener('click', sendChatMessage);
+  input.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  });
+  
+  // Focus input
+  input.focus();
+  
+  // Check if we should show lead capture
+  checkLeadCapture();
+}
+
+function loadChatHistory() {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  
+  const history = JSON.parse(localStorage.getItem('chat_history') || '[]');
+  
+  if (history.length === 0) {
+    // Show welcome message
+    addChatMessage('assistant', 'Hello! I\'m the OnHyper support assistant. How can I help you today?');
+    saveChatHistory();
+    return;
+  }
+  
+  // Render history
+  history.forEach(msg => {
+    const div = document.createElement('div');
+    div.className = `message ${msg.role}`;
+    div.innerHTML = `<div class="message-content">${escapeHtml(msg.content)}</div>`;
+    messages.appendChild(div);
+  });
+  
+  // Scroll to bottom
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chat-input');
+  const messages = document.getElementById('chat-messages');
+  
+  const text = input.value.trim();
+  if (!text) return;
+  
+  // Add user message
+  addChatMessage('user', text);
+  input.value = '';
+  
+  // Update and save message count
+  messageCount++;
+  localStorage.setItem('chat_message_count', messageCount.toString());
+  
+  // Show typing indicator
+  showTypingIndicator();
+  
+  // Send to API
+  fetch('/api/chat/message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 
+      message: text, 
+      session_id: chatSessionId 
+    })
+  })
+  .then(res => {
+    if (!res.ok) throw new Error('Request failed');
+    return res.json();
+  })
+  .then(data => {
+    hideTypingIndicator();
+    
+    // Extract response content
+    let responseText = 'Sorry, I couldn\'t process that response.';
+    if (data.response && Array.isArray(data.response)) {
+      const lastMsg = data.response[data.response.length - 1];
+      if (lastMsg && lastMsg.content) {
+        responseText = lastMsg.content;
+      }
+    } else if (data.response) {
+      responseText = data.response;
+    } else if (data.message) {
+      responseText = data.message;
+    }
+    
+    addChatMessage('assistant', responseText);
+    saveChatHistory();
+    
+    // Check for lead capture
+    checkLeadCapture();
+  })
+  .catch(err => {
+    hideTypingIndicator();
+    addChatMessage('error', 'Sorry, something went wrong. Please try again.');
+    console.error('Chat error:', err);
+  });
+}
+
+function addChatMessage(role, content) {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  
+  const div = document.createElement('div');
+  div.className = `message ${role}`;
+  div.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+  messages.appendChild(div);
+  
+  // Scroll to bottom
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function saveChatHistory() {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  
+  const history = [];
+  messages.querySelectorAll('.message').forEach(el => {
+    const role = el.classList.contains('user') ? 'user' : 
+                 el.classList.contains('error') ? 'error' : 'assistant';
+    const content = el.querySelector('.message-content')?.textContent || '';
+    if (role !== 'error') {
+      history.push({ role, content });
+    }
+  });
+  
+  localStorage.setItem('chat_history', JSON.stringify(history));
+}
+
+function showTypingIndicator() {
+  const messages = document.getElementById('chat-messages');
+  if (!messages) return;
+  
+  // Remove existing typing indicator if any
+  hideTypingIndicator();
+  
+  const typing = document.createElement('div');
+  typing.className = 'message assistant typing';
+  typing.id = 'typing-indicator';
+  typing.innerHTML = `
+    <div class="typing-indicator">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  `;
+  messages.appendChild(typing);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function hideTypingIndicator() {
+  const typing = document.getElementById('typing-indicator');
+  if (typing) typing.remove();
+}
+
+function checkLeadCapture() {
+  // Show lead capture after 3 messages and if not already captured
+  if (messageCount >= 3 && !localStorage.getItem('chat_lead_captured')) {
+    showLeadCaptureForm();
+  }
+}
+
+function showLeadCaptureForm() {
+  const existing = document.querySelector('.lead-capture');
+  if (existing) return;
+  
+  const chatContainer = document.querySelector('.chat-container');
+  if (!chatContainer) return;
+  
+  const leadForm = document.createElement('div');
+  leadForm.className = 'lead-capture';
+  leadForm.innerHTML = `
+    <div class="lead-content">
+      <p>Want updates? Drop your email:</p>
+      <div class="lead-form">
+        <input type="email" id="lead-email" placeholder="you@example.com">
+        <button id="lead-submit">Send Updates</button>
+      </div>
+    </div>
+  `;
+  
+  chatContainer.appendChild(leadForm);
+  
+  // Set up event listeners
+  const submitBtn = document.getElementById('lead-submit');
+  const emailInput = document.getElementById('lead-email');
+  
+  submitBtn.addEventListener('click', submitLeadCapture);
+  emailInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') submitLeadCapture();
+  });
+}
+
+async function submitLeadCapture() {
+  const emailInput = document.getElementById('lead-email');
+  const email = emailInput?.value?.trim();
+  
+  if (!email || !email.includes('@')) {
+    emailInput.style.borderColor = 'var(--error)';
+    return;
+  }
+  
+  try {
+    await fetch('/api/chat/lead', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email, 
+        session_id: chatSessionId 
+      })
+    });
+    
+    localStorage.setItem('chat_lead_captured', 'true');
+    
+    // Show success message
+    const leadForm = document.querySelector('.lead-capture');
+    if (leadForm) {
+      leadForm.innerHTML = '<div class="lead-success">Thanks! We\'ll keep you updated.</div>';
+      setTimeout(() => leadForm.remove(), 3000);
+    }
+  } catch (err) {
+    console.error('Lead capture error:', err);
+  }
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 // Hash change listener
