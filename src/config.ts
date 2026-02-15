@@ -3,7 +3,113 @@
  * 
  * All configuration values are loaded from environment variables
  * with sensible defaults for development.
+ * 
+ * IMPORTANT: In production, critical secrets MUST be set via environment variables.
+ * The server will fail to start if they are missing.
  */
+
+/**
+ * Determine if we're running in production mode
+ * Checks multiple indicators:
+ * 1. NODE_ENV=production
+ * 2. RAILWAY_ENVIRONMENT (set by Railway.app)
+ * 3. RENDER (set by Render.com)
+ */
+function isProductionMode(): boolean {
+  const nodeEnv = process.env.NODE_ENV;
+  const railwayEnv = process.env.RAILWAY_ENVIRONMENT;
+  const renderEnv = process.env.RENDER;
+  
+  return (
+    nodeEnv === 'production' ||
+    nodeEnv === 'prod' ||
+    !!railwayEnv ||
+    renderEnv === 'true'
+  );
+}
+
+/**
+ * Critical secrets that MUST be set in production
+ * These have default values for development only
+ */
+interface SecretValidation {
+  envVar: string;
+  description: string;
+  defaultValue: string;
+}
+
+const CRITICAL_SECRETS: SecretValidation[] = [
+  {
+    envVar: 'ONHYPER_JWT_SECRET',
+    description: 'JWT secret for signing authentication tokens',
+    defaultValue: 'dev-jwt-secret-change-in-production',
+  },
+  {
+    envVar: 'ONHYPER_MASTER_KEY',
+    description: 'Master key for encrypting user secrets (32+ character hex string recommended)',
+    defaultValue: 'dev-master-key-change-in-production',
+  },
+];
+
+/**
+ * Validate that all critical secrets are properly configured in production
+ * 
+ * @throws Error if any critical secret is missing or using default in production
+ */
+export function validateProductionSecrets(): void {
+  if (!isProductionMode()) {
+    // In development/test mode, allow defaults
+    console.log('Running in development mode - default secrets allowed');
+    return;
+  }
+
+  const missing: string[] = [];
+  const usingDefaults: string[] = [];
+
+  for (const secret of CRITICAL_SECRETS) {
+    const value = process.env[secret.envVar];
+    
+    if (!value) {
+      missing.push(secret.envVar);
+    } else if (value === secret.defaultValue) {
+      usingDefaults.push(secret.envVar);
+    }
+  }
+
+  if (missing.length > 0 || usingDefaults.length > 0) {
+    const errorParts: string[] = [];
+    
+    if (missing.length > 0) {
+      errorParts.push(`Missing required environment variables: ${missing.join(', ')}`);
+    }
+    if (usingDefaults.length > 0) {
+      errorParts.push(`Using insecure default values for: ${usingDefaults.join(', ')}`);
+    }
+
+    const errorMessage = `
+╔════════════════════════════════════════════════════════════════════════╗
+║                    CRITICAL SECURITY ERROR                              ║
+╠════════════════════════════════════════════════════════════════════════╣
+║  The server cannot start in production mode with missing or insecure    ║
+║  secrets. This is a security safeguard to prevent running with          ║
+║  known-default credentials.                                             ║
+║                                                                         ║
+║  ${errorParts.join('. ').padEnd(70)}║
+║                                                                         ║
+║  Required actions:                                                      ║
+║  1. Set ONHYPER_JWT_SECRET to a secure random string (32+ chars)       ║
+║  2. Set ONHYPER_MASTER_KEY to a secure random hex string (64 hex)      ║
+║                                                                         ║
+║  Example:                                                               ║
+║    ONHYPER_JWT_SECRET="$(openssl rand -hex 32)"                         ║
+║    ONHYPER_MASTER_KEY="$(openssl rand -hex 32)"                         ║
+╚════════════════════════════════════════════════════════════════════════╝
+`;
+    throw new Error(errorMessage);
+  }
+
+  console.log('✓ Production secrets validated successfully');
+}
 
 /**
  * Get the data directory path
@@ -42,8 +148,9 @@ export const config = {
   staticPath: process.env.STATIC_PATH || './public',
 
   // Security
-  jwtSecret: process.env.ONHYPER_JWT_SECRET || 'change-me-in-production-use-secure-random-string',
-  masterKey: process.env.ONHYPER_MASTER_KEY || 'change-me-in-production-32-bytes-hex',
+  // DEFAULTS ARE FOR DEVELOPMENT ONLY - production will fail fast if not set
+  jwtSecret: process.env.ONHYPER_JWT_SECRET || 'dev-jwt-secret-change-in-production',
+  masterKey: process.env.ONHYPER_MASTER_KEY || 'dev-master-key-change-in-production',
 
   // Auth
   auth: {

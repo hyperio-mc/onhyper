@@ -9,7 +9,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { config } from './config.js';
+import { config, validateProductionSecrets } from './config.js';
 import { initDatabase, closeDatabase } from './lib/db.js';
 import { initLMDB, closeLMDB } from './lib/lmdb.js';
 import { shutdownAnalytics } from './lib/analytics.js';
@@ -175,6 +175,10 @@ app.onError((err, c) => {
 // Initialize and start server
 async function main() {
   try {
+    // SECURITY: Validate critical secrets before anything else
+    // This will throw and exit if production secrets are missing
+    validateProductionSecrets();
+
     console.log('Initializing databases...');
     console.log(`Data directory: ${config.dataDir}`);
     console.log(`Volume mount: ${process.env.RAILWAY_VOLUME_MOUNT_PATH || 'not mounted (using local path)'}`);
@@ -215,7 +219,8 @@ Render: /a/*
 Configuration:
   Database: ${config.sqlitePath}
   LMDB: ${config.lmdbPath}
-  JWT Secret: ${process.env.ONHYPER_JWT_SECRET ? 'configured' : 'NOT SET (using default)'}
+  JWT Secret: ${process.env.ONHYPER_JWT_SECRET ? '✓ configured' : '⚠ using dev default (NOT SAFE FOR PRODUCTION)'}
+  Master Key: ${process.env.ONHYPER_MASTER_KEY ? '✓ configured' : '⚠ using dev default (NOT SAFE FOR PRODUCTION)'}
 `);
     });
 
