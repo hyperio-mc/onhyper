@@ -2,15 +2,17 @@
 
 ## Executive Summary
 
-**Recommendation: Build a custom AI copilot using OnHyper's own proxy infrastructure.**
+**Recommendation: Hybrid approach - ScoutOS backend for rapid MVP, migrate to custom build if needed.**
 
-OnHyper is uniquely positioned to self-host its chat widget because:
-1. We ARE a proxy service for AI APIs
-2. We already have PostHog for tracking
-3. We have authentication infrastructure
-4. Third-party solutions are expensive for what we need
+OnHyper is uniquely positioned to leverage ScoutOS because:
+1. We already proxy ScoutOS Atoms: `/proxy/scout-atoms`
+2. ScoutOS handles RAG + conversation history out of the box
+3. We can launch in days, not weeks
+4. Dogfooding our proxy validates the OnHyper product
 
-**MVP Timeline: 2-3 days** | **Cost: ~$5-15/month (our own API usage)**
+**MVP Timeline: 2-3 days (ScoutOS)** | **Cost: $0-200/month** (free tier → custom pricing)
+
+**Long-term option:** Full custom build using our own proxy infrastructure ($6-12/month).
 
 ---
 
@@ -907,7 +909,275 @@ Compare to:
 
 ---
 
-## 7. Placement & UX
+## 7. ScoutOS Atoms as Copilot Backend
+
+### What is ScoutOS?
+
+**ScoutOS** is a platform for building AI workflows, agents, and RAG applications without managing infrastructure. It's part of the hyper.io ecosystem (founded by Tom Wilson).
+
+**OnHyper already proxies ScoutOS Atoms:** `/proxy/scout-atoms`
+
+### Core Capabilities
+
+| Feature | Description | Relevance to Copilot |
+|---------|-------------|---------------------|
+| **Workflows** | Chain LLMs, APIs, and logic into automated pipelines | Build chat flows with branching logic |
+| **Agents** | AI assistants that reason, use tools, hold conversations | Pre-built conversational AI |
+| **RAG/Vector DB** | Store documents, semantic search, context injection | Knowledge base for OnHyper docs |
+| **Scout Copilot** | Embeddable chat widget (Beta) | Pre-built UI we could embed |
+
+### API Details
+
+**Base URL:** `https://api.scoutos.com/v2`
+
+**Execute Workflow:**
+```typescript
+POST https://api.scoutos.com/v2/workflows/{workflow_id}/execute
+
+// Request body
+{
+  "inputs": {
+    "user_message": "What is OnHyper?"
+  },
+  "streaming": false  // or true for streaming
+}
+
+// Response
+{
+  "run": {
+    "stop_reason": "workflow_run_completed",
+    "state": { ... },
+    "session_id": "session_abc123",
+    "workflow_run_id": "run_xyz789"
+  },
+  "workflow_id": "workflow_id"
+}
+```
+
+**Streaming Support:**
+```typescript
+// TypeScript SDK example
+import { ScoutClient } from "scoutos";
+
+const client = new ScoutClient({ apiKey: "YOUR_API_KEY" });
+
+// Stream responses
+const response = await client.workflows.run_stream("workflow_id", {
+  inputs: { user_message: "Hello!" },
+  session_id: "optional_session_for_conversation_context"
+});
+
+for await (const item of response) {
+  console.log(item); // Real-time chunks
+}
+```
+
+**Session Persistence:**
+- Pass `session_id` to maintain conversation context
+- ScoutOS handles conversation history automatically
+- No need to manage chat state in our database
+
+### Integration via OnHyper Proxy
+
+Since OnHyper already proxies ScoutOS Atoms (`/proxy/scout-atoms`), we can invoke ScoutOS through our own infrastructure:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Landing Page                             │
+│                                                              │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │              Chat Widget (Svelte component)          │   │
+│   │                                                      │   │
+│   │   • Simple bubble + expandable chat                  │   │
+│   │   • Calls /api/chat → OnHyper backend                │   │
+│   │                                                      │   │
+│   └────────────────────────┬────────────────────────────┘   │
+│                            │                                 │
+└────────────────────────────┼─────────────────────────────────┘
+                             │
+                             │ POST /api/chat
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                   OnHyper Backend                            │
+│                                                              │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │                 Chat API Route                        │   │
+│   │                                                      │   │
+│   │   1. Parse user message                              │   │
+│   │   2. Call /proxy/scout-atoms → ScoutOS workflow     │   │
+│   │   3. Stream response back                            │   │
+│   │   4. Track in PostHog                                │   │
+│   │                                                      │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                                                              │
+│   (No need for local RAG - ScoutOS handles knowledge)       │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+                             │
+                             │ Forward to ScoutOS
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    ScoutOS (External)                        │
+│                                                              │
+│   ┌─────────────────────────────────────────────────────┐   │
+│   │             Pre-built OnHyper Agent                  │   │
+│   │                                                      │   │
+│   │   • Knowledge base with OnHyper docs                 │   │
+│   │   • Conversation history management                  │   │
+│   │   • LLM orchestration (Claude/GPT-4)                 │   │
+│   │   • Tools: web search, lead capture logic            │   │
+│   │                                                      │   │
+│   └─────────────────────────────────────────────────────┘   │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### ScoutOS Pricing
+
+| Plan | Cost | Included | Notes |
+|------|------|----------|-------|
+| **Free** | $0/month | 50 invocations, 1GB storage | Good for testing |
+| **Scale** | Custom | Unlimited invocations, dedicated support | Production use |
+
+**Cost Concerns:**
+- Free tier limited to 50 invocations/month
+- Custom pricing likely based on volume
+- For 1000+ conversations/month, would need paid plan
+
+### ScoutOS Setup for OnHyper Copilot
+
+**Step 1: Create Knowledge Base**
+- Create a "Database" in ScoutOS
+- Import OnHyper docs (product, pricing, technical, FAQ)
+- ScoutOS handles vector embeddings automatically
+
+**Step 2: Build Chat Workflow**
+1. Create new workflow in Scout Studio
+2. Add blocks:
+   - **Input block**: `user_message`
+   - **Query block**: Search knowledge base
+   - **LLM block**: Generate response with context
+   - **Output block**: Return response
+3. Configure model (Claude 3.5 Sonnet / GPT-4o)
+4. Set response style (Balanced or Precise)
+
+**Step 3: Enable Session Tracking**
+- Enable `session_id` for conversation continuity
+- ScoutOS maintains chat history
+
+**Step 4: Deploy & Connect**
+- Get workflow ID
+- Call via OnHyper proxy: `/proxy/scout-atoms/v2/workflows/{id}/execute`
+
+### ScoutOS Copilot Widget (Beta)
+
+ScoutOS offers an embeddable Copilot widget (currently in beta). This would provide a pre-built chat UI:
+
+**Pros:**
+- Zero frontend development
+- Maintained by ScoutOS team
+- Automatic updates
+
+**Cons:**
+- Beta status (may have stability issues)
+- Less customization control
+- Requires emailing info@scoutos.com for access
+- Data flows through ScoutOS servers (not just API)
+
+**Verdict:** Not recommended for launch - beta status is risky. Better to call ScoutOS via API with our own UI.
+
+### Comparison: ScoutOS vs Custom Build
+
+| Factor | ScoutOS Backend | Custom Build (Current Plan) |
+|--------|-----------------|------------------------------|
+| **Setup Time** | Hours (configure workflow) | 2-3 days (full build) |
+| **RAG/Knowledge** | Built-in, auto-managed | Must implement |
+| **Session History** | Built-in | Must implement |
+| **Frontend** | Still needs custom widget | Same effort |
+| **API Costs** | ScoutOS pricing + LLM costs | Just LLM costs |
+| **Control** | Medium (ScoutOS manages infra) | Full control |
+| **Dogfooding** | Yes (proxy ScoutOS) | Yes (proxy LLMs directly) |
+| **Vendor Lock-in** | Higher (ScoutOS-specific) | Lower (standard LLM calls) |
+| **Knowledge Updates** | ScoutOS dashboard | Our admin interface |
+| **Scalability** | ScoutOS handles | We handle |
+| **Data Location** | ScoutOS servers | Our servers only |
+| **Custom Tools** | Via ScoutOS workflow | Direct code |
+
+### Hybrid Approach: Best of Both Worlds
+
+**Recommended:** Use ScoutOS for rapid MVP, migrate to custom later.
+
+**Phase 1: ScoutOS-Powered Copilot (Week 1)**
+1. Create ScoutOS account
+2. Upload OnHyper knowledge base content
+3. Build chat workflow with RAG
+4. Create simple frontend widget
+5. Connect via `/proxy/scout-atoms`
+6. Launch in days, not weeks
+
+**Phase 2: Evaluate & Decide (Month 1-3)**
+- Monitor costs and performance
+- Collect feedback
+- Assess if ScoutOS features meet needs
+
+**Phase 3: Migrate if Needed (Future)**
+- If costs grow or we want more control:
+  - Export knowledge from ScoutOS
+  - Build custom RAG with our infrastructure
+  - Direct LLM calls via our proxy
+
+**Why Hybrid Makes Sense:**
+1. **Speed to Market**: Launch copilot in days
+2. **Dogfooding**: We proxy ScoutOS - validates our proxy capability
+3. **Risk Mitigation**: If ScoutOS doesn't work out, we can switch
+4. **Cost Learning**: Understand real usage before committing to custom build
+5. **Feature Validation**: Test if RAG + conversation history works as expected
+
+### Recommendation: ScoutOS for MVP
+
+**Primary Reason:** Time to market. We can launch a functional copilot in days using ScoutOS, then evaluate whether to invest in a custom build.
+
+**Architecture:**
+```
+Frontend Widget (Svelte)
+        │
+        ▼
+OnHyper Backend (/api/chat)
+        │
+        ▼
+/proxy/scout-atoms → ScoutOS Workflow
+        │
+        ├── Knowledge Base (OnHyper docs)
+        ├── LLM (Claude/GPT)
+        └── Conversation History
+```
+
+**Cost Estimate with ScoutOS:**
+- Free tier: $0/month (50 invocations - good for testing)
+- Production: Custom pricing (likely $50-200/month based on volume)
+- Still cheaper than Chatbase/Intercom for equivalent features
+
+**What We'd Build:**
+1. **Frontend only** - Chat widget UI (same as custom approach)
+2. **Backend proxy route** - `/api/chat` → ScoutOS workflow
+3. **No local RAG** - ScoutOS handles knowledge search
+
+**ScoutOS Account Needs:**
+- API key stored as `SCOUT_API_KEY` in OnHyper secrets
+- Workflow configured with OnHyper knowledge base
+- Test and validate responses before launch
+
+### Decision Summary
+
+| Option | Timeline | Cost/Month | Control | Recommendation |
+|--------|----------|------------|---------|----------------|
+| ScoutOS Backend | Days | $0-200 | Medium | **Yes, for MVP** |
+| Custom Build | 2-3 days | $6-12 | Full | Yes, for future |
+| Hybrid | Days → Future | Growing | Increasing | **Best approach** |
+
+---
+
+## 8. Placement & UX
 
 ### Widget Position
 
@@ -1073,30 +1343,51 @@ Match OnHyper's existing design:
 
 | Aspect | Recommendation |
 |--------|----------------|
-| **Build vs Buy** | BUILD |
-| **Why** | We ARE an AI proxy - perfect product fit |
-| **Timeline** | 2-3 days for MVP |
-| **Cost** | ~$6-12/month (API usage only) |
+| **Initial Approach** | ScoutOS Backend (rapid MVP) |
+| **Why** | Launch in days, validate demand, dogfood our proxy |
+| **Timeline** | 2-3 days for MVP with ScoutOS |
+| **Initial Cost** | $0 (free tier), then custom pricing |
+| **Future Path** | Evaluate → custom build if needed |
 | **Position** | Bottom-right floating, standard |
 | **Timing** | Show immediately, proactive greeting at 30s |
 
+### Decision: Hybrid Approach
+
+1. **Phase 1 (Now):** ScoutOS backend + custom frontend widget
+   - Fastest time to market
+   - Dogfoods our `/proxy/scout-atoms` endpoint
+   - RAG + conversation history handled by ScoutOS
+
+2. **Phase 2 (Month 1-3):** Evaluate performance & costs
+   - Monitor usage, response quality, costs
+   - Collect user feedback
+
+3. **Phase 3 (Future):** Full custom build if warranted
+   - If ScoutOS costs grow, migrate to custom RAG
+   - Full control over knowledge base and logic
+
 ### Immediate Next Steps
 
-1. **Create knowledge base content**
-   - Write product, pricing, technical, and FAQ sections
-   - Seed into database
+1. **Create ScoutOS account**
+   - Sign up at studio.scoutos.com
+   - Store API key in OnHyper secrets as `SCOUT_API_KEY`
 
-2. **Build backend chat API**
-   - Create routes and RAG logic
-   - Connect to our own proxy
+2. **Build knowledge base in ScoutOS**
+   - Create Database with OnHyper docs
+   - Upload product, pricing, technical, FAQ content
 
-3. **Build frontend widget**
+3. **Create chat workflow**
+   - Configure agent with RAG + conversation
+   - Test responses thoroughly
+
+4. **Build frontend widget**
    - Svelte component
-   - Add to landing page
+   - Connect to `/api/chat` → ScoutOS proxy
 
-4. **Deploy and iterate**
-   - Launch with basic version
-   - Add features based on real usage
+5. **Track and iterate**
+   - PostHog events for engagement
+   - Lead capture to Pipedrive
+   - Evaluate after 100+ conversations
 
 ### Success Metrics
 
@@ -1347,5 +1638,6 @@ export default app;
 ---
 
 *Document created: February 15, 2026*
-*Version: 1.0*
+*Version: 1.1*
+*Updated: February 15, 2026 - Added ScoutOS Atoms analysis and hybrid recommendation*
 *Status: Ready for implementation*
