@@ -6,8 +6,12 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
+    "dev:frontend": "cd frontend && npm run dev",
     "build": "tsc",
+    "build:frontend": "cd frontend && npm install && npm run build",
+    "build:all": "npm run build:frontend && npm run build",
     "start": "node dist/index.js",
+    "start:dev": "STATIC_PATH=./frontend/dist tsx src/index.ts",
     "test": "vitest"
   },
   "keywords": [

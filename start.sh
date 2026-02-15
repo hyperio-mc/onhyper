@@ -1,40 +1,33 @@
 #!/bin/bash
+# OnHyper.io Development Start Script
+# Builds frontend then runs single server
+
 set -e
 
-# OnHyper.io Production Startup Script
-# Two-server mode: Frontend (3000) + Backend (3001)
-# Frontend proxies API calls to backend
-
-echo "Starting OnHyper.io two-server architecture..."
+echo "🚀 OnHyper.io Development Server"
 
 # Create data directory if needed
-mkdir -p /app/data
+mkdir -p data
 
-# Start backend on port 3001
-echo "Starting backend server on port 3001..."
-cd /app/backend
-PORT=3001 HOST=0.0.0.0 node dist/index.js &
-BACKEND_PID=$!
+# Check if frontend needs build
+if [ ! -d "frontend/dist" ] || [ ! -f "frontend/dist/index.html" ]; then
+    echo "📦 Building frontend..."
+    cd frontend
+    npm install
+    npm run build
+    cd ..
+fi
 
-# Wait for backend health check to pass
-echo "Waiting for backend to be healthy..."
-for i in {1..30}; do
-    if curl -s http://localhost:3001/health > /dev/null 2>&1; then
-        echo "Backend is healthy!"
-        break
-    fi
-    if [ $i -eq 30 ]; then
-        echo "Backend failed to start within 15 seconds"
-        kill $BACKEND_PID 2>/dev/null || true
-        exit 1
-    fi
-    sleep 0.5
-done
+# Check if backend needs build
+if [ ! -d "dist" ] || [ ! -f "dist/index.js" ]; then
+    echo "📦 Building backend..."
+    npm run build
+fi
 
-# Start frontend on port 3000 (proxies to backend on 3001)
-echo "Starting frontend server on port 3000..."
-cd /app/frontend
-BACKEND_URL=http://localhost:3001 PORT=3000 HOST=0.0.0.0 node build
+echo "🌐 Starting server on port 3000..."
+echo "   Frontend: http://localhost:3000"
+echo "   API: http://localhost:3000/api"
+echo "   Health: http://localhost:3000/health"
 
-# Clean up backend when frontend exits
-kill $BACKEND_PID 2>/dev/null || true
+# Run the server
+STATIC_PATH=./frontend/dist npm run start

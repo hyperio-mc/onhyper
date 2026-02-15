@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { auth } from '$lib/stores/auth';
-	import { page } from '$app/stores';
+	import { pathname } from '../../router';
 
 	interface Props {
 		loggedIn?: boolean;
@@ -12,6 +12,17 @@
 		auth.logout();
 		window.location.href = '/';
 	}
+
+	// Reactive variable to track current path
+	let currentPathname = $state('/');
+
+	// Subscribe to the pathname store
+	$effect(() => {
+		const unsub = pathname.subscribe((value) => {
+			currentPathname = value;
+		});
+		return unsub;
+	});
 </script>
 
 <nav class="bg-surface/80 backdrop-blur-md border-b border-border sticky top-0 z-50">
@@ -30,19 +41,19 @@
 				<div class="flex items-center gap-6">
 					<a 
 						href="/dashboard" 
-						class="text-sm font-medium {$page.url.pathname === '/dashboard' ? 'text-accent' : 'text-text-secondary hover:text-text'} transition-colors"
+						class="text-sm font-medium {currentPathname === '/dashboard' ? 'text-accent' : 'text-text-secondary hover:text-text'} transition-colors"
 					>
 						Dashboard
 					</a>
 					<a 
 						href="/apps" 
-						class="text-sm font-medium {$page.url.pathname.startsWith('/apps') ? 'text-accent' : 'text-text-secondary hover:text-text'} transition-colors"
+						class="text-sm font-medium {currentPathname.startsWith('/apps') ? 'text-accent' : 'text-text-secondary hover:text-text'} transition-colors"
 					>
 						Apps
 					</a>
 					<a 
 						href="/keys" 
-						class="text-sm font-medium {$page.url.pathname === '/keys' ? 'text-accent' : 'text-text-secondary hover:text-text'} transition-colors"
+						class="text-sm font-medium {currentPathname === '/keys' ? 'text-accent' : 'text-text-secondary hover:text-text'} transition-colors"
 					>
 						API Keys
 					</a>

@@ -4,7 +4,7 @@
  * Tracks events from the browser: page views, signups, logins, app interactions
  */
 
-import { browser } from '$app/environment';
+import { browser } from './environment';
 import posthog from 'posthog-js';
 
 // PostHog configuration - PUBLIC_ prefix for SvelteKit public env vars

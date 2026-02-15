@@ -1,11 +1,11 @@
 /**
  * OnHyper.io - Secure Proxy Service for API-Backed Web Apps
  * 
- * Backend API server - runs on port 3001
- * Frontend (SvelteKit) runs on port 3000 and proxies API calls here
+ * Single server deployment - serves static frontend + API routes
  */
 
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
@@ -30,6 +30,10 @@ const app = new Hono();
 app.use('*', logger());
 app.use('*', cors());
 app.use('*', rateLimit);
+
+// Serve static files from frontend dist
+// In production, these files are built from the Vite frontend
+const DIST_PATH = config.staticPath || './dist';
 
 // Health check
 app.get('/health', (c) => {
@@ -112,9 +116,38 @@ app.route('/a', render);
 // Unsubscribe routes (public)
 app.route('/unsubscribe', unsubscribe);
 
-// 404 handler
-app.notFound((c) => {
-  return c.json({ error: 'Not found' }, 404);
+// Serve static frontend files
+// This must come AFTER all API routes
+app.use('/*', serveStatic({ root: DIST_PATH }));
+
+// SPA fallback - serve index.html for unmatched routes (excluding API and proxy routes)
+app.get('*', async (c) => {
+  const path = c.req.path;
+  
+  // Don't fallback for API/proxy/render routes (they should have been handled above)
+  if (path.startsWith('/api') || path.startsWith('/proxy') || path.startsWith('/a')) {
+    return c.json({ error: 'Not found' }, 404);
+  }
+  
+  // For SPA routes, serve index.html
+  try {
+    const indexHtml = await Bun.file(`${DIST_PATH}/index.html`).text();
+    return c.html(indexHtml);
+  } catch {
+    // If no index.html, return a simple message (dev mode or build missing)
+    return c.html(`
+      <!DOCTYPE html>
+      <html>
+        <head><title>OnHyper</title></head>
+        <body style="display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:system-ui;">
+          <div style="text-align:center">
+            <h1 style="color:#6366f1;font-size:48px;margin-bottom:16px">H</h1>
+            <p style="color:#64748b">Frontend not built. Run <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">npm run build</code> in frontend/</p>
+          </div>
+        </body>
+      </html>
+    `);
+  }
 });
 
 // Error handler
@@ -132,13 +165,12 @@ async function main() {
     console.log(`SQLite database: ${config.sqlitePath}`);
     console.log(`LMDB database: ${config.lmdbPath}`);
 
-    // Use port 3001 for backend (frontend on 3000 proxies here)
-    const backendPort = 3001;
+    const port = config.port;
     const host = config.host;
 
     const server = serve({
       fetch: app.fetch,
-      port: backendPort,
+      port: port,
       hostname: host,
     }, (info) => {
       console.log(`
@@ -155,18 +187,12 @@ async function main() {
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-Backend API running at http://${info.address}:${backendPort}
-(Frontend on port 3000 proxies here)
+Single-server deployment running at http://${info.address}:${port}
 
-Endpoints:
-  GET  /health          - Health check
-  GET  /api             - API documentation
-  POST /api/auth/signup - Create account
-  POST /api/auth/login  - Get JWT token
-  POST /api/secrets     - Add API key (auth required)
-  GET  /proxy           - List proxy endpoints
-  ALL  /proxy/:ep/*     - Proxy to external API
-  GET  /a/:slug         - Render published app
+Frontend: Served from ${DIST_PATH}
+API: /api/*
+Proxy: /proxy/*
+Render: /a/*
 
 Configuration:
   Database: ${config.sqlitePath}

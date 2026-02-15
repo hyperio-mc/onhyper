@@ -15,6 +15,9 @@ export const config = {
   sqlitePath: process.env.SQLITE_PATH || './data/onhyper.db',
   lmdbPath: process.env.LMDB_PATH || './data/onhyper.lmdb',
 
+  // Static files (frontend)
+  staticPath: process.env.STATIC_PATH || './dist',
+
   // Security
   jwtSecret: process.env.ONHYPER_JWT_SECRET || 'change-me-in-production-use-secure-random-string',
   masterKey: process.env.ONHYPER_MASTER_KEY || 'change-me-in-production-32-bytes-hex',

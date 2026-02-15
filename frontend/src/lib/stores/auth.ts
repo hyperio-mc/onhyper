@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
-import { browser } from '$app/environment';
-import { identifyUser, resetUser, trackSignup, trackLogin } from '$lib/analytics';
+import { browser } from '../environment';
+import { identifyUser, resetUser, trackSignup, trackLogin } from '../analytics';
 
 export interface User {
 	id: string;

@@ -1,10 +1,9 @@
-# OnHyper.io - Two-Server Railway Deployment
-# SvelteKit frontend (adapter-node) + Hono backend
-# Frontend runs on port 3000, proxies to backend on port 3001
-# v2: Rebuild
+# OnHyper.io - Single-Server Railway Deployment
+# Plain Vite + Svelte frontend served by Hono backend
+# Everything runs on one port (3000)
 
 # ----------------------------------------------------------------
-# Stage 1: Build the frontend (SvelteKit with adapter-node)
+# Stage 1: Build the frontend (Vite -> static files)
 # ----------------------------------------------------------------
 FROM node:20-bookworm-slim AS frontend-builder
 
@@ -13,13 +12,13 @@ WORKDIR /app/frontend
 # Copy frontend package files
 COPY frontend/package*.json ./
 
-# Install frontend dependencies (including adapter-node)
+# Install frontend dependencies
 RUN npm ci
 
 # Copy frontend source
 COPY frontend/ ./
 
-# Build frontend as Node.js server (outputs to build/)
+# Build frontend (outputs to dist/)
 RUN npm run build
 
 # ----------------------------------------------------------------
@@ -50,7 +49,7 @@ COPY src ./src
 RUN npm run build
 
 # ----------------------------------------------------------------
-# Stage 3: Production image - Two servers
+# Stage 3: Production image - Single server
 # ----------------------------------------------------------------
 FROM node:20-bookworm-slim AS production
 
@@ -64,28 +63,18 @@ RUN apt-get update && apt-get install -y \
 
 WORKDIR /app
 
-# ---- Backend Setup ----
-# Create backend directory and copy its files
-RUN mkdir -p /app/backend
-COPY --from=backend-builder /app/backend/dist /app/backend/dist
-COPY --from=backend-builder /app/backend/node_modules /app/backend/node_modules
-COPY --from=backend-builder /app/backend/package.json /app/backend/
+# Copy backend dist and node_modules
+COPY --from=backend-builder /app/backend/dist ./dist
+COPY --from=backend-builder /app/backend/node_modules ./node_modules
+COPY --from=backend-builder /app/backend/package.json ./
 
-# ---- Frontend Setup ----
-# Create frontend directory and copy its files
-RUN mkdir -p /app/frontend
-COPY --from=frontend-builder /app/frontend/build /app/frontend/build
-COPY --from=frontend-builder /app/frontend/node_modules /app/frontend/node_modules
-COPY --from=frontend-builder /app/frontend/package.json /app/frontend/
+# Copy frontend static files to dist/ (served by Hono)
+COPY --from=frontend-builder /app/frontend/dist ./dist
 
-# Create data directory for backend
+# Create data directory
 RUN mkdir -p /app/data
 
-# Copy startup script
-COPY start.sh /app/start.sh
-RUN chmod +x /app/start.sh
-
-# Expose port 3000 (frontend)
+# Expose single port
 EXPOSE 3000
 
 # Set production defaults
@@ -94,10 +83,11 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV SQLITE_PATH=/app/data/onhyper.db
 ENV LMDB_PATH=/app/data/onhyper.lmdb
+ENV STATIC_PATH=/app/dist
 
-# Health check on frontend which proxies to backend
-HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+# Health check on the single server
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
-# Start both servers via startup script
-CMD ["/app/start.sh"]
+# Start the single Hono server
+CMD ["node", "dist/index.js"]
