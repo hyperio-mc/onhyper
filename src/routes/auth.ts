@@ -10,6 +10,7 @@
 import { Hono } from 'hono';
 import { createUser, authenticateUser, generateToken, verifyToken, getUserById } from '../lib/users.js';
 import { strictRateLimit } from '../middleware/rateLimit.js';
+import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
 
 const auth = new Hono();
@@ -150,8 +151,7 @@ auth.post('/token', async (c) => {
  * GET /api/auth/me
  * Get current user info (requires auth)
  */
-auth.get('/me', async (c) => {
-  // This will be protected by requireAuth middleware in the main app
+auth.get('/me', requireAuth, async (c) => {
   const user = c.get('user');
   
   if (!user) {
