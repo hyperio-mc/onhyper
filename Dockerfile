@@ -64,12 +64,12 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy backend dist and node_modules
-COPY --from=backend-builder /app/backend/dist ./dist
+COPY --from=backend-builder /app/backend/dist ./backend-dist
 COPY --from=backend-builder /app/backend/node_modules ./node_modules
 COPY --from=backend-builder /app/backend/package.json ./
 
-# Copy frontend static files to dist/ (served by Hono)
-COPY --from=frontend-builder /app/frontend/dist ./dist
+# Copy frontend static files (served by Hono)
+COPY --from=frontend-builder /app/frontend/dist ./static
 
 # Create data directory
 RUN mkdir -p /app/data
@@ -83,11 +83,11 @@ ENV PORT=3000
 ENV HOST=0.0.0.0
 ENV SQLITE_PATH=/app/data/onhyper.db
 ENV LMDB_PATH=/app/data/onhyper.lmdb
-ENV STATIC_PATH=/app/dist
+ENV STATIC_PATH=/app/static
 
 # Health check on the single server
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # Start the single Hono server
-CMD ["node", "dist/index.js"]
+CMD ["node", "backend-dist/index.js"]
