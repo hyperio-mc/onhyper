@@ -7,9 +7,9 @@
 
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
-import WelcomeEmail from '../emails/Welcome';
-import QuickWinEmail from '../emails/QuickWin';
-import FeedbackEmail from '../emails/Feedback';
+import WelcomeEmail from '../emails/Welcome.js';
+import QuickWinEmail from '../emails/QuickWin.js';
+import FeedbackEmail from '../emails/Feedback.js';
 import { getDatabase } from './db.js';
 import { randomUUID } from 'crypto';
 

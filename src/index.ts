@@ -31,51 +31,16 @@ app.use('*', logger());
 app.use('*', cors());
 app.use('*', rateLimit);
 
-// Serve static files from frontend dist
-// In production, these files are built from the Vite frontend
-const DIST_PATH = config.staticPath || './dist';
+// Serve static files from public/ folder
+const PUBLIC_PATH = config.staticPath || './public';
 
 // Health check
 app.get('/health', (c) => {
   return c.json({ 
     status: 'ok', 
     timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    build: '2026-02-15-v9-nudge'
+    version: '1.0.0'
   });
-});
-
-// Debug endpoint - check static files
-app.get('/x7k9m2-debug', async (c) => {
-  const fs = await import('fs/promises');
-  const path = await import('path');
-  try {
-    const staticPath = DIST_PATH;
-    const entries = await fs.readdir(staticPath);
-    const indexExists = await fs.access(path.join(staticPath, 'index.html')).then(() => true).catch(() => false);
-    return c.json({
-      staticPath,
-      exists: true,
-      files: entries.slice(0, 20),
-      indexHtmlExists: indexExists,
-      cwd: process.cwd(),
-      env: {
-        STATIC_PATH: process.env.STATIC_PATH,
-        PORT: process.env.PORT
-      }
-    });
-  } catch (err: any) {
-    return c.json({
-      staticPath: DIST_PATH,
-      exists: false,
-      error: err.message,
-      cwd: process.cwd(),
-      env: {
-        STATIC_PATH: process.env.STATIC_PATH,
-        PORT: process.env.PORT
-      }
-    });
-  }
 });
 
 // API info
@@ -150,18 +115,17 @@ app.route('/a', render);
 // Unsubscribe routes (public)
 app.route('/unsubscribe', unsubscribe);
 
-// Serve static frontend files
+// Serve static frontend files from public/
 // This must come AFTER all API routes
-// Add no-cache headers to bust Railway edge caching
 app.use('/*', async (c, next) => {
   await next();
-  // Add no-cache headers to all responses
+  // Add no-cache headers for HTML files
   if (c.res.headers.get('content-type')?.includes('text/html')) {
     c.res.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     c.res.headers.set('Pragma', 'no-cache');
   }
 });
-app.use('/*', serveStatic({ root: DIST_PATH }));
+app.use('/*', serveStatic({ root: PUBLIC_PATH }));
 
 // SPA fallback - serve index.html for unmatched routes (excluding API and proxy routes)
 app.get('*', async (c) => {
@@ -175,23 +139,21 @@ app.get('*', async (c) => {
   // For SPA routes, serve index.html
   try {
     const fs = await import('fs/promises');
-    const indexHtml = await fs.readFile(`${DIST_PATH}/index.html`, 'utf-8');
+    const indexHtml = await fs.readFile(`${PUBLIC_PATH}/index.html`, 'utf-8');
     return c.html(indexHtml, 200, {
       'Cache-Control': 'no-store, no-cache, must-revalidate',
       'Pragma': 'no-cache'
     });
   } catch (err) {
     console.error('Failed to serve index.html:', err);
-    // If no index.html, return a simple message (dev mode or build missing)
     return c.html(`
       <!DOCTYPE html>
       <html>
         <head><title>OnHyper</title></head>
-        <body style="display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:system-ui;">
+        <body style="display:flex;justify-content:center;align-items:center;min-height:100vh;margin:0;font-family:system-ui;background:#0f172a;color:#f8fafc;">
           <div style="text-align:center">
             <h1 style="color:#6366f1;font-size:48px;margin-bottom:16px">H</h1>
-            <p style="color:#64748b">Frontend not built. Run <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">npm run build</code> in frontend/</p>
-            <p style="color:#94a3b8;font-size:14px;margin-top:8px">Path: ${DIST_PATH}</p>
+            <p style="color:#94a3b8">Frontend files not found at ${PUBLIC_PATH}</p>
           </div>
         </body>
       </html>
@@ -238,7 +200,7 @@ async function main() {
 
 Single-server deployment running at http://${info.address}:${port}
 
-Frontend: Served from ${DIST_PATH}
+Frontend: Served from ${PUBLIC_PATH}
 API: /api/*
 Proxy: /proxy/*
 Render: /a/*

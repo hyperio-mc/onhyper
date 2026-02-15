@@ -16,7 +16,7 @@ export const config = {
   lmdbPath: process.env.LMDB_PATH || './data/onhyper.lmdb',
 
   // Static files (frontend)
-  staticPath: process.env.STATIC_PATH || './static',
+  staticPath: process.env.STATIC_PATH || './public',
 
   // Security
   jwtSecret: process.env.ONHYPER_JWT_SECRET || 'change-me-in-production-use-secure-random-string',

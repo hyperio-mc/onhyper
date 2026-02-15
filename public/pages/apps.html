@@ -1,0 +1,67 @@
+<div class="hero">
+  <h1>My Apps</h1>
+  <p>Publish web apps that call APIs securely</p>
+</div>
+
+<div id="app-list">
+  <p>Loading...</p>
+</div>
+
+<hr style="margin: 2rem 0; border-color: var(--border);">
+
+<h2>Create New App</h2>
+<form id="app-form" onsubmit="createApp(event)">
+  <div class="form-group">
+    <label for="app-name">App Name</label>
+    <input type="text" id="app-name" name="name" required>
+  </div>
+  <div class="form-group">
+    <label for="app-slug">Slug (URL path)</label>
+    <input type="text" id="app-slug" name="slug" required pattern="[a-z0-9-]+">
+  </div>
+  <div class="form-group">
+    <label for="app-description">Description</label>
+    <textarea id="app-description" name="description" rows="2"></textarea>
+  </div>
+  <div class="form-group">
+    <label for="app-html">HTML</label>
+    <textarea id="app-html" name="html" rows="5" placeholder="<div>Your app HTML...</div>"></textarea>
+  </div>
+  <div class="form-group">
+    <label for="app-css">CSS</label>
+    <textarea id="app-css" name="css" rows="3" placeholder="/* Your styles */"></textarea>
+  </div>
+  <div class="form-group">
+    <label for="app-js">JavaScript</label>
+    <textarea id="app-js" name="js" rows="5" placeholder="// Use /proxy/endpoint to call APIs"></textarea>
+  </div>
+  <button type="submit" class="btn-primary">Create App</button>
+</form>
+
+<script>
+async function createApp(e) {
+  e.preventDefault();
+  const form = e.target;
+  const formData = new FormData(form);
+  
+  try {
+    const app = await api('/apps', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: formData.get('name'),
+        slug: formData.get('slug'),
+        description: formData.get('description'),
+        html: formData.get('html'),
+        css: formData.get('css'),
+        js: formData.get('js')
+      })
+    });
+    
+    form.reset();
+    loadApps();
+    alert('App created! View at /a/' + app.slug);
+  } catch (err) {
+    showError(err.message);
+  }
+}
+</script>
