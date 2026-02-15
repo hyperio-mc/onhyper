@@ -6,6 +6,7 @@
  */
 
 import { Hono } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { PROXY_ENDPOINTS, config } from '../config.js';
 import { getSecretValue } from '../lib/secrets.js';
 import { getAppBySlug, getAppById } from '../lib/apps.js';
@@ -174,7 +175,49 @@ proxy.all('/:endpoint/*', async (c) => {
       return c.json({ error: 'Response too large' }, 502);
     }
     
-    // Read response body
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Handle SSE streaming responses
+    if (contentType.includes('text/event-stream')) {
+      // Record usage for streaming (duration is just connection setup time)
+      const duration = Date.now() - startTime;
+      recordUsage({
+        appId: identity.appId,
+        endpoint,
+        status: response.status,
+        duration,
+      });
+      
+      // Track proxy request in PostHog
+      trackProxyRequest({
+        userId: identity.userId,
+        appId: identity.appId,
+        endpoint,
+        status: response.status,
+        durationMs: duration,
+        success: response.status >= 200 && response.status < 400,
+      });
+      
+      // Stream the SSE response
+      return streamSSE(c, async (stream) => {
+        const reader = response.body?.getReader();
+        if (!reader) return;
+        
+        const decoder = new TextDecoder();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            await stream.write(decoder.decode(value));
+          }
+        } catch (error) {
+          // Client disconnected or stream error - this is normal for SSE
+          console.error('SSE stream error:', error);
+        }
+      });
+    }
+    
+    // Non-streaming: read response body
     const responseText = await response.text();
     
     // Record usage
@@ -217,7 +260,6 @@ proxy.all('/:endpoint/*', async (c) => {
     
     // Try to parse as JSON
     let responseBody: unknown = responseText;
-    const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
       try {
         responseBody = JSON.parse(responseText);
