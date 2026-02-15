@@ -21,6 +21,7 @@ import { proxy } from './routes/proxy.js';
 import { render } from './routes/render.js';
 import { waitlist } from './routes/waitlist.js';
 import { unsubscribe } from './routes/unsubscribe.js';
+import { blog } from './routes/blog.js';
 import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
@@ -94,6 +95,9 @@ app.get('/api', (c) => {
 
 // Auth routes (public)
 app.route('/api/auth', auth);
+
+// Blog routes (public)
+app.route('/api/blog', blog);
 
 // Waitlist routes (public) - MUST be before protected /api routes
 app.route('/api/waitlist', waitlist);

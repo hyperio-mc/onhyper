@@ -12,17 +12,36 @@ const routes = {
   '/dashboard': 'pages/dashboard.html',
   '/apps': 'pages/apps.html',
   '/keys': 'pages/keys.html',
-  '/waitlist': 'pages/waitlist.html'
+  '/waitlist': 'pages/waitlist.html',
+  '/blog': 'pages/blog.html',
+  '/blog/:slug': 'pages/post.html'
 };
 
 async function loadPage(path) {
-  const pagePath = routes[path] || routes['/'];
+  // Handle dynamic routes (e.g., /blog/:slug)
+  let pagePath = routes[path];
+  let routeParams = {};
+  
+  // Check for dynamic routes
+  if (!pagePath) {
+    // Check for blog post route
+    const blogMatch = path.match(/^\/blog\/(.+)$/);
+    if (blogMatch) {
+      pagePath = routes['/blog/:slug'];
+      routeParams = { slug: blogMatch[1] };
+    }
+  }
+  
+  if (!pagePath) {
+    pagePath = routes['/'];
+  }
+  
   try {
     const response = await fetch(pagePath);
     if (!response.ok) throw new Error('Page not found');
     const html = await response.text();
     document.getElementById('app').innerHTML = html;
-    initPageHandlers(path);
+    initPageHandlers(path, routeParams);
   } catch (err) {
     document.getElementById('app').innerHTML = '<p>Page not found</p>';
   }
@@ -91,6 +110,7 @@ function updateNav() {
       <div class="nav-links">
         <a href="#/dashboard">Dashboard</a>
         <a href="#/apps">Apps</a>
+        <a href="#/blog">Blog</a>
         <a href="#/keys">API Keys</a>
         <button onclick="logout()" class="btn-secondary">Logout</button>
       </div>
@@ -99,6 +119,7 @@ function updateNav() {
     nav.innerHTML = `
       <a href="#/" class="logo">H</a>
       <div class="nav-links">
+        <a href="#/blog">Blog</a>
         <a href="#/login">Login</a>
         <a href="#/signup">Sign Up</a>
       </div>
@@ -107,7 +128,7 @@ function updateNav() {
 }
 
 // Page-specific handlers
-function initPageHandlers(path) {
+function initPageHandlers(path, routeParams = {}) {
   switch (path) {
     case '/login':
       setupLoginForm();
@@ -126,6 +147,15 @@ function initPageHandlers(path) {
       break;
     case '/waitlist':
       setupWaitlistForm();
+      break;
+    case '/blog':
+      loadBlog();
+      break;
+    default:
+      // Check for dynamic blog route
+      if (routeParams.slug) {
+        loadPost(routeParams.slug);
+      }
       break;
   }
 }
@@ -343,6 +373,91 @@ async function addKey(e) {
   } catch (err) {
     showError(err.message);
   }
+}
+
+// Blog
+async function loadBlog() {
+  try {
+    const response = await fetch('/api/blog');
+    const data = await response.json();
+    
+    const blogPosts = document.getElementById('blog-posts');
+    
+    if (data.posts.length === 0) {
+      blogPosts.innerHTML = '<p>No posts yet. Check back soon!</p>';
+      return;
+    }
+    
+    blogPosts.innerHTML = data.posts.map(post => `
+      <article class="blog-card" onclick="navigate('/blog/${post.slug}')">
+        <h2>${post.title}</h2>
+        <div class="post-meta">
+          <time datetime="${post.date}">${formatDate(post.date)}</time>
+          <span class="author">${post.author}</span>
+        </div>
+        <p class="excerpt">${post.excerpt}</p>
+        ${post.tags && post.tags.length ? `
+          <div class="tags">
+            ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+          </div>
+        ` : ''}
+      </article>
+    `).join('');
+  } catch (err) {
+    const blogPosts = document.getElementById('blog-posts');
+    if (blogPosts) {
+      blogPosts.innerHTML = `<p class="error">Failed to load posts: ${err.message}</p>`;
+    }
+  }
+}
+
+// Individual blog post
+async function loadPost(slug) {
+  try {
+    const response = await fetch(`/api/blog/${slug}`);
+    if (!response.ok) {
+      throw new Error('Post not found');
+    }
+    
+    const post = await response.json();
+    
+    const postContent = document.getElementById('post-content');
+    postContent.innerHTML = `
+      <h1>${post.title}</h1>
+      <div class="post-meta">
+        <time datetime="${post.date}">${formatDate(post.date)}</time>
+        <span class="author">${post.author}</span>
+      </div>
+      ${post.tags && post.tags.length ? `
+        <div class="tags">
+          ${post.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+        </div>
+      ` : ''}
+      <div class="post-body">${post.html}</div>
+    `;
+    
+    // Update page title
+    document.title = `${post.title} | OnHyper Blog`;
+  } catch (err) {
+    const postContent = document.getElementById('post-content');
+    if (postContent) {
+      postContent.innerHTML = `
+        <h1>Post Not Found</h1>
+        <p>The requested blog post could not be loaded.</p>
+        <a href="#/blog" class="back-link">&larr; Back to Blog</a>
+      `;
+    }
+  }
+}
+
+// Format date nicely
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
 }
 
 // Error display
