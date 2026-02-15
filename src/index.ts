@@ -41,7 +41,7 @@ app.get('/health', (c) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     version: '1.0.0',
-    build: '2026-02-15-v8'
+    build: '2026-02-15-v9-nudge'
   });
 });
 
