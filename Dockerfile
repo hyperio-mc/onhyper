@@ -90,4 +90,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:3000/health || exit 1
 
 # Start the single Hono server
-CMD ["node", "backend-dist/index.js"]
+CMD ["node", "backend-dist/index.js"]# Build v1771157869
