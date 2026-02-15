@@ -129,13 +129,21 @@ proxy.all('/:endpoint/*', async (c) => {
     };
     
     // Forward relevant headers (excluding authentication)
-    const forwardHeaders = ['content-type', 'accept', 'accept-encoding', 'accept-language'];
+    // Note: We intentionally do NOT forward 'accept-encoding' because:
+    // 1. Browsers can't set this header (forbidden header)
+    // 2. We need raw responses to return properly to clients
+    // 3. ScoutOS Drive returns gzipped content that causes issues
+    const forwardHeaders = ['content-type', 'accept', 'accept-language'];
     for (const header of forwardHeaders) {
       const value = c.req.header(header);
       if (value) {
         headers[header] = value;
       }
     }
+    
+    // Explicitly request uncompressed content from target API
+    // This ensures we can properly return the response to all clients
+    headers['accept-encoding'] = 'identity';
     
     // Get request body for non-GET requests
     let body: string | undefined;
