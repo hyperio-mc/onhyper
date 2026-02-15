@@ -1,5 +1,6 @@
 import { writable } from 'svelte/store';
 import { browser } from '$app/environment';
+import { identifyUser, resetUser, trackSignup, trackLogin } from '$lib/analytics';
 
 export interface User {
 	id: string;
@@ -19,18 +20,52 @@ function createAuthStore() {
 
 	return {
 		subscribe,
-		login: (user: User, token: string) => {
+		login: (user: User, token: string, options?: { isNewUser?: boolean }) => {
 			const auth = { user, token };
 			if (browser) {
 				localStorage.setItem('auth', JSON.stringify(auth));
 			}
 			set(auth);
+			
+			// Identify user in PostHog
+			identifyUser(user.id, {
+				email: user.email,
+				plan: user.plan,
+			});
+			
+			// Track login event (only if not a new signup)
+			if (!options?.isNewUser) {
+				trackLogin({ email: user.email });
+			}
+		},
+		signup: (user: User, token: string, source?: string) => {
+			const auth = { user, token };
+			if (browser) {
+				localStorage.setItem('auth', JSON.stringify(auth));
+			}
+			set(auth);
+			
+			// Identify user in PostHog
+			identifyUser(user.id, {
+				email: user.email,
+				plan: user.plan,
+			});
+			
+			// Track signup event
+			trackSignup({
+				email: user.email,
+				plan: user.plan,
+				source: source || 'organic',
+			});
 		},
 		logout: () => {
 			if (browser) {
 				localStorage.removeItem('auth');
 			}
 			set({ user: null, token: null });
+			
+			// Reset PostHog user identity
+			resetUser();
 		},
 		updateUser: (user: Partial<User>) => {
 			update(auth => {

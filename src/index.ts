@@ -11,6 +11,7 @@ import { logger } from 'hono/logger';
 import { config } from './config.js';
 import { initDatabase, closeDatabase } from './lib/db.js';
 import { initLMDB, closeLMDB } from './lib/lmdb.js';
+import { shutdownAnalytics } from './lib/analytics.js';
 import { auth } from './routes/auth.js';
 import { secrets } from './routes/secrets.js';
 import { apps } from './routes/apps.js';
@@ -255,6 +256,7 @@ Configuration:
       console.log(`\nReceived ${signal}. Shutting down gracefully...`);
       closeDatabase();
       await closeLMDB();
+      await shutdownAnalytics();
       process.exit(0);
     };
 

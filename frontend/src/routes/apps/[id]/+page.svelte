@@ -4,6 +4,7 @@
 	import Input from '$lib/components/Input.svelte';
 	import Textarea from '$lib/components/Textarea.svelte';
 	import { auth } from '$lib/stores/auth';
+	import { trackAppViewed } from '$lib/analytics';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -30,6 +31,7 @@
 	let deleting = $state(false);
 	let error = $state('');
 	let success = $state('');
+	let trackedView = $state(false);
 
 	onMount(async () => {
 		if (!$auth.user) {
@@ -50,11 +52,21 @@
 				throw new Error('App not found');
 			}
 
-			app = await res.json();
-			name = app.name;
-			html = app.html || '';
-			css = app.css || '';
-			js = app.js || '';
+			const fetchedApp = await res.json() as App;
+			app = fetchedApp;
+			name = fetchedApp.name;
+			html = fetchedApp.html || '';
+			css = fetchedApp.css || '';
+			js = fetchedApp.js || '';
+			
+			// Track app viewed (only once per session)
+			if (!trackedView) {
+				trackAppViewed({
+					appId: fetchedApp.id,
+					appName: fetchedApp.name,
+				});
+				trackedView = true;
+			}
 		} catch (err: any) {
 			error = err.message;
 		} finally {

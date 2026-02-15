@@ -1,7 +1,16 @@
 <script lang="ts">
 	import '../app.css';
+	import { onMount } from 'svelte';
+	import { initAnalytics } from '$lib/analytics';
+	import { page } from '$app/stores';
+	import { browser } from '$app/environment';
 
 	let { children } = $props();
+
+	// Initialize PostHog on mount
+	onMount(() => {
+		initAnalytics();
+	});
 </script>
 
 <svelte:head>
@@ -10,7 +19,7 @@
 	<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%236366f1'/><text x='50' y='65' font-family='system-ui,sans-serif' font-size='48' font-weight='bold' fill='white' text-anchor='middle'>H</text></svg>" />
 	<meta name="theme-color" content="#6366f1" />
 	<link rel="preconnect" href="https://fonts.googleapis.com">
-	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 </svelte:head>
 

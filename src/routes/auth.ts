@@ -12,6 +12,7 @@ import { createUser, authenticateUser, generateToken, verifyToken, getUserById }
 import { strictRateLimit } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
+import { identifyServerUser, trackServerEvent } from '../lib/analytics.js';
 
 const auth = new Hono();
 
@@ -22,7 +23,7 @@ const auth = new Hono();
 auth.post('/signup', strictRateLimit, async (c) => {
   try {
     const body = await c.req.json();
-    const { email, password, plan } = body;
+    const { email, password, plan, source } = body;
     
     if (!email || !password) {
       return c.json({ error: 'Email and password are required' }, 400);
@@ -43,6 +44,20 @@ auth.post('/signup', strictRateLimit, async (c) => {
     
     // Create user
     const user = await createUser(email, password, plan || 'FREE');
+    
+    // Track signup event (server-side)
+    trackServerEvent(user.id, 'signup', {
+      email: user.email,
+      plan: user.plan,
+      source: source || 'organic',
+    });
+    
+    // Identify user in analytics
+    identifyServerUser(user.id, {
+      email: user.email,
+      plan: user.plan,
+      createdAt: user.created_at,
+    });
     
     // Generate JWT
     const token = generateToken(user);
@@ -87,6 +102,11 @@ auth.post('/login', strictRateLimit, async (c) => {
     if (!user) {
       return c.json({ error: 'Invalid email or password' }, 401);
     }
+    
+    // Track login event (server-side)
+    trackServerEvent(user.id, 'login', {
+      email: user.email,
+    });
     
     // Generate JWT
     const token = generateToken(user);

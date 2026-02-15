@@ -11,6 +11,7 @@ import { getSecretValue } from '../lib/secrets.js';
 import { getAppBySlug, getAppById } from '../lib/apps.js';
 import { getApiKeyByKey, getUserById, verifyToken } from '../lib/users.js';
 import { recordUsage } from '../lib/usage.js';
+import { trackProxyRequest } from '../lib/analytics.js';
 
 const proxy = new Hono();
 
@@ -177,6 +178,16 @@ proxy.all('/:endpoint/*', async (c) => {
       duration,
     });
     
+    // Track proxy request in PostHog
+    trackProxyRequest({
+      userId: identity.userId,
+      appId: identity.appId,
+      endpoint,
+      status: response.status,
+      durationMs: duration,
+      success: response.status >= 200 && response.status < 400,
+    });
+    
     // Build response headers (filter sensitive ones)
     const responseHeaders: Record<string, string> = {};
     const allowedResponseHeaders = [
@@ -223,6 +234,16 @@ proxy.all('/:endpoint/*', async (c) => {
       endpoint,
       status: 0,
       duration,
+    });
+    
+    // Track failed proxy request
+    trackProxyRequest({
+      userId: identity.userId,
+      appId: identity.appId,
+      endpoint,
+      status: 0,
+      durationMs: duration,
+      success: false,
     });
     
     if (error instanceof Error) {

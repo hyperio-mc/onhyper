@@ -5,6 +5,7 @@
 	import Select from '$lib/components/Select.svelte';
 	import Input from '$lib/components/Input.svelte';
 	import { auth, type User } from '$lib/stores/auth';
+	import { trackSecretAdded } from '$lib/analytics';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -82,6 +83,10 @@
 			}
 
 			secrets.push(data);
+			
+			// Track secret added
+			trackSecretAdded({ keyName: newSecretName });
+			
 			showAddForm = false;
 			newSecretName = '';
 			newSecretValue = '';

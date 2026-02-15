@@ -4,12 +4,16 @@
 	import Input from '$lib/components/Input.svelte';
 	import { auth } from '$lib/stores/auth';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	let email = $state('');
 	let password = $state('');
 	let confirmPassword = $state('');
 	let loading = $state(false);
 	let error = $state('');
+
+	// Get source from URL params (for tracking)
+	const source = $derived($page.url.searchParams.get('source') || 'organic');
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -31,7 +35,7 @@
 			const res = await fetch('/api/auth/signup', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ email, password })
+				body: JSON.stringify({ email, password, source })
 			});
 
 			const data = await res.json();
@@ -40,7 +44,8 @@
 				throw new Error(data.error || 'Signup failed');
 			}
 
-			auth.login(data.user, data.token);
+			// Use signup method which tracks the event
+			auth.signup(data.user, data.token, source);
 			goto('/dashboard');
 		} catch (err: any) {
 			error = err.message;

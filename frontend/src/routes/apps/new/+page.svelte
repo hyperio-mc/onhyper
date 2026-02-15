@@ -4,6 +4,7 @@
 	import Input from '$lib/components/Input.svelte';
 	import Textarea from '$lib/components/Textarea.svelte';
 	import { auth } from '$lib/stores/auth';
+	import { trackAppCreated } from '$lib/analytics';
 	import { goto } from '$app/navigation';
 	import { onMount } from 'svelte';
 
@@ -34,6 +35,12 @@
 			if (!res.ok) {
 				throw new Error(data.error || 'Failed to create app');
 			}
+
+			// Track app creation
+			trackAppCreated({
+				appId: data.id,
+				appName: name,
+			});
 
 			goto(`/apps/${data.id}`);
 		} catch (err: any) {
