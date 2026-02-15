@@ -4,34 +4,34 @@
 
 	const features = [
 		{
+			icon: '🤖',
+			title: 'Agent Publishing API',
+			desc: 'Full REST API for autonomous app publishing. Let your AI agent ship code without you.'
+		},
+		{
 			icon: '🔐',
-			title: 'Secure API Proxy',
-			desc: 'Store API keys server-side. Call any API from your app without exposing secrets.'
+			title: 'Secure by Default',
+			desc: 'API keys stay server-side. Agents authenticate with scoped tokens — no secrets exposed.'
 		},
 		{
 			icon: '⚡',
-			title: 'Instant Publishing',
-			desc: 'Push HTML/CSS/JS and get a live URL in seconds. No servers to manage.'
+			title: 'Instant Deployment',
+			desc: 'Push code, get a live URL in seconds. No servers, no CI/CD, no DevOps.'
 		},
 		{
-			icon: '🤖',
-			title: 'Built for AI Agents',
-			desc: 'Programmatic API for autonomous publishing. Perfect for AI-generated apps.'
+			icon: '🔄',
+			title: 'Draft & Approve',
+			desc: 'Review apps before they go live. Draft mode + approval workflows for control.'
 		},
 		{
 			icon: '🌐',
 			title: 'CORS Handled',
-			desc: 'Your apps can call external APIs through our proxy. No CORS headaches.'
+			desc: 'Your apps call APIs through our proxy. No browser CORS headaches.'
 		},
 		{
 			icon: '📊',
 			title: 'Usage Tracking',
-			desc: 'Monitor requests per app. Stay within your plan limits.'
-		},
-		{
-			icon: '🚀',
-			title: 'Multiple Endpoints',
-			desc: 'Pre-configured proxy routes for OpenAI, Anthropic, Ollama, and more.'
+			desc: 'Monitor requests per app. Know exactly what your agents are doing.'
 		}
 	];
 
@@ -85,32 +85,49 @@
 		{ icon: '📊', title: 'Data Viz', desc: 'Charts, reports, real-time displays' }
 	];
 
-	const metrics = [
-		{ value: '500+', label: 'APIs Protected' },
-		{ value: '1,200+', label: 'Apps Published' },
-		{ value: '50M+', label: 'API Calls Proxied' }
+	const faqs = [
+		{
+			question: 'Can AI agents publish apps programmatically?',
+			answer: 'Yes — our full REST API supports autonomous publishing. Your agent can create, update, and deploy apps without human intervention. Just give it a scoped API token.'
+		},
+		{
+			question: 'How do agents authenticate without exposing keys?',
+			answer: 'Agents use scoped API tokens (OAuth-style). These tokens can be limited to specific actions — like "publish apps" or "read usage" — without exposing your actual API keys. Your OpenAI, Anthropic, and other secrets stay encrypted server-side.'
+		},
+		{
+			question: 'What\'s the difference from Vercel/Netlify?',
+			answer: 'They\'re built for humans deploying code. We\'re built for agents publishing apps. Our API-first approach, proxy infrastructure, and approval workflows are designed specifically for AI-driven development workflows.'
+		},
+		{
+			question: 'Can I review apps before they go live?',
+			answer: 'Absolutely. Draft mode lets agents create apps without publishing. Set up approval workflows so you can review, edit, or reject before anything hits production.'
+		},
+		{
+			question: 'What APIs can agents call?',
+			answer: 'OpenAI, Anthropic, OpenRouter, Scout Atoms, Ollama, and any custom endpoint you configure. We handle CORS, rate limiting, and secret injection automatically.'
+		}
 	];
 </script>
 
 <svelte:head>
-	<title>OnHyper — Ship Frontend Apps Without Leaking API Keys</title>
-	<meta name="description" content="Secure proxy platform for frontend developers. Call OpenAI, Anthropic, and other APIs without exposing secrets to the browser. Deploy in minutes." />
-	<meta name="keywords" content="API proxy, frontend security, hide API keys, OpenAI proxy, Anthropic proxy, secure API calls, static site API, AI app hosting" />
+	<title>OnHyper — Where Agents Ship Code</title>
+	<meta name="description" content="Publish apps your AI agent creates. Secure API proxy for agent-driven development. OpenAI, Anthropic, and more — without exposing secrets." />
+	<meta name="keywords" content="AI agent publishing, API proxy, frontend security, hide API keys, OpenAI proxy, Anthropic proxy, agent deployment, AI app hosting" />
 	<link rel="canonical" href="https://onhyper.io/" />
 	
 	<!-- Open Graph / Facebook -->
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://onhyper.io/" />
-	<meta property="og:title" content="OnHyper — Ship Frontend Apps Without Leaking API Keys" />
-	<meta property="og:description" content="Secure proxy platform for frontend developers. Call APIs without exposing secrets. Deploy in minutes." />
+	<meta property="og:title" content="OnHyper — Where Agents Ship Code" />
+	<meta property="og:description" content="Publish apps your AI agent creates. Secure proxy for agent-driven development." />
 	<meta property="og:image" content="https://onhyper.io/og-image.png" />
 	<meta property="og:site_name" content="OnHyper" />
 	
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta name="twitter:url" content="https://onhyper.io/" />
-	<meta name="twitter:title" content="OnHyper — Ship Frontend Apps Without Leaking API Keys" />
-	<meta name="twitter:description" content="Secure proxy platform for frontend developers. Call APIs without exposing secrets." />
+	<meta name="twitter:title" content="OnHyper — Where Agents Ship Code" />
+	<meta name="twitter:description" content="Publish apps your AI agent creates. Secure proxy for agent-driven development." />
 	<meta name="twitter:image" content="https://onhyper.io/og-image.png" />
 </svelte:head>
 
@@ -124,22 +141,23 @@
 	
 	<div class="relative max-w-4xl mx-auto">
 		<div class="inline-flex items-center gap-2 text-sm font-semibold text-accent uppercase tracking-wide mb-6 bg-accent/10 px-4 py-2 rounded-full">
-			<span>🔐</span>
+			<span>🚀</span>
 			<span>Now in Public Beta</span>
 		</div>
 		
 		<h1 class="text-4xl md:text-6xl lg:text-7xl font-extrabold leading-tight mb-6 tracking-tight">
-			Ship frontend apps with<br>
+			Where agents<br>
 			<span class="bg-gradient-to-r from-accent to-cyan-500 bg-clip-text text-transparent">
-				zero leaked API keys
+				ship code
 			</span>
 		</h1>
 		
-		<p class="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-4 leading-relaxed">
-			Store API keys server-side. Publish apps with HTML/CSS/JS.
+		<p class="text-lg md:text-xl text-text-secondary max-w-2xl mx-auto mb-10 leading-relaxed">
+			Publish apps your AI agent creates. We handle security, so your agent can ship without leaking secrets.
 		</p>
-		<p class="text-base md:text-lg text-text-muted max-w-xl mx-auto mb-10">
-			We inject your secrets securely — no backend required.
+		
+		<p class="text-sm text-text-muted mb-10">
+			Built for developers who let agents ship their apps.
 		</p>
 		
 		<div class="flex flex-wrap items-center justify-center gap-4 mb-12">
@@ -147,11 +165,11 @@
 				Start Free →
 			</Button>
 			<Button href="/docs" variant="secondary" size="lg">
-				View Docs
+				API Docs
 			</Button>
 		</div>
 		
-		<!-- Code Example Window -->
+		<!-- Code Example Window - Agent Publishing -->
 		<div class="max-w-3xl mx-auto">
 			<div class="bg-[#0d1117] rounded-xl border border-white/10 overflow-hidden shadow-2xl shadow-black/20">
 				<!-- Window header -->
@@ -159,38 +177,33 @@
 					<div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
 					<div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
 					<div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
-					<span class="ml-3 text-xs text-gray-500 font-mono">app.js</span>
+					<span class="ml-3 text-xs text-gray-500 font-mono">agent-action.js</span>
 				</div>
 				
 				<!-- Code content -->
 				<div class="p-6 text-left">
-					<pre class="text-sm font-mono leading-relaxed overflow-x-auto"><code><span class="text-gray-500">// Your app just calls the proxy — no secrets needed!</span>
-<span class="text-cyan-400">const</span> <span class="text-white">res</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-yellow-300">fetch</span><span class="text-gray-300">(</span><span class="text-green-400">"/proxy/openai/v1/chat/completions"</span><span class="text-gray-300">, &#123;</span>
+					<pre class="text-sm font-mono leading-relaxed overflow-x-auto"><code><span class="text-gray-500">// Your AI agent publishes an app via our API</span>
+<span class="text-cyan-400">const</span> <span class="text-white">response</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-yellow-300">fetch</span><span class="text-gray-300">(</span><span class="text-green-400">"https://api.onhyper.io/v1/apps"</span><span class="text-gray-300">, &#123;</span>
   <span class="text-orange-300">method</span><span class="text-gray-300">:</span> <span class="text-green-400">"POST"</span><span class="text-gray-300">,</span>
-  <span class="text-orange-300">headers</span><span class="text-gray-300">: &#123;</span> <span class="text-green-400">"Content-Type"</span><span class="text-gray-300">:</span> <span class="text-green-400">"application/json"</span> <span class="text-gray-300">&#125;,</span>
+  <span class="text-orange-300">headers</span><span class="text-gray-300">: &#123;</span>
+    <span class="text-green-400">"Authorization"</span><span class="text-gray-300">:</span> <span class="text-green-400">"Bearer {AGENT_TOKEN}"</span><span class="text-gray-300">,</span>
+    <span class="text-green-400">"Content-Type"</span><span class="text-gray-300">:</span> <span class="text-green-400">"application/json"</span>
+  <span class="text-gray-300">&#125;,</span>
   <span class="text-orange-300">body</span><span class="text-gray-300">:</span> <span class="text-yellow-300">JSON</span><span class="text-gray-300">.</span><span class="text-yellow-300">stringify</span><span class="text-gray-300">(&#123;</span>
-    <span class="text-orange-300">model</span><span class="text-gray-300">:</span> <span class="text-green-400">"gpt-4"</span><span class="text-gray-300">,</span>
-    <span class="text-orange-300">messages</span><span class="text-gray-300">:</span> <span class="text-gray-300">[&#123;</span> <span class="text-orange-300">role</span><span class="text-gray-300">:</span> <span class="text-green-400">"user"</span><span class="text-gray-300">,</span> <span class="text-orange-300">content</span><span class="text-gray-300">:</span> <span class="text-green-400">"Hello!"</span> <span class="text-gray-300">&#125;]</span>
+    <span class="text-orange-300">name</span><span class="text-gray-300">:</span> <span class="text-green-400">"my-ai-tool"</span><span class="text-gray-300">,</span>
+    <span class="text-orange-300">files</span><span class="text-gray-300">: &#123;</span>
+      <span class="text-green-400">"index.html"</span><span="text-gray-300">:</span> <span class="text-green-400">"&lt;html&gt;...&lt;/html&gt;"</span><span class="text-gray-300">,</span>
+      <span class="text-green-400">"app.js"</span><span class="text-gray-300">:</span> <span class="text-green-400">"// Agent-generated code"</span>
+    <span class="text-gray-300">&#125;,</span>
+    <span class="text-orange-300">publish</span><span class="text-gray-300">:</span> <span class="text-cyan-400">true</span>
   <span class="text-gray-300">&#125;)</span>
 <span class="text-gray-300">&#125;);</span>
 
-<span class="text-gray-500">// ↑ We inject your API key securely on the server</span></code></pre>
+<span class="text-cyan-400">const</span> <span class="text-white">app</span> <span class="text-gray-300">=</span> <span class="text-cyan-400">await</span> <span class="text-white">response</span><span class="text-gray-300">.</span><span class="text-yellow-300">json</span><span class="text-gray-300">();</span>
+<span class="text-gray-500">// → app.url: "https://my-ai-tool.onhyper.live"</span>
+<span class="text-gray-500">// Agent shipped it. You didn't touch a thing.</span></code></pre>
 				</div>
 			</div>
-		</div>
-	</div>
-</section>
-
-<!-- Social Proof: Metrics -->
-<section class="py-16 px-6 bg-surface-alt border-y border-border">
-	<div class="max-w-5xl mx-auto">
-		<div class="grid grid-cols-3 gap-8 text-center">
-			{#each metrics as metric}
-				<div>
-					<div class="text-3xl md:text-4xl font-extrabold text-accent mb-1">{metric.value}</div>
-					<div class="text-sm text-text-muted">{metric.label}</div>
-				</div>
-			{/each}
 		</div>
 	</div>
 </section>
@@ -200,47 +213,39 @@
 	<div class="max-w-5xl mx-auto">
 		<h2 class="text-3xl font-bold text-center mb-4">How It Works</h2>
 		<p class="text-text-secondary text-center mb-12 max-w-xl mx-auto">
-			Get started in minutes. No complex setup required.
+			Your agent writes code → We validate & secure → Published instantly.
 		</p>
 		
-		<div class="grid md:grid-cols-4 gap-8">
+		<div class="grid md:grid-cols-3 gap-8">
 			<div class="text-center">
 				<div class="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-accent/20">
-					<span class="text-2xl">🔑</span>
+					<span class="text-2xl">🤖</span>
 				</div>
-				<div class="text-sm font-bold text-accent mb-1">Step 1</div>
-				<h3 class="text-lg font-semibold mb-2">Add Your Keys</h3>
-				<p class="text-text-secondary text-sm">Store API keys securely in our vault. Encrypted, never exposed.</p>
+				<div class="text-sm font-bold text-accent mb-1">1</div>
+				<h3 class="text-lg font-semibold mb-2">Agent Writes Code</h3>
+				<p class="text-text-secondary text-sm">Your AI agent generates HTML, CSS, JS. It calls our API with a scoped token to publish.</p>
 			</div>
 			<div class="text-center">
 				<div class="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-accent/20">
-					<span class="text-2xl">📝</span>
+					<span class="text-2xl">🔐</span>
 				</div>
-				<div class="text-sm font-bold text-accent mb-1">Step 2</div>
-				<h3 class="text-lg font-semibold mb-2">Write Your App</h3>
-				<p class="text-text-secondary text-sm">HTML, CSS, JS — any framework. Call /proxy/:endpoint directly.</p>
-			</div>
-			<div class="text-center">
-				<div class="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-accent/20">
-					<span class="text-2xl">🔄</span>
-				</div>
-				<div class="text-sm font-bold text-accent mb-1">Step 3</div>
-				<h3 class="text-lg font-semibold mb-2">We Proxy & Inject</h3>
-				<p class="text-text-secondary text-sm">Your request hits our server. We add your key, forward to API.</p>
+				<div class="text-sm font-bold text-accent mb-1">2</div>
+				<h3 class="text-lg font-semibold mb-2">We Validate & Secure</h3>
+				<p class="text-text-secondary text-sm">Server-side key injection, CORS handling, draft mode approval if you want oversight.</p>
 			</div>
 			<div class="text-center">
 				<div class="w-14 h-14 bg-accent/10 rounded-2xl flex items-center justify-center mx-auto mb-4 ring-1 ring-accent/20">
 					<span class="text-2xl">🚀</span>
 				</div>
-				<div class="text-sm font-bold text-accent mb-1">Step 4</div>
-				<h3 class="text-lg font-semibold mb-2">Publish Instantly</h3>
-				<p class="text-text-secondary text-sm">One click to live. Hosted, secured, and scaled automatically.</p>
+				<div class="text-sm font-bold text-accent mb-1">3</div>
+				<h3 class="text-lg font-semibold mb-2">Published Instantly</h3>
+				<p class="text-text-secondary text-sm">Live URL in seconds. Hosted, secured, and ready to call any API your app needs.</p>
 			</div>
 		</div>
 		
 		<div class="text-center mt-12">
 			<Button href="/signup" variant="secondary">
-				Get Started in 2 Minutes →
+				Let Your Agent Ship →
 			</Button>
 		</div>
 	</div>
@@ -249,7 +254,7 @@
 <!-- Use Cases -->
 <section class="py-20 px-6 bg-surface-alt">
 	<div class="max-w-5xl mx-auto">
-		<h2 class="text-3xl font-bold text-center mb-4">Built for Developers</h2>
+		<h2 class="text-3xl font-bold text-center mb-4">Built for Developer Agents</h2>
 		<p class="text-text-secondary text-center mb-12 max-w-xl mx-auto">
 			Power any app that needs secure API access.
 		</p>
@@ -269,9 +274,9 @@
 <!-- Features -->
 <section class="py-20 px-6 bg-surface">
 	<div class="max-w-6xl mx-auto">
-		<h2 class="text-3xl font-bold text-center mb-4">Everything You Need</h2>
+		<h2 class="text-3xl font-bold text-center mb-4">Everything Your Agent Needs</h2>
 		<p class="text-text-secondary text-center mb-12 max-w-xl mx-auto">
-			All the tools to ship secure frontend apps.
+			Built from the ground up for agent-driven development.
 		</p>
 		
 		<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -296,7 +301,7 @@
 <section id="pricing" class="py-20 px-6 bg-surface-alt">
 	<div class="max-w-6xl mx-auto">
 		<h2 class="text-3xl font-bold text-center mb-4">Simple, Transparent Pricing</h2>
-		<p class="text-text-secondary text-center mb-12">Start free, scale as you grow. No hidden fees.</p>
+		<p class="text-text-secondary text-center mb-12">Start free, scale as your agents ship more. No hidden fees.</p>
 		
 		<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
 			{#each plans as plan}
@@ -338,24 +343,44 @@
 	</div>
 </section>
 
+<!-- FAQ -->
+<section class="py-20 px-6 bg-surface">
+	<div class="max-w-3xl mx-auto">
+		<h2 class="text-3xl font-bold text-center mb-4">Frequently Asked Questions</h2>
+		<p class="text-text-secondary text-center mb-12">Common questions from agent developers.</p>
+		
+		<div class="space-y-6">
+			{#each faqs as faq}
+				<div class="bg-surface-alt rounded-xl p-6 border border-border">
+					<h3 class="text-lg font-semibold mb-3">{faq.question}</h3>
+					<p class="text-text-secondary">{faq.answer}</p>
+				</div>
+			{/each}
+		</div>
+	</div>
+</section>
+
 <!-- Final CTA -->
 <section class="py-20 px-6 bg-gradient-to-br from-accent/10 via-surface to-cyan-500/5">
 	<div class="max-w-3xl mx-auto text-center">
 		<h2 class="text-3xl md:text-4xl font-bold mb-4">
-			Ready to ship without the leaks?
+			Ready to let your agent ship?
 		</h2>
 		<p class="text-text-secondary mb-8 max-w-lg mx-auto">
-			Join hundreds of developers shipping secure frontend apps. 
-			Start free in under 2 minutes.
+			Join the developers who've stopped manually deploying. 
+			Your AI agent ships — OnHyper secures.
 		</p>
 		<div class="flex flex-wrap items-center justify-center gap-4">
 			<Button href="/signup" size="lg">
 				Start Free →
 			</Button>
 			<Button href="/docs" variant="secondary" size="lg">
-				View Docs
+				API Docs
 			</Button>
 		</div>
+		<p class="text-text-muted text-sm mt-6">
+			Free tier forever. No credit card required.
+		</p>
 	</div>
 </section>
 
@@ -371,7 +396,7 @@
 					<span class="font-bold text-xl text-text">OnHyper</span>
 				</div>
 				<p class="text-text-muted text-sm">
-					Ship frontend apps without leaking API keys.
+					Where agents ship code.
 				</p>
 			</div>
 			<div>
