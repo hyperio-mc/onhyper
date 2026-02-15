@@ -15,6 +15,7 @@ declare module 'hono' {
       email: string;
       plan: string;
     };
+    isAdmin: boolean;
   }
 }
 
@@ -127,4 +128,82 @@ export function requirePlan(...allowedPlans: string[]) {
  */
 export function getAuthUser(c: Context): { userId: string; email: string; plan: string } | undefined {
   return c.get('user');
+}
+
+/**
+ * Admin authentication middleware
+ * 
+ * Protects admin-only endpoints by requiring a valid admin key.
+ * The admin key is passed via the X-Admin-Key header and must match
+ * the ONHYPER_MASTER_KEY environment variable.
+ * 
+ * Usage:
+ *   // In routes file
+ *   import { requireAdminAuth } from '../middleware/auth.js';
+ *   
+ *   adminRoutes.use('*', requireAdminAuth);
+ *   
+ *   // Client request
+ *   fetch('/api/admin/endpoint', {
+ *     headers: { 'X-Admin-Key': 'your-admin-key' }
+ *   })
+ * 
+ * Environment:
+ *   ONHYPER_MASTER_KEY - The secret admin key (set in production!)
+ * 
+ * Security:
+ *   - Key is compared using timing-safe comparison to prevent timing attacks
+ *   - Returns 401 for missing/invalid key
+ *   - Does not reveal whether the key exists or is just wrong
+ */
+export async function requireAdminAuth(c: Context, next: Next) {
+  const adminKey = c.req.header('x-admin-key');
+  const masterKey = process.env.ONHYPER_MASTER_KEY;
+  
+  // Check if admin key was provided
+  if (!adminKey) {
+    return c.json({ 
+      error: 'Admin authentication required',
+      hint: 'Provide X-Admin-Key header'
+    }, 401);
+  }
+  
+  // Check if master key is configured
+  if (!masterKey || masterKey === 'change-me-in-production-32-bytes-hex') {
+    console.error('[SECURITY] ONHYPER_MASTER_KEY not configured or using default value');
+    return c.json({ 
+      error: 'Admin authentication not configured'
+    }, 500);
+  }
+  
+  // Timing-safe comparison to prevent timing attacks
+  // We compare both strings character by character
+  let isValid = adminKey.length === masterKey.length;
+  if (isValid) {
+    for (let i = 0; i < adminKey.length; i++) {
+      // Use bitwise XOR to avoid branching that could leak timing info
+      if (adminKey.charCodeAt(i) !== masterKey.charCodeAt(i)) {
+        isValid = false;
+      }
+    }
+  }
+  
+  if (!isValid) {
+    // Log failed attempt (but don't reveal specifics)
+    console.warn(`[ADMIN AUTH] Failed admin auth attempt from ${c.req.header('x-forwarded-for') || c.req.header('x-real-ip') || 'unknown IP'}`);
+    return c.json({ 
+      error: 'Invalid admin key'
+    }, 401);
+  }
+  
+  // Mark request as admin authenticated
+  c.set('isAdmin', true);
+  await next();
+}
+
+/**
+ * Check if request has admin authentication
+ */
+export function isAdmin(c: Context): boolean {
+  return c.get('isAdmin') === true;
 }

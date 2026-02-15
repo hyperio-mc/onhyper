@@ -2,10 +2,16 @@
  * Waitlist Routes for OnHyper.io
  * 
  * Handles waitlist applications, position tracking, and referrals
+ * 
+ * Admin routes (under /admin/*) are protected by requireAdminAuth middleware.
+ * These routes require the X-Admin-Key header to match ONHYPER_MASTER_KEY env var.
+ * 
+ * @see src/middleware/auth.ts - requireAdminAuth implementation
  */
 
 import { Hono } from 'hono';
 import { getDatabase, type WaitlistEntry, type WaitlistReferral, type InviteCode } from '../lib/db.js';
+import { requireAdminAuth } from '../middleware/auth.js';
 import { randomUUID } from 'crypto';
 
 export const waitlist = new Hono();
@@ -493,11 +499,17 @@ waitlist.get('/stats', async (c) => {
 });
 
 // ============ ADMIN ROUTES ============
+// All admin routes require X-Admin-Key header authentication
+// See requireAdminAuth middleware for implementation details
+
+const adminRoutes = new Hono();
+adminRoutes.use('*', requireAdminAuth);
 
 /**
  * GET /api/waitlist/admin/pending - List pending applications
+ * Requires: X-Admin-Key header
  */
-waitlist.get('/admin/pending', async (c) => {
+adminRoutes.get('/pending', async (c) => {
   try {
     const db = getDatabase();
     const page = parseInt(c.req.query('page') || '1');
@@ -538,8 +550,9 @@ waitlist.get('/admin/pending', async (c) => {
 
 /**
  * GET /api/waitlist/admin/all - List all applications
+ * Requires: X-Admin-Key header
  */
-waitlist.get('/admin/all', async (c) => {
+adminRoutes.get('/all', async (c) => {
   try {
     const db = getDatabase();
     const status = c.req.query('status');
@@ -593,8 +606,9 @@ waitlist.get('/admin/all', async (c) => {
 
 /**
  * POST /api/waitlist/admin/:id/approve - Approve an application
+ * Requires: X-Admin-Key header
  */
-waitlist.post('/admin/:id/approve', async (c) => {
+adminRoutes.post('/:id/approve', async (c) => {
   try {
     const id = c.req.param('id');
     const db = getDatabase();
@@ -627,8 +641,9 @@ waitlist.post('/admin/:id/approve', async (c) => {
 
 /**
  * POST /api/waitlist/admin/:id/reject - Reject an application
+ * Requires: X-Admin-Key header
  */
-waitlist.post('/admin/:id/reject', async (c) => {
+adminRoutes.post('/:id/reject', async (c) => {
   try {
     const id = c.req.param('id');
     const db = getDatabase();
@@ -654,8 +669,9 @@ waitlist.post('/admin/:id/reject', async (c) => {
 
 /**
  * POST /api/waitlist/admin/generate-invites - Generate invite codes
+ * Requires: X-Admin-Key header
  */
-waitlist.post('/admin/generate-invites', async (c) => {
+adminRoutes.post('/generate-invites', async (c) => {
   try {
     const body = await c.req.json();
     const { count = 5, tier = 'access', createdBy = null } = body;
@@ -686,8 +702,9 @@ waitlist.post('/admin/generate-invites', async (c) => {
 
 /**
  * GET /api/waitlist/admin/invites - List invite codes
+ * Requires: X-Admin-Key header
  */
-waitlist.get('/admin/invites', async (c) => {
+adminRoutes.get('/invites', async (c) => {
   try {
     const db = getDatabase();
     const unusedOnly = c.req.query('unused') === 'true';
@@ -707,3 +724,6 @@ waitlist.get('/admin/invites', async (c) => {
     return c.json({ error: 'Failed to list invite codes' }, 500);
   }
 });
+
+// Mount admin routes under /admin
+waitlist.route('/admin', adminRoutes);
