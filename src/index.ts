@@ -2,12 +2,14 @@
  * OnHyper.io - Secure Proxy Service for API-Backed Web Apps
  * 
  * Main entry point for the server.
+ * Serves the SvelteKit frontend as static files alongside API routes.
  */
 
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { config } from './config.js';
 import { initDatabase, closeDatabase } from './lib/db.js';
 import { initLMDB, closeLMDB } from './lib/lmdb.js';
@@ -111,102 +113,18 @@ app.route('/a', render);
 // Unsubscribe routes (public)
 app.route('/unsubscribe', unsubscribe);
 
-// Landing page
-app.get('/', (c) => {
-  return c.html(`
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>OnHyper.io - Publish Secure API-Backed Apps</title>
-      <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body {
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-          line-height: 1.6;
-          color: #333;
-          max-width: 800px;
-          margin: 0 auto;
-          padding: 40px 20px;
-        }
-        h1 { font-size: 2.5rem; margin-bottom: 0.5rem; color: #0066cc; }
-        h2 { font-size: 1.5rem; margin: 2rem 0 1rem; }
-        p { margin-bottom: 1rem; }
-        code {
-          background: #f4f4f4;
-          padding: 2px 6px;
-          border-radius: 4px;
-          font-family: 'Monaco', 'Menlo', monospace;
-          font-size: 0.9em;
-        }
-        pre {
-          background: #f4f4f4;
-          padding: 16px;
-          border-radius: 8px;
-          overflow-x: auto;
-          margin: 1rem 0;
-        }
-        pre code { background: none; padding: 0; }
-        .endpoint {
-          display: inline-block;
-          background: #e8f4ff;
-          color: #0066cc;
-          padding: 2px 8px;
-          border-radius: 4px;
-          font-weight: 600;
-        }
-        ul { padding-left: 1.5rem; margin-bottom: 1rem; }
-        li { margin-bottom: 0.5rem; }
-      </style>
-    </head>
-    <body>
-      <h1>OnHyper.io</h1>
-      <p><strong>Publish apps that call APIs securely.</strong></p>
-      
-      <p>OnHyper.io is a platform for publishing full-stack applications that require secure backend functionality. It enables developers to publish web apps that can safely call external APIs without exposing secrets to the browser.</p>
-      
-      <h2>How It Works</h2>
-      <ol>
-        <li>Add your API keys securely in the dashboard</li>
-        <li>Create an app with HTML, CSS, and JS</li>
-        <li>Call <code>/proxy/:endpoint</code> from your app</li>
-        <li>We inject your API keys server-side</li>
-      </ol>
-      
-      <h2>Available Proxy Endpoints</h2>
-      <ul>
-        <li><code>/proxy/scout-atoms</code> - Scout OS Atoms API</li>
-        <li><code>/proxy/ollama</code> - Ollama API</li>
-        <li><code>/proxy/openrouter</code> - OpenRouter API</li>
-        <li><code>/proxy/anthropic</code> - Anthropic API</li>
-        <li><code>/proxy/openai</code> - OpenAI API</li>
-      </ul>
-      
-      <h2>Quick Start</h2>
-      <pre><code># Create an account
-curl -X POST https://onhyper.io/api/auth/signup \\
-  -H "Content-Type: application/json" \\
-  -d '{"email":"you@example.com","password":"your-password"}'
+// Serve SvelteKit frontend static files
+// This serves the built frontend from the 'frontend-build' directory
+app.use('/*', serveStatic({
+  root: './frontend-build',
+}));
 
-# Add an API key
-curl -X POST https://onhyper.io/api/secrets \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"name":"OPENAI_API_KEY","value":"sk-..."}'
-
-# Create an app
-curl -X POST https://onhyper.io/api/apps \\
-  -H "Authorization: Bearer YOUR_TOKEN" \\
-  -H "Content-Type: application/json" \\
-  -d '{"name":"My App","html":"<h1>Hello!</h1>"}'</code></pre>
-      
-      <h2>API Reference</h2>
-      <p>See <a href="/api">/api</a> for full API documentation.</p>
-    </body>
-    </html>
-  `);
-});
+// Fallback to index.html for SPA routes (client-side routing)
+// This handles cases like /dashboard, /apps, etc. that don't have physical files
+app.get('*', serveStatic({
+  root: './frontend-build',
+  path: './index.html',
+}));
 
 // 404 handler
 app.notFound((c) => {
@@ -247,10 +165,10 @@ async function main() {
 ║                                                               ║
 ╚═══════════════════════════════════════════════════════════════╝
 
-Server running at http://${info.address}:${info.port}
+Server running at http://${info.address}:${info.port} (single server mode)
 
 Endpoints:
-  GET  /                - Landing page
+  GET  /                - Landing page (SvelteKit frontend)
   GET  /api             - API documentation
   POST /api/auth/signup - Create account
   POST /api/auth/login  - Get JWT token
@@ -258,6 +176,8 @@ Endpoints:
   GET  /proxy           - List proxy endpoints
   ALL  /proxy/:ep/*     - Proxy to external API
   GET  /a/:slug         - Render published app
+
+Frontend files served from: ./frontend-build
 
 Configuration:
   Database: ${config.sqlitePath}
