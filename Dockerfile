@@ -1,6 +1,7 @@
 # OnHyper.io - Two-Server Railway Deployment
 # SvelteKit frontend (adapter-node) + Hono backend
 # Frontend runs on port 3000, proxies to backend on port 3001
+# v2: Rebuild
 
 # ----------------------------------------------------------------
 # Stage 1: Build the frontend (SvelteKit with adapter-node)
