@@ -559,6 +559,15 @@ function sendChatMessage() {
   messageCount++;
   localStorage.setItem('chat_message_count', messageCount.toString());
   
+  // Track message sent in PostHog
+  if (window.posthog) {
+    posthog.capture('chat_message_sent_client', {
+      session_id: chatSessionId,
+      message_count: messageCount,
+      message_length: text.length
+    });
+  }
+  
   // Show typing indicator
   showTypingIndicator();
   
@@ -593,6 +602,15 @@ function sendChatMessage() {
     
     addChatMessage('assistant', responseText);
     saveChatHistory();
+    
+    // Track response received in PostHog
+    if (window.posthog) {
+      posthog.capture('chat_response_received', {
+        session_id: chatSessionId,
+        message_count: messageCount,
+        response_length: responseText.length
+      });
+    }
     
     // Check for lead capture
     checkLeadCapture();
@@ -718,6 +736,16 @@ async function submitLeadCapture() {
     });
     
     localStorage.setItem('chat_lead_captured', 'true');
+    
+    // Track lead captured in PostHog
+    if (window.posthog) {
+      posthog.capture('chat_lead_captured_client', {
+        session_id: chatSessionId,
+        message_count: messageCount
+      });
+      // Identify user with email
+      posthog.identify(chatSessionId, { email });
+    }
     
     // Show success message
     const leadForm = document.querySelector('.lead-capture');
