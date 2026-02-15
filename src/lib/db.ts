@@ -147,6 +147,85 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_usage_app ON usage(app_id);
     CREATE INDEX IF NOT EXISTS idx_usage_created ON usage(created_at);
   `);
+
+  // Waitlist entries
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS waitlist_entries (
+      id TEXT PRIMARY KEY,
+      email TEXT UNIQUE NOT NULL,
+      name TEXT,
+      referral_code TEXT UNIQUE NOT NULL,
+      
+      -- Qualification answers
+      question_what_building TEXT NOT NULL,
+      question_project_link TEXT,
+      question_apis_used TEXT,
+      question_referral_source TEXT DEFAULT '',
+      
+      -- Scoring
+      auto_score INTEGER DEFAULT 0,
+      manual_score INTEGER,
+      final_score INTEGER,
+      
+      -- Status
+      status TEXT DEFAULT 'pending',
+      
+      -- Position tracking
+      position INTEGER,
+      referral_count INTEGER DEFAULT 0,
+      position_boost INTEGER DEFAULT 0,
+      referred_by TEXT,
+      
+      -- Timestamps
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      approved_at DATETIME,
+      rejected_at DATETIME,
+      
+      FOREIGN KEY (referred_by) REFERENCES waitlist_entries(id)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_waitlist_email ON waitlist_entries(email);
+    CREATE INDEX IF NOT EXISTS idx_waitlist_status ON waitlist_entries(status);
+    CREATE INDEX IF NOT EXISTS idx_waitlist_position ON waitlist_entries(position);
+    CREATE INDEX IF NOT EXISTS idx_waitlist_referral_code ON waitlist_entries(referral_code);
+  `);
+
+  // Waitlist referrals
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS waitlist_referrals (
+      id TEXT PRIMARY KEY,
+      referrer_id TEXT NOT NULL,
+      referral_email TEXT NOT NULL,
+      position_boost INTEGER DEFAULT 10,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      
+      FOREIGN KEY (referrer_id) REFERENCES waitlist_entries(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_referrals_referrer ON waitlist_referrals(referrer_id);
+    CREATE INDEX IF NOT EXISTS idx_referrals_email ON waitlist_referrals(referral_email);
+  `);
+
+  // Invite codes
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS invite_codes (
+      id TEXT PRIMARY KEY,
+      code TEXT UNIQUE NOT NULL,
+      tier TEXT NOT NULL DEFAULT 'access',
+      created_by TEXT,
+      used_by TEXT,
+      is_used INTEGER DEFAULT 0,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      used_at DATETIME,
+      
+      FOREIGN KEY (created_by) REFERENCES waitlist_entries(id) ON DELETE SET NULL,
+      FOREIGN KEY (used_by) REFERENCES waitlist_entries(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
+    CREATE INDEX IF NOT EXISTS idx_invite_codes_tier ON invite_codes(tier);
+  `);
 }
 
 // Type exports
@@ -198,4 +277,46 @@ export interface UsageRecord {
   status: number | null;
   duration: number | null;
   created_at: string;
+}
+
+export interface WaitlistEntry {
+  id: string;
+  email: string;
+  name: string | null;
+  referral_code: string;
+  question_what_building: string;
+  question_project_link: string | null;
+  question_apis_used: string | null;
+  question_referral_source: string;
+  auto_score: number;
+  manual_score: number | null;
+  final_score: number | null;
+  status: 'pending' | 'approved' | 'rejected';
+  position: number | null;
+  referral_count: number;
+  position_boost: number;
+  referred_by: string | null;
+  created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  rejected_at: string | null;
+}
+
+export interface WaitlistReferral {
+  id: string;
+  referrer_id: string;
+  referral_email: string;
+  position_boost: number;
+  created_at: string;
+}
+
+export interface InviteCode {
+  id: string;
+  code: string;
+  tier: 'founding' | 'early' | 'access';
+  created_by: string | null;
+  used_by: string | null;
+  is_used: number;
+  created_at: string;
+  used_at: string | null;
 }

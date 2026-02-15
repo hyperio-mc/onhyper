@@ -13,6 +13,7 @@ import { strictRateLimit } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { identifyServerUser, trackServerEvent } from '../lib/analytics.js';
+import { sendWelcomeEmail, isEmailConfigured } from '../lib/email.js';
 
 const auth = new Hono();
 
@@ -58,6 +59,27 @@ auth.post('/signup', strictRateLimit, async (c) => {
       plan: user.plan,
       createdAt: user.created_at,
     });
+    
+    // Send welcome email (async, don't block signup)
+    // Extract name from email if not provided
+    const userName = body.name || email.split('@')[0];
+    
+    if (isEmailConfigured()) {
+      // Send welcome email in background
+      sendWelcomeEmail(email, userName)
+        .then(result => {
+          if (result.success) {
+            console.log(`[EMAIL] Welcome email sent to ${email}`);
+          } else {
+            console.error(`[EMAIL] Failed to send welcome email to ${email}:`, result.error);
+          }
+        })
+        .catch(err => {
+          console.error('[EMAIL] Welcome email error:', err);
+        });
+    } else {
+      console.log(`[EMAIL] Email not configured - skipping welcome email for ${email}`);
+    }
     
     // Generate JWT
     const token = generateToken(user);

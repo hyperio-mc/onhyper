@@ -18,6 +18,8 @@ import { apps } from './routes/apps.js';
 import { dashboard } from './routes/dashboard.js';
 import { proxy } from './routes/proxy.js';
 import { render } from './routes/render.js';
+import { waitlist } from './routes/waitlist.js';
+import { unsubscribe } from './routes/unsubscribe.js';
 import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
@@ -75,12 +77,22 @@ app.get('/api', (c) => {
         'GET /a/:slug/css': 'Get CSS',
         'GET /a/:slug/js': 'Get JS',
       },
+      waitlist: {
+        'POST /api/waitlist': 'Submit waitlist application',
+        'GET /api/waitlist/position': 'Get position in queue',
+        'POST /api/waitlist/referral': 'Process referral',
+        'GET /api/waitlist/invite/:code': 'Validate invite code',
+        'GET /api/waitlist/stats': 'Get global waitlist stats',
+      },
     },
   });
 });
 
 // Auth routes (public)
 app.route('/api/auth', auth);
+
+// Waitlist routes (public) - MUST be before protected /api routes
+app.route('/api/waitlist', waitlist);
 
 // Protected API routes
 const protectedApi = new Hono();
@@ -95,6 +107,9 @@ app.route('/proxy', proxy);
 
 // Render routes (public)
 app.route('/a', render);
+
+// Unsubscribe routes (public)
+app.route('/unsubscribe', unsubscribe);
 
 // Landing page
 app.get('/', (c) => {

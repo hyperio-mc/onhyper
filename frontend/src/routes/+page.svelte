@@ -393,8 +393,8 @@
 			<div>
 				<h4 class="font-semibold mb-3 text-sm">Legal</h4>
 				<ul class="space-y-2 text-sm text-text-secondary">
-					<li><a href="/privacy" class="hover:text-text">Privacy</a></li>
-					<li><a href="/terms" class="hover:text-text">Terms</a></li>
+					<li><a href="/legal/privacy" class="hover:text-text">Privacy</a></li>
+					<li><a href="/legal/terms" class="hover:text-text">Terms</a></li>
 				</ul>
 			</div>
 		</div>
