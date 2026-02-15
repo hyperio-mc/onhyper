@@ -53,9 +53,9 @@ export const config = {
  */
 export const PROXY_ENDPOINTS = {
   'scout-atoms': {
-    target: 'https://api.scoutos.com/atoms',
+    target: 'https://api.scoutos.com',
     secretKey: 'SCOUT_API_KEY',
-    description: 'Scout OS Atoms API',
+    description: 'Scout OS Agents API - Use /world/{agent_id}/_interact for chat',
   },
   'ollama': {
     target: 'https://ollama.com/v1',
