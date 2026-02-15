@@ -41,11 +41,12 @@ app.get('/health', (c) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     version: '1.0.0',
+    build: '2026-02-15-v8'
   });
 });
 
-// Debug endpoint to check static files
-app.get('/debug/static', async (c) => {
+// Debug endpoint - check static files
+app.get('/x7k9m2-debug', async (c) => {
   const fs = await import('fs/promises');
   const path = await import('path');
   try {
