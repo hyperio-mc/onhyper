@@ -1,4 +1,5 @@
 # OnHyper.io - Secure Proxy Service for API-Backed Web Apps
+trigger
 
 OnHyper.io is a platform for publishing full-stack applications that require secure backend functionality. It enables developers to publish web apps that can safely call external APIs without exposing secrets to the browser.
 
