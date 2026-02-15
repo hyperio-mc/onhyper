@@ -6,3 +6,11 @@ healthcheckPath = "/health"
 healthcheckTimeout = 100
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
+
+# Persistent volume for SQLite and LMDB databases
+# Mount point must match paths used in Dockerfile's ENV variables
+[[volume]]
+name = "onhyper-data"
+mountPath = "/app/data"
+# Size managed by Railway - starts small and grows as needed
+# Hobby plan: up to 5GB, Pro plan: up to 50GB (expandable to 250GB)

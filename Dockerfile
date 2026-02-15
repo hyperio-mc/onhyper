@@ -31,8 +31,9 @@ RUN npm run build
 # Prune dev dependencies
 RUN npm prune --production
 
-# Create data directory
-RUN mkdir -p /app/data
+# Create data directory for persistent storage
+# Railway volume will mount at this location at runtime
+RUN mkdir -p /app/data && chmod 755 /app/data
 
 # Expose port
 EXPOSE 3000

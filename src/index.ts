@@ -176,6 +176,8 @@ app.onError((err, c) => {
 async function main() {
   try {
     console.log('Initializing databases...');
+    console.log(`Data directory: ${config.dataDir}`);
+    console.log(`Volume mount: ${process.env.RAILWAY_VOLUME_MOUNT_PATH || 'not mounted (using local path)'}`);
     initDatabase();
     initLMDB();
     console.log(`SQLite database: ${config.sqlitePath}`);

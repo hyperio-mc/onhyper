@@ -5,15 +5,38 @@
  * with sensible defaults for development.
  */
 
+/**
+ * Get the data directory path
+ * Priority:
+ * 1. RAILWAY_VOLUME_MOUNT_PATH (auto-set by Railway when volume is attached)
+ * 2. DATA_DIR (custom override)
+ * 3. Default './data' for development
+ */
+function getDataDir(): string {
+  // Railway auto-sets this when a volume is mounted
+  if (process.env.RAILWAY_VOLUME_MOUNT_PATH) {
+    return process.env.RAILWAY_VOLUME_MOUNT_PATH;
+  }
+  // Custom override
+  if (process.env.DATA_DIR) {
+    return process.env.DATA_DIR;
+  }
+  // Development default
+  return './data';
+}
+
+const DATA_DIR = getDataDir();
+
 export const config = {
   // Server
   port: parseInt(process.env.PORT || '3000', 10),
   host: process.env.HOST || '0.0.0.0',
   baseUrl: process.env.BASE_URL || 'http://localhost:3000',
 
-  // Database
-  sqlitePath: process.env.SQLITE_PATH || './data/onhyper.db',
-  lmdbPath: process.env.LMDB_PATH || './data/onhyper.lmdb',
+  // Database paths - use data directory
+  dataDir: DATA_DIR,
+  sqlitePath: process.env.SQLITE_PATH || `${DATA_DIR}/onhyper.db`,
+  lmdbPath: process.env.LMDB_PATH || `${DATA_DIR}/onhyper.lmdb`,
 
   // Static files (frontend)
   staticPath: process.env.STATIC_PATH || './public',
