@@ -226,6 +226,20 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_invite_codes_code ON invite_codes(code);
     CREATE INDEX IF NOT EXISTS idx_invite_codes_tier ON invite_codes(tier);
   `);
+
+  // Chat leads (captured from support chat)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS leads (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL,
+      session_id TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_leads_email ON leads(email);
+    CREATE INDEX IF NOT EXISTS idx_leads_session ON leads(session_id);
+    CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);
+  `);
 }
 
 // Type exports
@@ -319,4 +333,11 @@ export interface InviteCode {
   is_used: number;
   created_at: string;
   used_at: string | null;
+}
+
+export interface Lead {
+  id: number;
+  email: string;
+  session_id: string | null;
+  created_at: string;
 }

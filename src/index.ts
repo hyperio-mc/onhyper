@@ -22,6 +22,7 @@ import { render } from './routes/render.js';
 import { waitlist } from './routes/waitlist.js';
 import { unsubscribe } from './routes/unsubscribe.js';
 import { blog } from './routes/blog.js';
+import { chat } from './routes/chat.js';
 import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 
@@ -89,6 +90,11 @@ app.get('/api', (c) => {
         'GET /api/waitlist/invite/:code': 'Validate invite code',
         'GET /api/waitlist/stats': 'Get global waitlist stats',
       },
+      chat: {
+        'POST /api/chat/message': 'Send a message to support agent',
+        'POST /api/chat/lead': 'Capture lead from chat',
+        'GET /api/chat/status': 'Check chat service status',
+      },
     },
   });
 });
@@ -98,6 +104,9 @@ app.route('/api/auth', auth);
 
 // Blog routes (public)
 app.route('/api/blog', blog);
+
+// Chat routes (public - anonymous support chat)
+app.route('/api/chat', chat);
 
 // Waitlist routes (public) - MUST be before protected /api routes
 app.route('/api/waitlist', waitlist);
