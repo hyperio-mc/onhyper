@@ -26,10 +26,10 @@
 	}: Props = $props();
 
 	const variantClasses: Record<string, string> = {
-		primary: 'bg-accent text-white hover:bg-accent-hover',
-		secondary: 'bg-surface-alt text-text hover:bg-border border border-border',
+		primary: 'bg-gradient-to-r from-accent to-accent-hover text-white hover:shadow-lg hover:shadow-accent/25 active:scale-[0.98]',
+		secondary: 'bg-surface-alt text-text hover:bg-border border border-border hover:border-accent/30 active:scale-[0.98]',
 		ghost: 'bg-transparent text-text-secondary hover:text-text hover:bg-surface-alt',
-		danger: 'bg-error text-white hover:bg-red-600'
+		danger: 'bg-error text-white hover:bg-red-600 active:scale-[0.98]'
 	};
 
 	const sizeClasses: Record<string, string> = {
@@ -39,10 +39,10 @@
 	};
 
 	const classes = [
-		'font-semibold rounded-lg transition-colors inline-flex items-center justify-center gap-2',
+		'font-semibold rounded-lg transition-all duration-150 inline-flex items-center justify-center gap-2 relative overflow-hidden',
 		variantClasses[variant],
 		sizeClasses[size],
-		disabled || loading ? 'opacity-50 cursor-not-allowed' : '',
+		disabled || loading ? 'opacity-50 cursor-not-allowed pointer-events-none' : '',
 		className || ''
 	].filter(Boolean).join(' ');
 </script>
