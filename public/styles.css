@@ -900,3 +900,31 @@ a:hover {
     margin-top: 8px;
   }
 }
+
+/* Footer */
+.site-footer {
+  margin-top: 60px;
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.site-footer a {
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.site-footer a:hover {
+  color: var(--primary);
+}
+
+.site-footer .divider {
+  margin: 0 8px;
+}
+
+.site-footer .copyright {
+  margin-top: 8px;
+  font-size: 12px;
+}
