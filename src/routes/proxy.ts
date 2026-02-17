@@ -123,16 +123,20 @@ const proxy = new Hono();
 /**
  * Build authorization header for a specific endpoint
  */
-function buildAuthHeader(endpoint: keyof typeof PROXY_ENDPOINTS, apiKey: string): string {
+function buildAuthHeader(endpoint: keyof typeof PROXY_ENDPOINTS, apiKey: string): { header: string; value: string } {
   switch (endpoint) {
     case 'anthropic':
-      return `x-api-key ${apiKey}`;
+      return { header: 'x-api-key', value: apiKey };
+    case 'onhyper':
+      // OnHyper uses X-API-Key header for its own API
+      return { header: 'X-API-Key', value: apiKey };
     case 'scout-atoms':
+    case 'scoutos':
     case 'ollama':
     case 'openrouter':
     case 'openai':
     default:
-      return `Bearer ${apiKey}`;
+      return { header: 'Authorization', value: `Bearer ${apiKey}` };
   }
 }
 
@@ -253,8 +257,9 @@ proxy.all('/:endpoint/*', async (c) => {
   
   try {
     // Prepare headers
+    const auth = buildAuthHeader(endpoint, secretValue);
     const headers: Record<string, string> = {
-      'Authorization': buildAuthHeader(endpoint, secretValue),
+      [auth.header]: auth.value,
       'User-Agent': 'OnHyper-Proxy/1.0',
     };
     
