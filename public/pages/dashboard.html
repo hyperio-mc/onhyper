@@ -3,14 +3,57 @@
 </div>
 
 <div id="stats" class="stats">
-  <div class="stat"><span>-</span> Apps</div>
-  <div class="stat"><span>-</span> API Keys</div>
-  <div class="stat"><span>-</span> API Calls</div>
+  <div class="stat"><span id="stat-apps">-</span> Apps</div>
+  <div class="stat"><span id="stat-secrets">-</span> API Keys</div>
+  <div class="stat"><span id="stat-calls">-</span> API Calls</div>
 </div>
+
+<h2>🔌 Your API Token</h2>
+<p class="text-muted">Use this token in your <code>.env</code> file or CLI tools:</p>
+
+<div class="token-box">
+  <code id="api-token">Loading...</code>
+  <button id="copy-token-btn" class="btn-secondary" onclick="copyApiToken()">Copy</button>
+</div>
+
+<div class="token-actions">
+  <button id="generate-token-btn" class="btn-tertiary" onclick="generateApiToken()" style="display:none;">
+    Generate New Token
+  </button>
+</div>
+
+<hr>
 
 <h2>Quick Actions</h2>
 <div style="display: flex; gap: 1rem; margin-top: 1rem; flex-wrap: wrap;">
   <button onclick="navigate('/apps')" class="btn-primary">Manage Apps</button>
   <button onclick="navigate('/domains')" class="btn-secondary">My Domains</button>
-  <button onclick="navigate('/keys')" class="btn-secondary">Manage API Keys</button>
+  <button onclick="navigate('/keys')" class="btn-secondary">Manage Secrets</button>
 </div>
+
+<style>
+.token-box {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--bg-alt);
+  padding: 16px;
+  border-radius: 8px;
+  margin: 12px 0;
+  font-family: 'SF Mono', Monaco, monospace;
+}
+
+.token-box code {
+  flex: 1;
+  font-size: 14px;
+  word-break: break-all;
+}
+
+.token-actions {
+  margin-bottom: 20px;
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+</style>

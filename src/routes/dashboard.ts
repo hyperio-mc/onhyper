@@ -51,6 +51,7 @@ import { getAppCount } from '../lib/apps.js';
 import { getSecretCount } from '../lib/secrets.js';
 import { getTodayUsageCount } from '../lib/usage.js';
 import { getAuthUser } from '../middleware/auth.js';
+import { listApiKeysByUser, createApiKey } from '../lib/users.js';
 
 const dashboard = new Hono();
 
@@ -75,6 +76,57 @@ dashboard.get('/stats', async (c) => {
     appCount,
     requestCount,
     keysConfigured,
+  });
+});
+
+/**
+ * GET /api/dashboard/api-keys
+ * Get the user's API keys (for programmatic access)
+ */
+dashboard.get('/api-keys', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const keys = listApiKeysByUser(user.userId);
+  
+  // Mask keys for security (show first 12 chars + ...)
+  const maskedKeys = keys.map(k => ({
+    id: k.id,
+    key: k.key.substring(0, 12) + '...' + k.key.substring(k.key.length - 8),
+    fullKey: k.key, // Include full key for copy functionality
+    plan: k.plan,
+    createdAt: k.created_at
+  }));
+  
+  return c.json({ keys: maskedKeys });
+});
+
+/**
+ * POST /api/dashboard/api-keys
+ * Generate a new API key for the user
+ */
+dashboard.post('/api-keys', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  // Get user plan from JWT payload
+  const plan = user.plan || 'FREE';
+  
+  // Create new API key
+  const key = await createApiKey(user.userId, plan);
+  
+  // Track event
+  console.log(`[Dashboard] API key generated for user ${user.userId}`);
+  
+  return c.json({ 
+    key,
+    message: 'API key generated. Copy it now - it won\'t be shown again in full.'
   });
 });
 

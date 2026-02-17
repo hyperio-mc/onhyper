@@ -346,14 +346,76 @@ async function loadDashboard() {
   
   try {
     const stats = await api('/dashboard/stats');
-    document.getElementById('stats').innerHTML = `
-      <div class="stat"><span>${stats.appCount || 0}</span> Apps</div>
-      <div class="stat"><span>${stats.secretCount || 0}</span> API Keys</div>
-      <div class="stat"><span>${stats.requestCount || 0}</span> API Calls</div>
-    `;
+    document.getElementById('stat-apps').textContent = stats.appCount || 0;
+    document.getElementById('stat-secrets').textContent = stats.keysConfigured || 0;
+    document.getElementById('stat-calls').textContent = stats.requestCount || 0;
+    
+    // Load API token
+    await loadApiToken();
   } catch (err) {
     document.getElementById('stats').innerHTML = '<p>Failed to load stats</p>';
   }
+}
+
+async function loadApiToken() {
+  const tokenEl = document.getElementById('api-token');
+  const generateBtn = document.getElementById('generate-token-btn');
+  
+  try {
+    const result = await api('/dashboard/api-keys');
+    
+    if (result.keys && result.keys.length > 0) {
+      // Show the most recent key
+      const latestKey = result.keys[result.keys.length - 1];
+      tokenEl.textContent = latestKey.fullKey;
+      tokenEl.dataset.key = latestKey.fullKey;
+      generateBtn.style.display = 'inline-block';
+    } else {
+      tokenEl.textContent = 'No API token yet';
+      generateBtn.textContent = 'Generate API Token';
+      generateBtn.style.display = 'inline-block';
+    }
+  } catch (err) {
+    tokenEl.textContent = 'Failed to load token';
+  }
+}
+
+async function generateApiToken() {
+  const tokenEl = document.getElementById('api-token');
+  const generateBtn = document.getElementById('generate-token-btn');
+  
+  generateBtn.disabled = true;
+  generateBtn.textContent = 'Generating...';
+  
+  try {
+    const result = await api('/dashboard/api-keys', { method: 'POST' });
+    tokenEl.textContent = result.key;
+    tokenEl.dataset.key = result.key;
+    generateBtn.textContent = 'Generate New Token';
+    generateBtn.disabled = false;
+    
+    showToast('API token generated! Copy it now.', 'success');
+  } catch (err) {
+    generateBtn.textContent = 'Generate API Token';
+    generateBtn.disabled = false;
+    showToast('Failed to generate token: ' + err.message, 'error');
+  }
+}
+
+function copyApiToken() {
+  const tokenEl = document.getElementById('api-token');
+  const key = tokenEl.dataset.key || tokenEl.textContent;
+  
+  if (!key || key === 'No API token yet' || key === 'Loading...' || key === 'Failed to load token') {
+    showToast('No token to copy', 'error');
+    return;
+  }
+  
+  navigator.clipboard.writeText(key).then(() => {
+    showToast('Token copied to clipboard!', 'success');
+  }).catch(() => {
+    showToast('Could not copy token', 'error');
+  });
 }
 
 // Apps
