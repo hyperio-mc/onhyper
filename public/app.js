@@ -809,7 +809,21 @@ function addChatMessage(role, content) {
   
   const div = document.createElement('div');
   div.className = `message ${role}`;
-  div.innerHTML = `<div class="message-content">${escapeHtml(content)}</div>`;
+  
+  // Render markdown for assistant messages, escape HTML for user messages
+  let renderedContent;
+  if (role === 'assistant' && typeof marked !== 'undefined') {
+    // Configure marked for safe rendering
+    marked.setOptions({
+      breaks: true,
+      gfm: true
+    });
+    renderedContent = marked.parse(content);
+  } else {
+    renderedContent = escapeHtml(content);
+  }
+  
+  div.innerHTML = `<div class="message-content">${renderedContent}</div>`;
   messages.appendChild(div);
   
   // Scroll to bottom
@@ -946,10 +960,55 @@ function escapeHtml(text) {
 }
 
 // Copy agent prompt to clipboard
-function copyAgentPrompt() {
+async function copyAgentPrompt() {
   const prompt = 'Read the OnHyper skill at https://onhyper.io/#/skill and help me build an app that securely calls AI APIs.';
-  navigator.clipboard.writeText(prompt);
-  alert('Prompt copied! Paste it to your agent.');
+  
+  try {
+    await navigator.clipboard.writeText(prompt);
+    showToast('Prompt copied! Paste it to your agent.', 'success');
+  } catch (err) {
+    // Fallback for older browsers or permission issues
+    const textArea = document.createElement('textarea');
+    textArea.value = prompt;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    document.body.appendChild(textArea);
+    textArea.select();
+    try {
+      document.execCommand('copy');
+      showToast('Prompt copied! Paste it to your agent.', 'success');
+    } catch (e) {
+      showToast('Could not copy. Here\'s the prompt: ' + prompt, 'error');
+    }
+    document.body.removeChild(textArea);
+  }
+}
+
+function showToast(message, type) {
+  // Remove any existing toast
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = `toast toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 10000;
+    animation: slideIn 0.3s ease;
+    ${type === 'success' ? 'background: #059669; color: white;' : 'background: #dc2626; color: white;'}
+  `;
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.style.animation = 'fadeOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // Hash change listener
