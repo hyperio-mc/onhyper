@@ -148,7 +148,7 @@ function getAppBySubdomain(subdomain: string): App | null {
 let cached404Template: string | null = null;
 
 /**
- * Load the 404 template from disk
+ * Load the 404 template from disk (synchronous, cached)
  */
 function load404Template(): string {
   if (cached404Template) {
@@ -156,12 +156,12 @@ function load404Template(): string {
   }
   
   try {
-    // Try to load from public directory
-    const templatePath = new URL('../../public/subdomain-404.html', import.meta.url);
-    const fs = await import('fs');
-    cached404Template = fs.readFileSync(templatePath, 'utf-8');
+    // Resolve path relative to this module
+    const templatePath = join(__dirname, '../../public/subdomain-404.html');
+    cached404Template = readFileSync(templatePath, 'utf-8');
     return cached404Template;
-  } catch {
+  } catch (error) {
+    console.warn('[subdomain] Could not load 404 template, using fallback:', error);
     // Fallback to minimal template if file not found
     return getFallback404Template();
   }
@@ -206,29 +206,33 @@ function getFallback404Template(): string {
 
 /**
  * Render 404 page for unknown subdomain
- * Uses the static HTML template with subdomain injected via JavaScript
+ * Uses the static HTML template with subdomain injected
  */
-async function render404(subdomain: string): Promise<string> {
-  const template = await load404Template();
+function render404(subdomain: string): string {
+  const template = load404Template();
   
-  // Inject subdomain by replacing placeholder or using a script injection
-  // The template has a JavaScript function setSubdomainName() we can call
-  return template.replace(
-    '</body>',
-    `<script>
-      // Inject subdomain from server
-      if (window.setSubdomainName) {
-        window.setSubdomainName('${subdomain.replace(/'/g, "\\'")}');
-      } else {
-        // Fallback: direct element update
-        var el = document.getElementById('subdomain-name');
-        if (el) el.textContent = '${subdomain.replace(/'/g, "\\'")} .onhyper.io';
-      }
-    </script></body>`
-  ).replace(
-    'id="subdomain-name">subdomain.onhyper.io',
-    `id="subdomain-name">${subdomain}.onhyper.io`
-  );
+  // Escape subdomain for safe HTML/JS insertion
+  const escapedSubdomain = subdomain
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/'/g, "\\'");
+  
+  // Replace the placeholder subdomain in the template
+  return template
+    .replace(
+      'id="subdomain-name">subdomain.onhyper.io',
+      `id="subdomain-name">${escapedSubdomain}.onhyper.io`
+    )
+    .replace(
+      '</body>',
+      `<script>
+        // Inject subdomain from server
+        if (window.setSubdomainName) {
+          window.setSubdomainName('${escapedSubdomain}');
+        }
+      </script></body>`
+    );
 }
 
 /**
