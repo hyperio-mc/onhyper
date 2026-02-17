@@ -1,10 +1,89 @@
 /**
- * Authentication routes for OnHyper.io
+ * Authentication Routes for OnHyper.io
  * 
- * Endpoints:
- * - POST /api/auth/signup - Create a new account
- * - POST /api/auth/login - Authenticate and get JWT
- * - POST /api/auth/token - Validate JWT and return user info
+ * Handles user authentication including signup, login, and token validation.
+ * All endpoints use JSON request/response format.
+ * 
+ * ## Endpoints
+ * 
+ * ### POST /api/auth/signup
+ * Create a new user account.
+ * 
+ * **Request Body:**
+ * ```json
+ * {
+ *   "email": "user@example.com",
+ *   "password": "securepassword",
+ *   "name": "Optional Name",
+ *   "plan": "FREE",
+ *   "source": "organic"
+ * }
+ * ```
+ * 
+ * **Response (201):**
+ * ```json
+ * {
+ *   "user": { "id": "uuid", "email": "user@example.com", "plan": "FREE", "createdAt": "..." },
+ *   "token": "eyJhbGciOiJIUzI1NiIs..."
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 400: Invalid email/password format
+ * - 409: Email already registered
+ * 
+ * ### POST /api/auth/login
+ * Authenticate and receive a JWT token.
+ * 
+ * **Request Body:**
+ * ```json
+ * { "email": "user@example.com", "password": "securepassword" }
+ * ```
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "user": { "id": "uuid", "email": "user@example.com", "plan": "FREE" },
+ *   "token": "eyJhbGciOiJIUzI1NiIs..."
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 400: Missing email or password
+ * - 401: Invalid credentials
+ * 
+ * ### POST /api/auth/token
+ * Validate an existing JWT token.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "valid": true,
+ *   "user": { "id": "uuid", "email": "user@example.com", "plan": "FREE", "createdAt": "..." }
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 401: Missing or invalid token
+ * - 404: User not found
+ * 
+ * ### GET /api/auth/me
+ * Get current authenticated user info.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * { "id": "uuid", "email": "user@example.com", "plan": "FREE", "createdAt": "..." }
+ * ```
+ * 
+ * **Errors:**
+ * - 401: Not authenticated
+ * - 404: User not found
+ * 
+ * @module routes/auth
  */
 
 import { Hono } from 'hono';

@@ -1,8 +1,66 @@
 /**
- * Encryption utilities for OnHyper.io
+ * Encryption Utilities for OnHyper.io
  * 
- * Implements AES-256-GCM encryption for storing user secrets securely.
- * Each secret is encrypted with a per-user salt for additional security.
+ * Implements AES-256-GCM encryption for secure storage of user secrets.
+ * Uses PBKDF2 for key derivation with per-secret salts.
+ * 
+ * ## Security Model
+ * 
+ * ```
+ * Secret Storage Flow:
+ * 
+ * 1. Generate random 32-byte salt
+ * 2. Derive 256-bit key using PBKDF2:
+ *    - Input: Master Key (env) + Salt
+ *    - Iterations: 100,000
+ *    - Algorithm: SHA-256
+ * 3. Generate random 16-byte IV
+ * 4. Encrypt with AES-256-GCM:
+ *    - Produces ciphertext + 16-byte auth tag
+ * 5. Store: ciphertext + auth tag + IV + salt
+ * ```
+ * 
+ * ## Why We Use Each Component
+ * 
+ * | Component | Purpose |
+ * |-----------|---------|
+ * | AES-256-GCM | Authenticated encryption (confidentiality + integrity) |
+ * | PBKDF2 | Key stretching (makes brute-force expensive) |
+ * | Per-secret salt | Same secret → different ciphertext |
+ * | Random IV | Prevents pattern detection |
+ * | Auth tag | Detects any tampering |
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { encrypt, decrypt, generateSalt, maskSecret } from './lib/encryption.js';
+ * 
+ * // Encrypt a secret
+ * const salt = generateSalt();  // Store this
+ * const { encrypted, iv } = encrypt('my-api-key', salt);
+ * 
+ * // Decrypt later
+ * const plaintext = decrypt(encrypted, iv, salt);
+ * 
+ * // Show masked version in UI
+ * const masked = maskSecret('sk-ant-api03-xxxx');  // "sk-ant-ap••••xxxx"
+ * ```
+ * 
+ * ## Environment Configuration
+ * 
+ * Set `ONHYPER_MASTER_KEY` in production:
+ * ```bash
+ * # Generate a secure key
+ * openssl rand -hex 32
+ * 
+ * # Set in environment
+ * export ONHYPER_MASTER_KEY="your-64-character-hex-string"
+ * ```
+ * 
+ * ⚠️ **Security Warning**: Never commit the master key to source control.
+ * The default development key is intentionally insecure.
+ * 
+ * @module lib/encryption
  */
 
 import { createCipheriv, createDecipheriv, randomBytes, createHash, pbkdf2Sync } from 'crypto';

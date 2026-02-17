@@ -1,18 +1,172 @@
 /**
- * App management routes for OnHyper.io
+ * App Management Routes for OnHyper.io
  * 
- * Endpoints:
- * - GET /api/apps - List user's apps
- * - POST /api/apps - Create a new app
- * - GET /api/apps/:id - Get app details
- * - PUT /api/apps/:id - Update an app
- * - DELETE /api/apps/:id - Delete an app
+ * CRUD operations for user apps. Apps are published web applications
+ * that can call external APIs through the proxy service.
+ * 
+ * ## Endpoints
+ * 
+ * ### GET /api/apps
+ * List all apps for the authenticated user.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "apps": [
+ *     {
+ *       "id": "uuid",
+ *       "name": "My App",
+ *       "slug": "my-app-abc123",
+ *       "createdAt": "2024-01-15T...",
+ *       "updatedAt": "2024-01-15T..."
+ *     }
+ *   ],
+ *   "count": 1
+ * }
+ * ```
+ * 
+ * ### POST /api/apps
+ * Create a new app.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Request Body:**
+ * ```json
+ * {
+ *   "name": "My App",
+ *   "html": "<div>Hello World</div>",
+ *   "css": ".container { color: blue; }",
+ *   "js": "console.log('hi');"
+ * }
+ * ```
+ * 
+ * **Response (201):**
+ * ```json
+ * {
+ *   "id": "uuid",
+ *   "name": "My App",
+ *   "slug": "my-app-abc123",
+ *   "url": "https://onhyper.io/a/my-app-abc123",
+ *   "createdAt": "2024-01-15T..."
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 400: Invalid input or name missing
+ * - 401: Not authenticated
+ * - 403: App limit reached for plan
+ * 
+ * ### GET /api/apps/:id
+ * Get app details including full HTML/CSS/JS content.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "id": "uuid",
+ *   "name": "My App",
+ *   "slug": "my-app-abc123",
+ *   "html": "<div>...</div>",
+ *   "css": "...",
+ *   "js": "...",
+ *   "url": "https://onhyper.io/a/my-app-abc123",
+ *   "createdAt": "...",
+ *   "updatedAt": "..."
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 401: Not authenticated
+ * - 403: Access denied (not owner)
+ * - 404: App not found
+ * 
+ * ### PUT /api/apps/:id
+ * Update an existing app.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Request Body:** (all fields optional)
+ * ```json
+ * { "name": "New Name", "html": "...", "css": "...", "js": "..." }
+ * ```
+ * 
+ * **Response (200):**
+ * ```json
+ * { "id": "uuid", "name": "New Name", "slug": "...", "url": "...", "updatedAt": "..." }
+ * ```
+ * 
+ * ### DELETE /api/apps/:id
+ * Delete an app permanently.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * { "deleted": true }
+ * ```
+ * 
+ * ### POST /api/apps/:id/publish
+ * Publish an app with an optional custom subdomain.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Request Body:**
+ * ```json
+ * { "subdomain": "my-app" }
+ * ```
+ * 
+ * The `subdomain` field is optional. If not provided, only the path-based URL is returned.
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "success": true,
+ *   "urls": {
+ *     "path": "https://onhyper.io/a/my-app-abc123",
+ *     "subdomain": "my-app.onhyper.io"
+ *   }
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 400: Invalid subdomain format or validation failed
+ * - 401: Not authenticated
+ * - 403: Access denied (not owner)
+ * - 404: App not found
+ * - 409: Subdomain already claimed by another user
+ * 
+ * **Behavior:**
+ * - If subdomain is available: claims it for the user
+ * - If subdomain is owned by this user: reassigns to this app (allowed)
+ * - If subdomain is owned by another user: error (409)
+ * - Reserved subdomains (api, www, admin, etc.) cannot be claimed
+ * 
+ * ## Plan Limits
+ * 
+ * | Plan | Max Apps |
+ * |------|----------|
+ * | FREE | 3 |
+ * | HOBBY | 10 |
+ * | PRO | 50 |
+ * | BUSINESS | Unlimited |
+ * 
+ * @module routes/apps
  */
 
 import { Hono } from 'hono';
-import { createApp, getAppById, listAppsByUser, updateApp, deleteApp, getAppCount } from '../lib/apps.js';
+import { createApp, getAppById, listAppsByUser, updateApp, deleteApp, getAppCount, updateAppSubdomain } from '../lib/apps.js';
 import { getAuthUser } from '../middleware/auth.js';
 import { config } from '../config.js';
+import {
+  validateSubdomain,
+  isReserved,
+  isSubdomainAvailable,
+  getSubdomainOwner,
+  releaseSubdomain,
+} from '../lib/subdomains.js';
 
 const apps = new Hono();
 
@@ -191,5 +345,149 @@ apps.delete('/:id', async (c) => {
   
   return c.json({ deleted: true });
 });
+
+/**
+ * POST /api/apps/:id/publish
+ * Publish an app with optional subdomain
+ * 
+ * When a subdomain is provided:
+ * - Validates format and availability
+ * - Claims the subdomain for the user (if available)
+ * - Allows user to reassign their owned subdomain to a different app
+ * - Updates the app's subdomain field
+ * 
+ * Returns both path-based URL and subdomain URL (if configured)
+ */
+apps.post('/:id/publish', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('id');
+  const app = getAppById(appId);
+  
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  // Verify ownership
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  try {
+    const body = await c.req.json();
+    const { subdomain } = body;
+    
+    // If no subdomain provided, just return success with path URL
+    if (!subdomain) {
+      return c.json({
+        success: true,
+        urls: {
+          path: `${config.baseUrl}/a/${app.slug}`,
+          subdomain: null,
+        },
+      });
+    }
+    
+    const normalizedSubdomain = subdomain.toLowerCase();
+    
+    // Validate subdomain format
+    const validation = validateSubdomain(normalizedSubdomain);
+    if (!validation.valid) {
+      return c.json({ 
+        success: false, 
+        error: validation.error 
+      }, 400);
+    }
+    
+    // Check if subdomain is reserved
+    if (isReserved(normalizedSubdomain)) {
+      return c.json({ 
+        success: false, 
+        error: 'This subdomain is reserved and cannot be claimed' 
+      }, 400);
+    }
+    
+    // Check who owns this subdomain
+    const subdomainOwner = await getSubdomainOwner(normalizedSubdomain);
+    
+    // Case 1: Subdomain already claimed by another user
+    if (subdomainOwner && subdomainOwner !== user.userId) {
+      return c.json({ 
+        success: false, 
+        error: 'This subdomain is already claimed by another user' 
+      }, 409);
+    }
+    
+    // Case 2: Subdomain is available (not claimed by anyone)
+    // Case 3: Subdomain already claimed by this user (reassignment)
+    // Both cases we proceed to claim/update
+    
+    // If this user already owns it, we need to:
+    // 1. Release it from the current app it's assigned to (if any)
+    // 2. Re-claim it for this new app
+    if (subdomainOwner === user.userId) {
+      // Release the existing subdomain assignment
+      await releaseSubdomain(user.userId, normalizedSubdomain);
+    }
+    
+    // Claim the subdomain for this app
+    const claimResult = await claimSubdomainForApp(user.userId, normalizedSubdomain, appId);
+    
+    if (!claimResult.success) {
+      return c.json({ 
+        success: false, 
+        error: claimResult.error 
+      }, 400);
+    }
+    
+    // Update app's subdomain field
+    await updateAppSubdomain(appId, user.userId, normalizedSubdomain);
+    
+    return c.json({
+      success: true,
+      urls: {
+        path: `${config.baseUrl}/a/${app.slug}`,
+        subdomain: `${normalizedSubdomain}.onhyper.io`,
+      },
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to publish app';
+    return c.json({ success: false, error: message }, 500);
+  }
+});
+
+/**
+ * Helper function to claim a subdomain for a specific app
+ * Uses the subdomain_reservations table
+ */
+async function claimSubdomainForApp(
+  userId: string, 
+  subdomain: string, 
+  appId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { getDatabase } = await import('../lib/db.js');
+  const db = getDatabase();
+  
+  try {
+    // Insert into subdomain_reservations with app_id
+    db.prepare(`
+      INSERT INTO subdomain_reservations (subdomain, owner_id, app_id)
+      VALUES (?, ?, ?)
+    `).run(subdomain.toLowerCase(), userId, appId);
+    
+    return { success: true };
+  } catch (error) {
+    // Handle UNIQUE constraint violation
+    if (error instanceof Error && error.message.includes('UNIQUE constraint failed')) {
+      return { success: false, error: 'This subdomain was just claimed by another user' };
+    }
+    throw error;
+  }
+}
 
 export { apps };

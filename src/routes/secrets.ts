@@ -1,10 +1,112 @@
 /**
- * Secrets management routes for OnHyper.io
+ * Secrets Management Routes for OnHyper.io
  * 
- * Endpoints:
- * - GET /api/secrets - List user's secrets (masked)
- * - POST /api/secrets - Add a new secret
- * - DELETE /api/secrets/:name - Delete a secret
+ * Secure storage and management of API keys and other secrets.
+ * Secrets are encrypted at rest and values are never returned after creation.
+ * 
+ * ## Security Model
+ * 
+ * - Secrets are encrypted with AES-256-GCM before storage
+ * - Each secret has a unique salt for key derivation
+ * - Values are **never** returned via API (only shown once at creation)
+ * - Names are normalized to uppercase with underscores
+ * 
+ * ## Endpoints
+ * 
+ * ### GET /api/secrets
+ * List all secrets for the authenticated user.
+ * Values are masked with `••••••••` placeholders.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "secrets": [
+ *     {
+ *       "id": "uuid",
+ *       "name": "SCOUT_API_KEY",
+ *       "masked": "••••••••••••••••",
+ *       "created_at": "2024-01-15T..."
+ *     }
+ *   ],
+ *   "count": 1
+ * }
+ * ```
+ * 
+ * ### POST /api/secrets
+ * Store a new secret. The value is encrypted and cannot be retrieved.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Request Body:**
+ * ```json
+ * {
+ *   "name": "SCOUT_API_KEY",
+ *   "value": "sk-ant-api03-xxxxxxxxxxxx"
+ * }
+ * ```
+ * 
+ * **Response (201):**
+ * ```json
+ * {
+ *   "id": "uuid",
+ *   "name": "SCOUT_API_KEY",
+ *   "created": true,
+ *   "message": "Secret stored successfully. The value cannot be retrieved after creation."
+ * }
+ * ```
+ * 
+ * **Errors:**
+ * - 400: Missing name or value, invalid name format
+ * - 401: Not authenticated
+ * - 403: Secret limit reached for plan
+ * - 409: Secret with this name already exists
+ * 
+ * ### DELETE /api/secrets/:name
+ * Delete a secret by name.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * { "deleted": true, "name": "SCOUT_API_KEY" }
+ * ```
+ * 
+ * **Errors:**
+ * - 401: Not authenticated
+ * - 404: Secret not found
+ * 
+ * ### GET /api/secrets/check/:name
+ * Check if a secret exists without revealing its value.
+ * Useful for validating proxy readiness.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * { "name": "SCOUT_API_KEY", "exists": true }
+ * ```
+ * 
+ * ## Name Convention
+ * 
+ * Secret names are automatically normalized:
+ * - Converted to uppercase
+ * - Non-alphanumeric characters replaced with underscores
+ * - Must be 3-64 characters
+ * 
+ * Example: `scout-api-key` → `SCOUT_API_KEY`
+ * 
+ * ## Plan Limits
+ * 
+ * | Plan | Max Secrets |
+ * |------|-------------|
+ * | FREE | 5 |
+ * | HOBBY | 20 |
+ * | PRO | 50 |
+ * | BUSINESS | Unlimited |
+ * 
+ * @module routes/secrets
  */
 
 import { Hono } from 'hono';

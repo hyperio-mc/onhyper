@@ -1,5 +1,81 @@
 /**
- * User management utilities for OnHyper.io
+ * User Management Utilities for OnHyper.io
+ * 
+ * Core user operations: creation, authentication, and API key management.
+ * Handles password hashing with bcrypt and JWT token generation.
+ * 
+ * ## Security Model
+ * 
+ * - Passwords hashed with bcrypt (10 rounds by default)
+ * - JWTs signed with server secret, 7-day expiration
+ * - API keys prefixed with `oh_live_` for easy identification
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { 
+ *   createUser, 
+ *   authenticateUser, 
+ *   generateToken, 
+ *   verifyToken,
+ *   createApiKey,
+ *   getApiKeyByKey 
+ * } from './lib/users.js';
+ * 
+ * // Sign up new user
+ * const user = await createUser('user@example.com', 'password123', 'FREE');
+ * 
+ * // Login
+ * const user = await authenticateUser('user@example.com', 'password123');
+ * if (user) {
+ *   const token = generateToken(user);
+ *   // Return token to client
+ * }
+ * 
+ * // Verify token from request
+ * const payload = verifyToken(token);
+ * if (payload) {
+ *   const { userId, email, plan } = payload;
+ * }
+ * 
+ * // Create API key for programmatic access
+ * const apiKey = await createApiKey(user.id, user.plan);
+ * // Returns: "oh_live_abc123..."
+ * 
+ * // Validate API key
+ * const keyRecord = getApiKeyByKey('oh_live_abc123...');
+ * if (keyRecord) {
+ *   // Key is valid, get user from keyRecord.user_id
+ * }
+ * ```
+ * 
+ * ## Password Security
+ * 
+ * - Minimum length: 8 characters (configurable)
+ * - Hashed with bcrypt (configurable rounds)
+ * - Hashes never logged or returned in responses
+ * 
+ * ## JWT Tokens
+ * 
+ * ```typescript
+ * // Token payload
+ * {
+ *   sub: userId,      // Subject (user ID)
+ *   email: string,    // User email
+ *   plan: string,     // User's plan tier
+ *   iat: number,      // Issued at
+ *   exp: number       // Expiration
+ * }
+ * ```
+ * 
+ * ## API Keys
+ * 
+ * - Format: `oh_live_{32-char-hex}`
+ * - Stored in `api_keys` table
+ * - Scoped to user and plan
+ * - Can be revoked by user
+ * 
+ * @module lib/users
  */
 
 import bcrypt from 'bcrypt';

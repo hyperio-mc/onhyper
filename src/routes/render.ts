@@ -1,7 +1,92 @@
 /**
- * App rendering routes for OnHyper.io
+ * App Rendering Routes for OnHyper.io
  * 
- * Serves published apps at /a/:slug
+ * Serves published web applications with injected configuration.
+ * Each app gets a unique URL: `https://onhyper.io/a/{slug}`
+ * 
+ * ## URL Structure
+ * 
+ * - `/a/:slug` - Render full HTML page with app
+ * - `/a/:slug/raw` - Get raw HTML content
+ * - `/a/:slug/css` - Get CSS stylesheet
+ * - `/a/:slug/js` - Get JavaScript code
+ * 
+ * ## Rendering Flow
+ * 
+ * ```
+ * Request: GET /a/my-app-abc123
+ *      │
+ *      ▼
+ * Lookup app by slug in SQLite
+ *      │
+ *      ▼
+ * Get cached content from LMDB (fast!)
+ *      │
+ *      ▼
+ * Build HTML with:
+ *   - Base styles (CSS reset)
+ *   - User's CSS
+ *   - User's HTML
+ *   - Injected window.ONHYPER config
+ *   - User's JavaScript
+ *      │
+ *      ▼
+ * Return complete HTML page
+ * ```
+ * 
+ * ## Injected Configuration
+ * 
+ * Every rendered app receives:
+ * 
+ * ```javascript
+ * window.ONHYPER = {
+ *   proxyBase: '/proxy',        // Base URL for proxy requests
+ *   appSlug: 'my-app-abc123',   // App's unique slug
+ *   appId: 'uuid'               // App's database ID
+ * };
+ * ```
+ * 
+ * This enables apps to make proxy requests:
+ * 
+ * ```javascript
+ * const response = await fetch(`${ONHYPER.proxyBase}/scout-atoms/...`, {
+ *   method: 'POST',
+ *   headers: { 'X-App-Slug': ONHYPER.appSlug },
+ *   body: JSON.stringify({ ... })
+ * });
+ * ```
+ * 
+ * ## Endpoints
+ * 
+ * ### GET /a/:slug
+ * Render a published app as a full HTML page.
+ * 
+ * **Response (200):** Full HTML page with styles and scripts
+ * 
+ * **Response (404):** Not found page with link back to home
+ * 
+ * ### GET /a/:slug/raw
+ * Get raw HTML content.
+ * 
+ * **Response (200):** Plain text HTML
+ * 
+ * ### GET /a/:slug/css
+ * Get CSS stylesheet.
+ * 
+ * **Response (200):** CSS with `text/css` content type
+ * 
+ * ### GET /a/:slug/js
+ * Get JavaScript code.
+ * 
+ * **Response (200):** JavaScript with `application/javascript` content type
+ * 
+ * ## Security
+ * 
+ * - Apps are public (no authentication to view)
+ * - Proxy calls require auth (see proxy.ts)
+ * - Content is not sanitized (user responsibility)
+ * 
+ * @module routes/render
  */
 
 import { Hono } from 'hono';

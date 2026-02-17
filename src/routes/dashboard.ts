@@ -1,8 +1,49 @@
 /**
- * Dashboard routes for OnHyper.io
+ * Dashboard Routes for OnHyper.io
  * 
- * Endpoints:
- * - GET /api/dashboard/stats - Get dashboard statistics for the authenticated user
+ * Provides aggregate statistics for the user dashboard.
+ * Aggregates data from apps, secrets, and usage tables.
+ * 
+ * ## Endpoints
+ * 
+ * ### GET /api/dashboard/stats
+ * Get statistics for the authenticated user's dashboard.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "appCount": 5,
+ *   "requestCount": 1234,
+ *   "keysConfigured": 3
+ * }
+ * ```
+ * 
+ * **Fields:**
+ * - `appCount` - Number of published apps
+ * - `requestCount` - API requests made today
+ * - `keysConfigured` - Number of secrets stored
+ * 
+ * **Errors:**
+ * - 401: Not authenticated
+ * 
+ * ## Usage
+ * 
+ * ```javascript
+ * // Fetch dashboard stats
+ * const response = await fetch('/api/dashboard/stats', {
+ *   headers: { 'Authorization': `Bearer ${token}` }
+ * });
+ * const stats = await response.json();
+ * 
+ * // Display in UI
+ * document.getElementById('stat-apps').textContent = stats.appCount;
+ * document.getElementById('stat-requests').textContent = stats.requestCount;
+ * document.getElementById('stat-keys').textContent = stats.keysConfigured;
+ * ```
+ * 
+ * @module routes/dashboard
  */
 
 import { Hono } from 'hono';

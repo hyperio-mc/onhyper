@@ -293,7 +293,8 @@ subdomains.get('/mine', async (c) => {
   const subdomainList = await getUserSubdomains(user.userId);
   
   return c.json({ 
-    subdomains: subdomainList 
+    subdomains: subdomainList,
+    count: subdomainList.length
   });
 });
 

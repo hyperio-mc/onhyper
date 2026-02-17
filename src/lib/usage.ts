@@ -1,7 +1,69 @@
 /**
- * Usage tracking for OnHyper.io
+ * Usage Tracking for OnHyper.io
  * 
- * Records proxy requests for analytics and rate limiting.
+ * Records and queries proxy request usage for analytics and rate limiting.
+ * Every proxy request is logged with timing and status information.
+ * 
+ * ## Purpose
+ * 
+ * - **Rate Limiting**: Count requests per user per day
+ * - **Analytics**: Track API usage patterns
+ * - **Billing**: Basis for plan enforcement
+ * - **Debugging**: Request history for troubleshooting
+ * 
+ * ## Data Recorded
+ * 
+ * ```typescript
+ * interface UsageRecord {
+ *   id: string;
+ *   api_key_id: string | null;  // If using API key
+ *   app_id: string | null;       // If from published app
+ *   endpoint: string;            // e.g., "scout-atoms"
+ *   status: number;              // HTTP status code
+ *   duration: number;            // Response time in ms
+ *   created_at: string;
+ * }
+ * ```
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { recordUsage, getUserUsageStats, getTodayUsageCount } from './lib/usage.js';
+ * 
+ * // Record a proxy request
+ * recordUsage({
+ *   appId: 'app-uuid',
+ *   endpoint: 'scout-atoms',
+ *   status: 200,
+ *   duration: 342
+ * });
+ * 
+ * // Get user's usage stats for last 30 days
+ * const stats = getUserUsageStats('user-uuid', 30);
+ * // → { totalRequests: 1234, byEndpoint: {...}, byStatus: {...}, avgDuration: 256 }
+ * 
+ * // Get today's count for rate limiting
+ * const count = getTodayUsageCount('user-uuid');
+ * // → 47
+ * ```
+ * 
+ * ## Analytics Queries
+ * 
+ * The usage table supports various analytics:
+ * 
+ * - Requests per day/hour
+ * - Most used endpoints
+ * - Error rates
+ * - Average response times
+ * - Usage by app
+ * 
+ * ## Performance
+ * 
+ * - Records are inserted asynchronously (no blocking)
+ * - Indexed on `created_at`, `api_key_id`, `app_id`
+ * - Old records can be archived/deleted after retention period
+ * 
+ * @module lib/usage
  */
 
 import { randomUUID } from 'crypto';

@@ -333,27 +333,49 @@ export async function releaseSubdomain(userId: string, subdomain: string): Promi
 }
 
 /**
- * Get all subdomains owned by a user.
+ * Subdomain with associated app info
+ */
+export interface SubdomainWithApp {
+  subdomain: string;
+  app_id: string | null;
+  app_name: string | null;
+  claimed_at: string;
+}
+
+/**
+ * Get all subdomains owned by a user with optional app association.
  * 
  * @param userId - The user ID to query
- * @returns Promise resolving to array of subdomain strings (most recently claimed first)
+ * @returns Promise resolving to array of subdomain objects with app info (most recently claimed first)
  * 
  * @example
  * ```typescript
  * const subdomains = await getUserSubdomains('user-123');
- * console.log('User owns:', subdomains); // ['my-app', 'another-app']
+ * console.log('User owns:', subdomains); 
+ * // [{ subdomain: 'my-app', app_id: 'abc', app_name: 'My Cool App', claimed_at: '...' }]
  * ```
  */
-export async function getUserSubdomains(userId: string): Promise<string[]> {
+export async function getUserSubdomains(userId: string): Promise<SubdomainWithApp[]> {
   const db = getDatabase();
   
   const results = db.prepare(`
-    SELECT subdomain FROM subdomain_reservations 
-    WHERE owner_id = ? 
-    ORDER BY claimed_at DESC
-  `).all(userId) as { subdomain: string }[];
+    SELECT 
+      sr.subdomain, 
+      sr.app_id, 
+      sr.claimed_at,
+      a.name as app_name
+    FROM subdomain_reservations sr
+    LEFT JOIN apps a ON sr.app_id = a.id
+    WHERE sr.owner_id = ? 
+    ORDER BY sr.claimed_at DESC
+  `).all(userId) as { subdomain: string; app_id: string | null; claimed_at: string; app_name: string | null }[];
   
-  return results.map(row => row.subdomain);
+  return results.map(row => ({
+    subdomain: row.subdomain,
+    app_id: row.app_id,
+    app_name: row.app_name,
+    claimed_at: row.claimed_at,
+  }));
 }
 
 /**

@@ -1,13 +1,74 @@
 /**
  * Chat Routes for OnHyper.io Support Chat
  * 
- * Handles anonymous chat with ScoutOS agent and lead capture
- * No authentication required for these routes
+ * Provides anonymous support chat powered by ScoutOS agent.
+ * Enables lead capture from chat sessions.
+ * 
+ * ## Features
+ * 
+ * - Anonymous chat (no auth required)
+ * - Session continuity via session_id
+ * - Streaming responses (SSE support)
+ * - Lead capture (email collection)
+ * 
+ * ## Configuration
+ * 
+ * Requires ScoutOS credentials:
+ * - `SCOUTOS_API_KEY` - API key for ScoutOS
+ * - `SCOUTOS_SUPPORT_AGENT_ID` - Agent ID for support bot
+ * 
+ * ## Endpoints
+ * 
+ * ### POST /api/chat/message
+ * Send a message to the support agent.
+ * 
+ * **Request Body:**
+ * ```json
+ * {
+ *   "message": "How do I add an API key?",
+ *   "session_id": "optional-session-uuid",
+ *   "stream": false
+ * }
+ * ```
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "success": true,
+ *   "session_id": "uuid",
+ *   "response": { ... }
+ * }
+ * ```
+ * 
+ * With `stream: true`, returns SSE stream.
+ * 
+ * ### POST /api/chat/lead
+ * Capture email from chat user.
+ * 
+ * **Request Body:**
+ * ```json
+ * { "email": "user@example.com", "session_id": "uuid" }
+ * ```
+ * 
+ * **Response (200):**
+ * ```json
+ * { "success": true, "message": "Thanks! We'll be in touch." }
+ * ```
+ * 
+ * ### GET /api/chat/status
+ * Health check for chat service.
+ * 
+ * **Response (200):**
+ * ```json
+ * { "status": "ok", "configured": true, "agentId": "configured" }
+ * ```
+ * 
+ * @module routes/chat
  */
 
 import { Hono } from 'hono';
 import { stream } from 'hono/streaming';
-import { getDatabase, initDatabase } from '../lib/db.js';
+import { getDatabase } from '../lib/db.js';
 import { trackServerEvent } from '../lib/analytics.js';
 import { randomUUID } from 'crypto';
 

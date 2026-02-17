@@ -365,6 +365,61 @@ a:hover {
   margin-top: 0.5rem;
 }
 
+/* Subdomain Section */
+.subdomain-section {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: var(--bg-alt);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+
+.subdomain-section > label {
+  margin-bottom: 0.5rem;
+}
+
+.subdomain-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.subdomain-input-row input {
+  flex: 1;
+}
+
+.subdomain-input-row button {
+  flex-shrink: 0;
+  padding: 0.625rem 1rem;
+  font-size: 0.9rem;
+}
+
+.subdomain-status {
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  min-height: 1.25rem;
+}
+
+.subdomain-status.success {
+  color: var(--success);
+}
+
+.subdomain-status.error {
+  color: var(--error);
+}
+
+.subdomain-preview {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.subdomain-preview strong {
+  color: var(--primary);
+  font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .hero h1 {
@@ -393,6 +448,14 @@ a:hover {
   
   .features {
     grid-template-columns: 1fr;
+  }
+  
+  .subdomain-input-row {
+    flex-direction: column;
+  }
+  
+  .subdomain-input-row button {
+    width: 100%;
   }
 }
 

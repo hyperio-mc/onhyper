@@ -1,258 +1,341 @@
-# OnHyper.io - Secure Proxy Service for API-Backed Web Apps
-trigger
+# OnHyper.io
 
-OnHyper.io is a platform for publishing full-stack applications that require secure backend functionality. It enables developers to publish web apps that can safely call external APIs without exposing secrets to the browser.
+> Secure Proxy Service for API-Backed Web Apps
 
-## Features
-
-- **Secure Secret Storage**: API keys are encrypted at rest with per-user salts
-- **Proxy Service**: Call external APIs without exposing keys in browser code
-- **App Publishing**: Create and publish HTML/CSS/JS apps
-- **Usage Tracking**: Monitor API usage per app and endpoint
-- **Analytics**: PostHog integration for user behavior tracking
+OnHyper is a platform for publishing web applications that securely call external APIs. It solves the problem of exposing API keys in client-side code by providing a secure proxy layer that holds secrets server-side and injects them at request time.
 
 ## Quick Start
 
 ```bash
-# Install dependencies
+# Clone and install
+git clone https://github.com/hyperio-mc/onhyper.git
+cd onhyper
 npm install
 
-# Install frontend dependencies
-cd frontend && npm install && cd ..
-
-# Copy environment files
+# Set up environment (development defaults are provided)
 cp .env.example .env
-cp frontend/.env.example frontend/.env
-
-# Edit .env with your settings
-# ONHYPER_JWT_SECRET - a secure random string for JWT signing
-# ONHYPER_MASTER_KEY - 32 bytes hex for encryption
 
 # Start development server
 npm run dev
-
-# In another terminal, start the frontend
-cd frontend && npm run dev
 ```
 
-## API Endpoints
+The server will start at `http://localhost:3000`.
+
+## Features
+
+- **Secure Secret Storage**: API keys encrypted at rest with AES-256-GCM
+- **Proxy Service**: Forward requests to external APIs with automatic auth injection
+- **App Publishing**: Deploy static apps that can call APIs securely
+- **User Authentication**: JWT-based auth with email/password
+- **Usage Tracking**: Monitor API calls per app and endpoint
+- **Waitlist System**: Managed access with referral bonuses
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              Client Browser                              │
+│                                                                          │
+│   ┌────────────────────────────────────────────────────────────────┐    │
+│   │                        Published App                             │    │
+│   │                                                                 │    │
+│   │   fetch('/proxy/scout-atoms/world/{id}/_interact', {           │    │
+│   │     method: 'POST',                                             │    │
+│   │     headers: { 'X-App-Slug': 'my-app' },                        │    │
+│   │     body: JSON.stringify({ messages: [...] })                   │    │
+│   │   })                                                            │    │
+│   │                                                                 │    │
+│   └─────────────────────────────┬──────────────────────────────────┘    │
+│                                 │                                        │
+└─────────────────────────────────┼────────────────────────────────────────┘
+                                  │
+                                  │ 1. Request to /proxy/{endpoint}
+                                  │    (no API key exposed)
+                                  ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          OnHyper.io Server                               │
+│                                                                          │
+│   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
+│   │   Auth Layer     │  │  Secret Vault    │  │  Usage Tracker   │      │
+│   │  (JWT + API Key) │  │  (AES-256-GCM)   │  │   (SQLite)       │      │
+│   └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘      │
+│            │                     │                     │                 │
+│            └─────────────────────┼─────────────────────┘                 │
+│                                  │                                       │
+│   ┌──────────────────────────────▼──────────────────────────────────┐   │
+│   │                        Proxy Service                              │   │
+│   │                                                                  │   │
+│   │   1. Identify user (JWT, API key, or App-Slug)                   │   │
+│   │   2. Look up encrypted secret for endpoint                       │   │
+│   │   3. Decrypt and inject Authorization header                     │   │
+│   │   4. Forward request to target API                               │   │
+│   │   5. Return response (with CORS headers)                         │   │
+│   │                                                                  │   │
+│   └──────────────────────────────┬──────────────────────────────────┘   │
+│                                  │                                       │
+└──────────────────────────────────┼───────────────────────────────────────┘
+                                   │
+                                   │ 2. Forward with secret
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           External APIs                                  │
+│                                                                          │
+│   api.scoutos.com    ollama.com/v1    openrouter.ai    anthropic.com    │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## API Reference
 
 ### Authentication
 
-- `POST /api/auth/signup` - Create a new account
-- `POST /api/auth/login` - Authenticate and get JWT
-- `POST /api/auth/token` - Validate JWT and return user info
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/signup` | POST | Create new account |
+| `/api/auth/login` | POST | Authenticate and get JWT |
+| `/api/auth/token` | POST | Validate JWT token |
+| `/api/auth/me` | GET | Get current user info |
 
-### Secrets
+### Secrets Management
 
-- `GET /api/secrets` - List user secrets (masked)
-- `POST /api/secrets` - Add a new secret
-- `DELETE /api/secrets/:name` - Delete a secret
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/secrets` | GET | List user's secrets (masked) |
+| `/api/secrets` | POST | Store a new secret |
+| `/api/secrets/:name` | DELETE | Delete a secret |
+| `/api/secrets/check/:name` | GET | Check if secret exists |
 
 ### Apps
 
-- `GET /api/apps` - List user apps
-- `POST /api/apps` - Create a new app
-- `GET /api/apps/:id` - Get app details
-- `PUT /api/apps/:id` - Update an app
-- `DELETE /api/apps/:id` - Delete an app
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/apps` | GET | List user's apps |
+| `/api/apps` | POST | Create new app |
+| `/api/apps/:id` | GET | Get app details |
+| `/api/apps/:id` | PUT | Update app |
+| `/api/apps/:id` | DELETE | Delete app |
 
 ### Proxy
 
-- `GET /proxy` - List available proxy endpoints
-- `ALL /proxy/:endpoint/*` - Proxy requests to external API
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/proxy` | GET | List available endpoints |
+| `/proxy/:endpoint/*` | ALL | Proxy request to external API |
 
-Available endpoints:
-- `/proxy/scout-atoms` - Scout OS Atoms API
-- `/proxy/ollama` - Ollama API
-- `/proxy/openrouter` - OpenRouter API
-- `/proxy/anthropic` - Anthropic API
-- `/proxy/openai` - OpenAI API
+### App Rendering
 
-### Render
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/a/:slug` | GET | Render published app |
+| `/a/:slug/raw` | GET | Get raw HTML |
+| `/a/:slug/css` | GET | Get app CSS |
+| `/a/:slug/js` | GET | Get app JavaScript |
 
-- `GET /a/:slug` - Render a published app
+### Waitlist (Public)
 
-## Example Usage
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/waitlist` | POST | Submit waitlist application |
+| `/api/waitlist/position` | GET | Get position in queue |
+| `/api/waitlist/referral` | POST | Process a referral |
+| `/api/waitlist/invite/:code` | GET | Validate invite code |
+| `/api/waitlist/stats` | GET | Get global waitlist stats |
 
-### 1. Create an account
+### Chat (Public)
 
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/chat/message` | POST | Send message to support agent |
+| `/api/chat/lead` | POST | Capture lead from chat |
+| `/api/chat/status` | GET | Check chat service status |
+
+### Blog (Public)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/blog` | GET | List all posts |
+| `/api/blog/:slug` | GET | Get single post |
+| `/api/blog/rss` | GET | RSS feed |
+
+### Dashboard (Protected)
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/dashboard/stats` | GET | Get user statistics |
+
+## Proxy Endpoints
+
+Pre-configured proxy endpoints for common AI APIs:
+
+| Endpoint | Target API | Secret Key |
+|----------|-----------|------------|
+| `/proxy/scout-atoms` | Scout OS Agents API | `SCOUT_API_KEY` |
+| `/proxy/ollama` | Ollama API | `OLLAMA_API_KEY` |
+| `/proxy/openrouter` | OpenRouter API | `OPENROUTER_API_KEY` |
+| `/proxy/anthropic` | Anthropic API | `ANTHROPIC_API_KEY` |
+| `/proxy/openai` | OpenAI API | `OPENAI_API_KEY` |
+
+### Authentication Methods
+
+The proxy supports three authentication methods:
+
+1. **JWT Token**: `Authorization: Bearer <token>`
+2. **API Key**: `X-API-Key: oh_live_...`
+3. **App Slug**: `X-App-Slug: my-app` (for published apps)
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PORT` | No | Server port (default: 3000) |
+| `HOST` | No | Server host (default: 0.0.0.0) |
+| `BASE_URL` | No | Public URL (default: http://localhost:3000) |
+| `DATA_DIR` | No | Data storage directory (default: ./data) |
+| `STATIC_PATH` | No | Frontend files path (default: ./public) |
+| **`ONHYPER_JWT_SECRET`** | **Yes** | Secret for JWT signing (32+ chars) |
+| **`ONHYPER_MASTER_KEY`** | **Yes** | Master key for secret encryption (32+ chars) |
+| `SCOUTOS_API_KEY` | No | ScoutOS API key for chat support |
+| `SCOUTOS_SUPPORT_AGENT_ID` | No | ScoutOS agent ID for support chat |
+
+### Security Note
+
+In production, `ONHYPER_JWT_SECRET` and `ONHYPER_MASTER_KEY` **must** be set to secure random values. The server will fail to start if these are left as defaults in production mode.
+
+Generate secure values:
 ```bash
-curl -X POST http://localhost:3000/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{"email":"you@example.com","password":"your-password"}'
+# Generate JWT secret
+openssl rand -hex 32
+
+# Generate master key
+openssl rand -hex 32
 ```
-
-### 2. Add an API key
-
-```bash
-curl -X POST http://localhost:3000/api/secrets \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"name":"OPENAI_API_KEY","value":"sk-..."}'
-```
-
-### 3. Create an app
-
-```bash
-curl -X POST http://localhost:3000/api/apps \
-  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name":"My AI App",
-    "html":"<h1>AI Chat</h1><div id=\"output\"></div>",
-    "js":"fetch(\"/proxy/openai/chat/completions\", {method:\"POST\", headers:{\"Content-Type\":\"application/json\"}, body: JSON.stringify({model:\"gpt-4\", messages:[{role:\"user\",content:\"Hello!\"}]})}).then(r=>r.json()).then(console.log)"
-  }'
-```
-
-### 4. View your app
-
-Visit `http://localhost:3000/a/your-app-slug`
-
-## Analytics (PostHog)
-
-OnHyper uses PostHog for analytics tracking. Events are tracked both client-side (browser) and server-side (backend).
-
-### Setup
-
-1. Create a free account at [posthog.com](https://posthog.com)
-2. Create a new project and get your API key from Project Settings
-3. Add environment variables:
-
-**Backend (.env):**
-```bash
-POSTHOG_KEY=phc_your_project_key_here
-POSTHOG_HOST=https://app.posthog.com
-```
-
-**Frontend (frontend/.env):**
-```bash
-VITE_PUBLIC_POSTHOG_KEY=phc_your_project_key_here
-VITE_PUBLIC_POSTHOG_HOST=https://app.posthog.com
-```
-
-### Tracked Events
-
-#### Client-Side Events (Browser)
-| Event | Description | Properties |
-|-------|-------------|------------|
-| `page_view` | Page navigation (automatic) | `path`, `referrer` |
-| `signup` | User creates account | `email`, `plan`, `source` |
-| `login` | User logs in | `email` |
-| `app_created` | User creates an app | `app_id`, `app_name` |
-| `app_viewed` | User views an app | `app_id`, `app_name` |
-| `secret_added` | User adds an API key | `key_name` |
-| `upgrade_clicked` | User clicks upgrade CTA | `from_plan`, `to_plan` |
-
-#### Server-Side Events (Backend)
-| Event | Description | Properties |
-|-------|-------------|------------|
-| `proxy_request` | API proxied to external service | `endpoint`, `status`, `duration_ms`, `success` |
-| `signup` | Account created (server-side backup) | `email`, `plan`, `source` |
-| `login` | User authenticated (server-side) | `email` |
-| `upgrade_clicked` | Upgrade attempted | `from_plan`, `to_plan` |
-| `trial_started` | Trial period begins | `plan`, `source` |
-
-### User Identification
-
-After login/signup, users are identified in PostHog with:
-- `id` - User's database ID
-- `email` - User's email address
-- `plan` - Current subscription plan
-
-This allows tracking user journeys across sessions and devices.
-
-### Analytics Utility Files
-
-- **Client-side**: `frontend/src/lib/analytics.ts` - Use for browser events
-- **Server-side**: `src/lib/analytics.ts` - Use for backend events
-
-### Usage in Code
-
-```typescript
-// Client-side tracking
-import { trackEvent, trackAppCreated } from '$lib/analytics';
-
-// Simple event
-trackEvent('custom_action', { detail: 'value' });
-
-// Pre-built events
-trackAppCreated({ appId: 'abc123', appName: 'My App' });
-
-// Server-side tracking
-import { trackProxyRequest, identifyServerUser } from '../lib/analytics.js';
-
-trackProxyRequest({
-  userId: 'user123',
-  endpoint: 'openai',
-  status: 200,
-  durationMs: 450,
-  success: true
-});
-```
-
-### Development Mode
-
-When no PostHog key is configured, analytics events are logged to the console instead:
-
-```
-[Analytics] (no key) signup { email: 'test@example.com', plan: 'FREE' }
-```
-
-This allows testing analytics integration without a real PostHog project.
-
-## Security
-
-- **AES-256-GCM Encryption**: All secrets are encrypted at rest
-- **Per-User Salts**: Each user has a unique salt for encryption
-- **JWT Authentication**: Secure token-based auth with configurable expiration
-- **Rate Limiting**: Per-user and per-plan rate limits
-
-## Tech Stack
-
-- **Framework**: Hono (fast, minimal web framework)
-- **Frontend**: SvelteKit with Tailwind CSS
-- **Database**: SQLite (users, secrets, apps) + LMDB (app content)
-- **Auth**: JWT + bcrypt password hashing
-- **Encryption**: AES-256-GCM with PBKDF2 key derivation
-- **Analytics**: PostHog
 
 ## Project Structure
 
 ```
 onhyper/
-├── src/                    # Backend (Hono server)
-│   ├── index.ts           # Main entry point
-│   ├── config.ts          # Configuration
-│   ├── lib/               # Shared utilities
-│   │   ├── analytics.ts   # Server-side PostHog
-│   │   ├── db.ts          # SQLite database
-│   │   ├── encryption.ts  # AES-256-GCM
-│   │   ├── lmdb.ts        # App content storage
-│   │   ├── secrets.ts     # Secret management
-│   │   ├── usage.ts       # Usage tracking
-│   │   └── users.ts       # User management
-│   ├── middleware/        # Auth, rate limiting
-│   └── routes/            # API endpoints
-│       ├── apps.ts
-│       ├── auth.ts
-│       ├── dashboard.ts
-│       ├── proxy.ts
-│       ├── render.ts
-│       └── secrets.ts
-├── frontend/              # Frontend (SvelteKit)
-│   ├── src/
-│   │   ├── lib/
-│   │   │   ├── analytics.ts  # Client-side PostHog
-│   │   │   ├── components/   # Reusable UI components
-│   │   │   └── stores/       # Svelte stores
-│   │   └── routes/           # Pages
-│   └── vite.config.ts
-├── data/                  # Database files (gitignored)
-├── dist/                  # Compiled output
-└── static/                # Static assets
+├── src/
+│   ├── index.ts              # Server entry point
+│   ├── config.ts             # Configuration and validation
+│   ├── routes/
+│   │   ├── auth.ts           # Authentication endpoints
+│   │   ├── apps.ts           # App management
+│   │   ├── secrets.ts        # Secret management
+│   │   ├── proxy.ts          # Proxy service
+│   │   ├── render.ts         # App rendering
+│   │   ├── dashboard.ts      # Dashboard stats
+│   │   ├── waitlist.ts       # Waitlist system
+│   │   ├── chat.ts           # Support chat
+│   │   ├── blog.ts           # Blog endpoints
+│   │   └── unsubscribe.ts    # Email unsubscribe
+│   ├── lib/
+│   │   ├── db.ts             # SQLite database
+│   │   ├── lmdb.ts           # LMDB key-value store
+│   │   ├── encryption.ts     # AES-256-GCM encryption
+│   │   ├── secrets.ts        # Secret management
+│   │   ├── users.ts          # User operations
+│   │   ├── apps.ts           # App operations
+│   │   ├── usage.ts          # Usage tracking
+│   │   ├── analytics.ts      # PostHog analytics
+│   │   └── email.ts          # Email sending (Resend)
+│   ├── middleware/
+│   │   ├── auth.ts           # JWT/API key authentication
+│   │   └── rateLimit.ts      # Rate limiting
+│   └── emails/               # React Email templates
+├── public/
+│   ├── index.html            # SPA entry point
+│   ├── app.js                # Frontend application
+│   ├── styles.css            # Styles
+│   └── pages/                # SPA page templates
+├── data/                     # SQLite + LMDB data (gitignored)
+├── blog/                     # Markdown blog posts
+└── dist/                     # Compiled JavaScript
 ```
+
+## Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm start` | Run production server |
+| `npm test` | Run tests with Vitest |
+
+## Pricing Plans
+
+| Plan | Requests/Day | Apps | Secrets |
+|------|-------------|------|---------|
+| FREE | 100 | 3 | 5 |
+| HOBBY | 1,000 | 10 | 20 |
+| PRO | 10,000 | 50 | 50 |
+| BUSINESS | Unlimited | Unlimited | Unlimited |
+
+## Tech Stack
+
+- **Runtime**: Node.js 20+
+- **Framework**: Hono (fast web framework)
+- **Language**: TypeScript
+- **Database**: SQLite (users, secrets, apps) + LMDB (content cache)
+- **Encryption**: AES-256-GCM with PBKDF2 key derivation
+- **Auth**: JWT with bcrypt password hashing
+- **Email**: Resend
+- **Analytics**: PostHog
+- **Frontend**: Vanilla JS SPA
+
+## Security Model
+
+### Secret Encryption
+
+1. Secrets are encrypted with AES-256-GCM
+2. Each secret has a unique random salt (32 bytes)
+3. Encryption key derived from master key + salt via PBKDF2 (100k iterations)
+4. Auth tags ensure integrity
+5. Master key stored in environment variable (never in code)
+
+### Request Flow
+
+1. Request arrives at `/proxy/:endpoint/*`
+2. User identified via JWT, API key, or App-Slug header
+3. Secret looked up from encrypted database
+4. Secret decrypted and injected into Authorization header
+5. Request forwarded to target API
+6. Response returned to client (with CORS headers)
+
+### Rate Limiting
+
+- Daily request limits per plan
+- Strict rate limiting on auth endpoints (10/min)
+- In-memory tracking (use Redis for production)
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server
+npm run dev
+
+# Build for production
+npm run build
+
+# Run production server
+npm start
+```
+
+## Deployment
+
+OnHyper is designed for single-server deployment (Railway, Render, Fly.io).
+
+Required environment variables for production:
+- `ONHYPER_JWT_SECRET` - Must be set (no default)
+- `ONHYPER_MASTER_KEY` - Must be set (no default)
+- `DATA_DIR` or `RAILWAY_VOLUME_MOUNT_PATH` - For persistent storage
 
 ## License
 
 MIT
+
+## Contributing
+
+Issues and pull requests welcome at [github.com/hyperio-mc/onhyper](https://github.com/hyperio-mc/onhyper)

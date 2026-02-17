@@ -1,0 +1,26 @@
+ONHYPER MARKETING VIDEO SCRIPT
+
+Target: 30 seconds max
+
+SCRIPT:
+Hey developers! Stop exposing your API keys in client-side code. OnHyper is your secure API proxy. Store your keys server-side, call through our endpoints. Works with OpenAI, Anthropic, OpenRouter, and more. Ship secure apps in minutes, not weeks. OnHyper.io - your keys, safe.
+
+---
+
+CHARACTER COUNT: 267 characters (within 420 limit)
+
+RECOMMENDED SETTINGS:
+- Avatar: Pamela (professional, female)
+- Resolution: 1080p
+- Voice: Professional tone
+
+HEYGEN URL: https://app.heygen.com/avatar/script-to-video
+
+STEPS:
+1. Click "Public avatars" tab
+2. Find "Pamela" and click to expand her 32 looks
+3. Select a professional Pamela look
+4. Click "Add Script" tab
+5. Paste the script above
+6. Set resolution to 1080p
+7. Click "Generate video"

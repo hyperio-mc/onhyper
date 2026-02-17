@@ -23,14 +23,17 @@ import { waitlist } from './routes/waitlist.js';
 import { unsubscribe } from './routes/unsubscribe.js';
 import { blog } from './routes/blog.js';
 import { chat } from './routes/chat.js';
+import { subdomains } from './routes/subdomains.js';
 import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
+import { subdomainRouter } from './middleware/subdomain.js';
 
 const app = new Hono();
 
 // Global middleware
 app.use('*', logger());
 app.use('*', cors());
+app.use('*', subdomainRouter);
 app.use('*', rateLimit);
 
 // Serve static files from public/ folder
@@ -95,6 +98,12 @@ app.get('/api', (c) => {
         'POST /api/chat/lead': 'Capture lead from chat',
         'GET /api/chat/status': 'Check chat service status',
       },
+      subdomains: {
+        'GET /api/subdomains/check?name=X': 'Check if subdomain is available',
+        'POST /api/subdomains/claim': 'Claim a subdomain (requires auth)',
+        'GET /api/subdomains/mine': 'List owned subdomains (requires auth)',
+        'DELETE /api/subdomains/:name': 'Release a subdomain (requires auth)',
+      },
     },
   });
 });
@@ -125,6 +134,9 @@ app.route('/api/chat', chat);
 
 // Waitlist routes (public) - MUST be before protected /api routes
 app.route('/api/waitlist', waitlist);
+
+// Subdomain routes (mixed public/protected - handled in-module)
+app.route('/api/subdomains', subdomains);
 
 // Protected API routes
 const protectedApi = new Hono();

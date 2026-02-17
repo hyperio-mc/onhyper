@@ -1,16 +1,84 @@
 /**
- * Blog routes for OnHyper.io
+ * Blog Routes for OnHyper.io
  * 
- * Endpoints:
- * - GET /api/blog - List all posts (sorted by date, newest first)
- * - GET /api/blog/:slug - Get single post with rendered HTML
- * - GET /api/blog/rss - RSS/Atom feed for subscribers
+ * Serves blog posts from Markdown files with frontmatter.
+ * Provides JSON API for SPA consumption and RSS feed.
+ * 
+ * ## Blog Post Format
+ * 
+ * Posts are stored as Markdown files in `/blog/` directory:
+ * 
+ * ```markdown
+ * ---
+ * title: "Getting Started with OnHyper"
+ * date: "2024-01-15"
+ * author: "OnHyper Team"
+ * tags: ["tutorial", "getting-started"]
+ * featured: true
+ * ---
+ * 
+ * Your markdown content here...
+ * ```
+ * 
+ * ## Endpoints
+ * 
+ * ### GET /api/blog
+ * List all posts (sorted by date, newest first).
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "posts": [
+ *     {
+ *       "slug": "getting-started",
+ *       "title": "Getting Started with OnHyper",
+ *       "date": "2024-01-15",
+ *       "author": "OnHyper Team",
+ *       "tags": ["tutorial"],
+ *       "excerpt": "First 200 chars of content...",
+ *       "featured": true
+ *     }
+ *   ],
+ *   "count": 10
+ * }
+ * ```
+ * 
+ * ### GET /api/blog/:slug
+ * Get single post with rendered HTML.
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "slug": "getting-started",
+ *   "title": "Getting Started with OnHyper",
+ *   "date": "2024-01-15",
+ *   "author": "OnHyper Team",
+ *   "tags": ["tutorial"],
+ *   "excerpt": "...",
+ *   "html": "<p>Rendered HTML...</p>",
+ *   "featured": true
+ * }
+ * ```
+ * 
+ * **Response (404):** Post not found
+ * 
+ * ### GET /api/blog/rss
+ * RSS 2.0 feed for blog subscribers.
+ * 
+ * **Response (200):** XML with `Content-Type: application/rss+xml`
+ * 
+ * ## Caching
+ * 
+ * Posts are cached in memory for 1 minute (CACHE_TTL = 60000ms).
+ * This balances freshness with read performance.
+ * 
+ * @module routes/blog
  */
 
 import { Hono } from 'hono';
 import { marked } from 'marked';
 import matter from 'gray-matter';
-import { readFileSync, readdirSync, statSync } from 'fs';
+import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 
 const blog = new Hono();

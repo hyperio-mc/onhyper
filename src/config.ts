@@ -1,11 +1,56 @@
 /**
  * OnHyper.io Configuration
  * 
- * All configuration values are loaded from environment variables
- * with sensible defaults for development.
+ * Centralized configuration loaded from environment variables.
+ * All configuration values have sensible defaults for development,
+ * but production deployments must set critical secrets.
  * 
- * IMPORTANT: In production, critical secrets MUST be set via environment variables.
- * The server will fail to start if they are missing.
+ * ## Environment Detection
+ * 
+ * Production mode is automatically detected when:
+ * - `NODE_ENV=production`
+ * - `RAILWAY_ENVIRONMENT` is set (Railway.app)
+ * - `RENDER=true` (Render.com)
+ * 
+ * In production, the server validates that critical secrets are set.
+ * 
+ * ## Configuration Groups
+ * 
+ * | Group | Purpose |
+ * |-------|---------|
+ * | Server | Port, host, base URL |
+ * | Database | SQLite and LMDB paths |
+ * | Security | JWT secret, master key |
+ * | Auth | Password hashing, token settings |
+ * | Rate Limit | Request throttling |
+ * | Proxy | Timeout and size limits |
+ * | Plans | Tier limits for apps, secrets, requests |
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { config, validateProductionSecrets, PROXY_ENDPOINTS } from './config.js';
+ * 
+ * // Access configuration
+ * console.log(config.port);           // 3000
+ * console.log(config.jwtSecret);      // 'dev-...' or env var
+ * console.log(config.plans.FREE);     // { requestsPerDay: 100, ... }
+ * 
+ * // Validate secrets before starting server
+ * validateProductionSecrets();  // Throws if invalid
+ * 
+ * // Access proxy endpoint configuration
+ * const endpoint = PROXY_ENDPOINTS['scout-atoms'];
+ * // { target: 'https://api.scoutos.com', secretKey: 'SCOUT_API_KEY', ... }
+ * ```
+ * 
+ * ## Security Warning
+ * 
+ * ⚠️ The default values for `ONHYPER_JWT_SECRET` and `ONHYPER_MASTER_KEY`
+ * are intentionally insecure for development. The server will fail to start
+ * in production mode if these are not overridden.
+ * 
+ * @module config
  */
 
 /**

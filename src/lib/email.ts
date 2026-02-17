@@ -26,9 +26,6 @@ const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'OnHyper';
 const FROM = `${FROM_NAME} <${FROM_EMAIL}>`;
 
-// Base URL for links
-const BASE_URL = process.env.BASE_URL || 'https://onhyper.io';
-
 // Email sequence configuration
 const EMAIL_SEQUENCE = {
   WELCOME: { step: 1, delay: 0 },            // Immediate

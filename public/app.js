@@ -1,10 +1,84 @@
-// OnHyper SPA - Simple client-side router + API
+/**
+ * OnHyper Single Page Application (SPA)
+ * 
+ * A lightweight client-side router and API wrapper for the OnHyper dashboard.
+ * Handles authentication state, page navigation, and API communication.
+ * 
+ * ## Architecture
+ * 
+ * - **Hash-based routing**: URLs like `#/dashboard` map to page templates
+ * - **API wrapper**: Handles JWT token injection and error handling
+ * - **State management**: Global `currentUser` state for auth
+ * 
+ * ## Page Flow
+ * 
+ * ```
+ * URL Change → Router → Load Template → Init Handlers → Render
+ *     │                                          │
+ *     │                                          ▼
+ *     │                              Page-specific setup:
+ *     │                              - Form handlers
+ *     │                              - Data loading
+ *     │                              - Event listeners
+ *     │
+ *     └────────────────────────────────────────────┘
+ * ```
+ * 
+ * ## Key Functions
+ * 
+ * | Function | Purpose |
+ * |----------|---------|
+ * | `loadPage(path)` | Load and render a page template |
+ * | `navigate(path)` | Change URL hash (triggers loadPage) |
+ * | `api(endpoint, options)` | Authenticated API request helper |
+ * | `checkAuth()` | Validate stored JWT and restore session |
+ * | `updateNav()` | Update navigation based on auth state |
+ * 
+ * ## API Integration
+ * 
+ * All API calls automatically include the JWT token:
+ * 
+ * ```javascript
+ * // Simple GET
+ * const apps = await api('/apps');
+ * 
+ * // POST with body
+ * const result = await api('/apps', {
+ *   method: 'POST',
+ *   body: JSON.stringify({ name: 'My App' })
+ * });
+ * ```
+ * 
+ * ## Chat System
+ * 
+ * The support chat connects to ScoutOS agent:
+ * - Maintains session ID in localStorage
+ * - Tracks message count for lead capture prompt
+ * - Streams responses via SSE
+ * 
+ * @file Public-facing SPA client
+ */
 
-// State
+// ============================================================================
+// STATE & CONFIGURATION
+// ============================================================================
+
+/**
+ * Current authenticated user state
+ * Populated by checkAuth(), cleared on logout
+ * @type {Object|null}
+ */
 let currentUser = null;
+
+/**
+ * Base URL for API requests
+ * @constant {string}
+ */
 const API_BASE = '/api';
 
-// Router
+// ============================================================================
+// ROUTER
+// ============================================================================
 const routes = {
   '/': 'pages/home.html',
   '/login': 'pages/login.html',
@@ -12,6 +86,7 @@ const routes = {
   '/dashboard': 'pages/dashboard.html',
   '/apps': 'pages/apps.html',
   '/keys': 'pages/keys.html',
+  '/domains': 'pages/domains.html',
   '/waitlist': 'pages/waitlist.html',
   '/chat': 'pages/chat.html',
   '/blog': 'pages/blog.html',
@@ -112,6 +187,7 @@ function updateNav() {
       <div class="nav-links">
         <a href="#/dashboard">Dashboard</a>
         <a href="#/apps">Apps</a>
+        <a href="#/domains">Domains</a>
         <a href="#/blog">Blog</a>
         <a href="#/skill">For Agents</a>
         <a href="#/chat">Chat</a>
@@ -293,22 +369,124 @@ async function loadApps() {
     
     if (apps.length === 0) {
       list.innerHTML = '<p>No apps yet. Create your first app!</p>';
-      return;
+    } else {
+      list.innerHTML = apps.map(app => `
+        <div class="app-card">
+          <h3>${app.name}</h3>
+          <p>${app.description || 'No description'}</p>
+          <div class="app-actions">
+            <a href="/a/${app.slug}" target="_blank">View</a>
+            <button onclick="editApp('${app.id}')">Edit</button>
+            <button onclick="deleteApp('${app.id}')" class="btn-danger">Delete</button>
+          </div>
+        </div>
+      `).join('');
     }
     
-    list.innerHTML = apps.map(app => `
-      <div class="app-card">
-        <h3>${app.name}</h3>
-        <p>${app.description || 'No description'}</p>
-        <div class="app-actions">
-          <a href="/a/${app.slug}" target="_blank">View</a>
-          <button onclick="editApp('${app.id}')">Edit</button>
-          <button onclick="deleteApp('${app.id}')" class="btn-danger">Delete</button>
-        </div>
-      </div>
-    `).join('');
+    // Initialize subdomain functionality
+    initSubdomainSection();
   } catch (err) {
     showError(err.message);
+  }
+}
+
+// Subdomain functionality
+let currentSubdomain = null;
+
+async function initSubdomainSection() {
+  const subdomainInput = document.getElementById('subdomain-input');
+  const checkBtn = document.getElementById('check-subdomain');
+  const statusSpan = document.getElementById('subdomain-status');
+  const previewUrl = document.getElementById('subdomain-preview-url');
+  
+  if (!subdomainInput || !checkBtn) return;
+  
+  // Load user's existing subdomains
+  try {
+    const result = await api('/subdomains/mine');
+    if (result.subdomains && result.subdomains.length > 0) {
+      currentSubdomain = result.subdomains[0];
+      subdomainInput.value = currentSubdomain;
+      updateSubdomainPreview(currentSubdomain);
+      // Show as already claimed (editable but already owned)
+      statusSpan.className = 'subdomain-status success';
+      statusSpan.textContent = '✓ Your subdomain';
+    }
+  } catch (err) {
+    // User has no subdomains yet - that's fine
+    console.log('No subdomains found for user');
+  }
+  
+  // Check button click handler
+  checkBtn.addEventListener('click', checkSubdomainAvailability);
+  
+  // Live preview on input
+  subdomainInput.addEventListener('input', (e) => {
+    const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    e.target.value = value;
+    updateSubdomainPreview(value);
+    // Clear status when input changes
+    statusSpan.className = 'subdomain-status';
+    statusSpan.textContent = '';
+  });
+  
+  // Initial preview
+  updateSubdomainPreview('');
+}
+
+function updateSubdomainPreview(subdomain) {
+  const previewUrl = document.getElementById('subdomain-preview-url');
+  if (previewUrl) {
+    const domain = subdomain || '__';
+    previewUrl.textContent = `${domain}.onhyper.io`;
+  }
+}
+
+async function checkSubdomainAvailability() {
+  const subdomainInput = document.getElementById('subdomain-input');
+  const statusSpan = document.getElementById('subdomain-status');
+  const name = subdomainInput.value.trim().toLowerCase();
+  
+  if (!name) {
+    statusSpan.className = 'subdomain-status error';
+    statusSpan.textContent = 'Enter a subdomain name';
+    return;
+  }
+  
+  if (name.length < 3) {
+    statusSpan.className = 'subdomain-status error';
+    statusSpan.textContent = '✗ Must be at least 3 characters';
+    return;
+  }
+  
+  try {
+    const result = await api(`/subdomains/check?name=${encodeURIComponent(name)}`);
+    
+    if (result.available) {
+      statusSpan.className = 'subdomain-status success';
+      statusSpan.textContent = '✓ Available!';
+      currentSubdomain = name;
+    } else {
+      statusSpan.className = 'subdomain-status error';
+      statusSpan.textContent = `✗ ${result.message}`;
+    }
+  } catch (err) {
+    statusSpan.className = 'subdomain-status error';
+    statusSpan.textContent = `✗ ${err.message}`;
+  }
+}
+
+async function claimSubdomain(name) {
+  if (!name) return { success: true }; // No subdomain to claim
+  
+  try {
+    const result = await api('/subdomains/claim', {
+      method: 'POST',
+      body: JSON.stringify({ subdomain: name })
+    });
+    return result;
+  } catch (err) {
+    return { success: false, error: err.message };
   }
 }
 

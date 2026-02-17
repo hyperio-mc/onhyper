@@ -1,8 +1,105 @@
 /**
- * Proxy routes for OnHyper.io
+ * Proxy Routes for OnHyper.io
  * 
- * The core proxy service that injects user secrets into API requests.
- * Allows published apps to call external APIs securely without exposing keys.
+ * The core proxy service that securely injects user secrets into API requests.
+ * This enables published apps to call external APIs without exposing keys to browsers.
+ * 
+ * ## How It Works
+ * 
+ * 1. Client sends request to `/proxy/{endpoint}/{path}`
+ * 2. Proxy identifies user via JWT, API key, or app ownership
+ * 3. Looks up user's secret for that endpoint
+ * 4. Decrypts secret and injects into Authorization header
+ * 5. Forwards request to target API
+ * 6. Returns response to client with CORS headers
+ * 
+ * ## Endpoints
+ * 
+ * ### GET /proxy
+ * List all available proxy endpoints.
+ * 
+ * **Response (200):**
+ * ```json
+ * {
+ *   "endpoints": [
+ *     {
+ *       "name": "scout-atoms",
+ *       "target": "https://api.scoutos.com",
+ *       "secretKey": "SCOUT_API_KEY",
+ *       "description": "Scout OS Agents API",
+ *       "usage": "POST /proxy/scout-atoms/..."
+ *     }
+ *   ]
+ * }
+ * ```
+ * 
+ * ### ALL /proxy/:endpoint/*
+ * Forward requests to the target API.
+ * 
+ * **Authentication (one of):**
+ * - `Authorization: Bearer <jwt>` - JWT from login
+ * - `X-API-Key: oh_live_xxx` - API key from dashboard
+ * - `X-App-Slug: my-app` - App slug (uses app owner's secrets)
+ * - `X-App-ID: uuid` - App ID (uses app owner's secrets)
+ * 
+ * **Response:**
+ * - Success: Returns the API response with CORS headers
+ * - Error: Returns error JSON with details
+ * 
+ * **Error Codes:**
+ * - 401: Authentication required / No secret configured for endpoint
+ * - 404: Unknown proxy endpoint
+ * - 413: Request body too large (>5MB)
+ * - 502: Proxy request failed / API error
+ * - 504: Request timed out (30s)
+ * 
+ * ## Available Endpoints
+ * 
+ * | Endpoint | Target | Auth Format |
+ * |----------|--------|-------------|
+ * | `scout-atoms` | api.scoutos.com | `Bearer` |
+ * | `ollama` | ollama.com/v1 | `Bearer` |
+ * | `openrouter` | openrouter.ai/api/v1 | `Bearer` |
+ * | `anthropic` | api.anthropic.com/v1 | `x-api-key` |
+ * | `openai` | api.openai.com/v1 | `Bearer` |
+ * 
+ * ## Example Usage
+ * 
+ * ```javascript
+ * // In a published app
+ * const response = await fetch('/proxy/scout-atoms/world/agent123/_interact', {
+ *   method: 'POST',
+ *   headers: {
+ *     'Content-Type': 'application/json',
+ *     'X-App-Slug': 'my-app'
+ *   },
+ *   body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] })
+ * });
+ * ```
+ * 
+ * ## Streaming Support
+ * 
+ * Server-Sent Events (SSE) responses are streamed directly to the client:
+ * ```javascript
+ * const response = await fetch('/proxy/scout-atoms/world/agent/_interact', {
+ *   method: 'POST',
+ *   headers: { 'Accept': 'text/event-stream' },
+ *   body: JSON.stringify({ messages: [...], stream: true })
+ * });
+ * 
+ * const reader = response.body.getReader();
+ * // Handle SSE stream...
+ * ```
+ * 
+ * ## Rate Limits
+ * 
+ * Rate limiting is applied per user based on their plan:
+ * - FREE: 100 requests/day
+ * - HOBBY: 1,000 requests/day
+ * - PRO: 10,000 requests/day
+ * - BUSINESS: Unlimited
+ * 
+ * @module routes/proxy
  */
 
 import { Hono } from 'hono';
@@ -10,7 +107,7 @@ import { streamSSE } from 'hono/streaming';
 import { PROXY_ENDPOINTS, config } from '../config.js';
 import { getSecretValue } from '../lib/secrets.js';
 import { getAppBySlug, getAppById } from '../lib/apps.js';
-import { getApiKeyByKey, getUserById, verifyToken } from '../lib/users.js';
+import { getApiKeyByKey, verifyToken } from '../lib/users.js';
 import { recordUsage } from '../lib/usage.js';
 import { trackProxyRequest } from '../lib/analytics.js';
 

@@ -1,5 +1,73 @@
 /**
- * App management for OnHyper.io
+ * App Management for OnHyper.io
+ * 
+ * CRUD operations for published web applications.
+ * Apps are the core entity - users create HTML/CSS/JS apps that call APIs.
+ * 
+ * ## Data Storage
+ * 
+ * Apps are stored in **both** SQLite and LMDB:
+ * 
+ * - **SQLite**: Persistent storage, relationships, queries
+ * - **LMDB**: Fast content retrieval for rendering
+ * 
+ * This dual-storage approach ensures both durability and performance.
+ * 
+ * ## Slug Generation
+ * 
+ * App URLs use slugs derived from the app name:
+ * 
+ * ```
+ * name: "My Cool App!" → slug: "my-cool-app-a1b2c3"
+ * ```
+ * 
+ * - Lowercase alphanumeric + hyphens
+ * - Max 64 characters from name
+ * - UUID suffix for uniqueness
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { createApp, getAppById, getAppBySlug, listAppsByUser, updateApp, deleteApp } from './lib/apps.js';
+ * 
+ * // Create an app
+ * const app = await createApp('user-uuid', 'My App', {
+ *   html: '<div id="app"></div>',
+ *   css: '#app { color: blue; }',
+ *   js: 'console.log("Hello!");'
+ * });
+ * // → { id, name, slug: 'my-app-abc123', ... }
+ * 
+ * // Get by ID
+ * const app = getAppById('app-uuid');
+ * 
+ * // Get by slug (for rendering)
+ * const app = getAppBySlug('my-app-abc123');
+ * 
+ * // List user's apps
+ * const apps = listAppsByUser('user-uuid');
+ * 
+ * // Update an app
+ * await updateApp('app-uuid', 'user-uuid', { html: '<div>New content</div>' });
+ * 
+ * // Delete an app
+ * await deleteApp('app-uuid', 'user-uuid');
+ * 
+ * // Check plan limits
+ * const count = getAppCount('user-uuid');
+ * if (count >= planLimits.maxApps) {
+ *   // Deny creation
+ * }
+ * ```
+ * 
+ * ## URL Pattern
+ * 
+ * Published apps are accessible at:
+ * ```
+ * https://onhyper.io/a/{slug}
+ * ```
+ * 
+ * @module lib/apps
  */
 
 import { randomUUID } from 'crypto';
@@ -189,4 +257,42 @@ export function getAppCount(userId: string): number {
   const result = db.prepare('SELECT COUNT(*) as count FROM apps WHERE user_id = ?')
     .get(userId) as { count: number };
   return result.count;
+}
+
+/**
+ * Update an app's subdomain
+ * Sets the subdomain field and tracking columns
+ */
+export async function updateAppSubdomain(
+  appId: string,
+  userId: string,
+  subdomain: string | null
+): Promise<App | null> {
+  const db = getDatabase();
+  
+  // Verify ownership
+  const app = getAppById(appId);
+  if (!app || app.user_id !== userId) {
+    return null;
+  }
+  
+  const now = new Date().toISOString();
+  
+  if (subdomain) {
+    // Update with new subdomain
+    db.prepare(`
+      UPDATE apps 
+      SET subdomain = ?, subdomain_claimed_at = ?, subdomain_owner_id = ?, updated_at = ?
+      WHERE id = ?
+    `).run(subdomain.toLowerCase(), now, userId, now, appId);
+  } else {
+    // Clear subdomain
+    db.prepare(`
+      UPDATE apps 
+      SET subdomain = NULL, subdomain_claimed_at = NULL, subdomain_owner_id = NULL, updated_at = ?
+      WHERE id = ?
+    `).run(now, appId);
+  }
+  
+  return getAppById(appId);
 }

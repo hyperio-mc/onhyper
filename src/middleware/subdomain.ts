@@ -38,8 +38,15 @@
  */
 
 import { Context, Next } from 'hono';
+import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { getDatabase, App } from '../lib/db.js';
 import { AppContentStore } from '../lib/lmdb.js';
+
+// Get current directory for resolving template path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /**
  * Reserved subdomains that cannot be claimed by users
@@ -136,68 +143,92 @@ function getAppBySubdomain(subdomain: string): App | null {
 }
 
 /**
- * Render 404 page for unknown subdomain
+ * Cache for the 404 template
  */
-function render404(subdomain: string): string {
-  return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>App Not Found | OnHyper.io</title>
-      <style>
-        * { box-sizing: border-box; }
-        body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
-          text-align: center; 
-          padding: 50px 20px;
-          margin: 0;
-          background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          color: #f8fafc;
-        }
-        h1 { 
-          color: #6366f1; 
-          font-size: 24px;
-          margin-bottom: 16px;
-        }
-        p { 
-          color: #94a3b8; 
-          font-size: 16px;
-          margin-bottom: 24px;
-        }
-        a { 
-          color: #6366f1; 
-          text-decoration: none;
-          font-weight: 500;
-          padding: 10px 20px;
-          border: 1px solid #6366f1;
-          border-radius: 6px;
-          transition: all 0.2s ease;
-        }
-        a:hover {
-          background: #6366f1;
-          color: white;
-        }
-        .subdomain {
-          font-family: monospace;
-          background: rgba(99, 102, 241, 0.1);
-          padding: 2px 8px;
-          border-radius: 4px;
-          color: #6366f1;
-        }
-      </style>
-    </head>
-    <body>
-      <h1>App Not Found</h1>
-      <p>The app <span class="subdomain">${subdomain}</span> doesn't exist or hasn't been published yet.</p>
-      <p><a href="https://onhyper.io">Return to OnHyper.io</a></p>
-    </body>
-    </html>
-  `;
+let cached404Template: string | null = null;
+
+/**
+ * Load the 404 template from disk
+ */
+function load404Template(): string {
+  if (cached404Template) {
+    return cached404Template;
+  }
+  
+  try {
+    // Try to load from public directory
+    const templatePath = new URL('../../public/subdomain-404.html', import.meta.url);
+    const fs = await import('fs');
+    cached404Template = fs.readFileSync(templatePath, 'utf-8');
+    return cached404Template;
+  } catch {
+    // Fallback to minimal template if file not found
+    return getFallback404Template();
+  }
+}
+
+/**
+ * Fallback 404 template if file can't be loaded
+ */
+function getFallback404Template(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Subdomain Available | OnHyper.io</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 50%,#0f172a 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#f1f5f9;padding:2rem}
+    .container{text-align:center;max-width:480px}
+    .logo{font-size:2rem;font-weight:700;margin-bottom:2rem}
+    .logo span{background:linear-gradient(135deg,#2563eb 0%,#6366f1 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .subdomain{font-family:monospace;background:rgba(99,102,241,0.2);padding:0.5rem 1rem;border-radius:999px;color:#6366f1;display:inline-block;margin:1rem 0}
+    h1{font-size:1.5rem;margin-bottom:0.75rem}
+    p{color:#94a3b8;margin-bottom:1.5rem}
+    .btn{display:inline-block;padding:0.875rem 1.5rem;border-radius:8px;font-weight:500;text-decoration:none;margin:0.5rem;background:linear-gradient(135deg,#2563eb 0%,#6366f1 100%);color:white}
+    .btn:hover{transform:translateY(-2px)}
+    .btn-secondary{background:transparent;border:1px solid #334155;color:#f1f5f9}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo"><span>OnHyper</span></div>
+    <h1>Subdomain Available</h1>
+    <div class="subdomain" id="subdomain-name">SUBDOMAIN_PLACEHOLDER</div>
+    <p>This subdomain is available. Create your app and claim it!</p>
+    <a href="https://onhyper.io#/login" class="btn">Login to Claim</a>
+    <a href="https://onhyper.io" class="btn btn-secondary">Back to OnHyper.io</a>
+  </div>
+</body>
+</html>`;
+}
+
+/**
+ * Render 404 page for unknown subdomain
+ * Uses the static HTML template with subdomain injected via JavaScript
+ */
+async function render404(subdomain: string): Promise<string> {
+  const template = await load404Template();
+  
+  // Inject subdomain by replacing placeholder or using a script injection
+  // The template has a JavaScript function setSubdomainName() we can call
+  return template.replace(
+    '</body>',
+    `<script>
+      // Inject subdomain from server
+      if (window.setSubdomainName) {
+        window.setSubdomainName('${subdomain.replace(/'/g, "\\'")}');
+      } else {
+        // Fallback: direct element update
+        var el = document.getElementById('subdomain-name');
+        if (el) el.textContent = '${subdomain.replace(/'/g, "\\'")} .onhyper.io';
+      }
+    </script></body>`
+  ).replace(
+    'id="subdomain-name">subdomain.onhyper.io',
+    `id="subdomain-name">${subdomain}.onhyper.io`
+  );
 }
 
 /**

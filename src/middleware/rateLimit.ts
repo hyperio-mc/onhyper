@@ -1,7 +1,80 @@
 /**
- * Rate limiting middleware for OnHyper.io
+ * Rate Limiting Middleware for OnHyper.io
  * 
- * Implements sliding window rate limiting with configurable limits per plan.
+ * Implements daily rate limiting per user/IP with plan-based limits.
+ * Also provides strict rate limiting for sensitive endpoints.
+ * 
+ * ## Rate Limit Strategy
+ * 
+ * - **Window**: 24 hours (resets at midnight UTC)
+ * - **Identifier**: User ID if authenticated, otherwise IP + User-Agent hash
+ * - **Limits**: Based on user's plan tier
+ * 
+ * ## Plan Limits
+ * 
+ * | Plan | Requests/Day |
+ * |------|-------------|
+ * | FREE | 100 |
+ * | HOBBY | 1,000 |
+ * | PRO | 10,000 |
+ * | BUSINESS | Unlimited (-1) |
+ * 
+ * ## Response Headers
+ * 
+ * Every response includes rate limit info:
+ * 
+ * ```
+ * X-RateLimit-Limit: 1000
+ * X-RateLimit-Remaining: 847
+ * X-RateLimit-Reset: 1704153600
+ * ```
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { rateLimit, strictRateLimit } from './middleware/rateLimit.js';
+ * 
+ * // Apply general rate limiting to all routes
+ * app.use('*', rateLimit);
+ * 
+ * // Apply strict rate limiting to sensitive endpoints
+ * app.post('/api/auth/login', strictRateLimit, loginHandler);
+ * app.post('/api/auth/signup', strictRateLimit, signupHandler);
+ * ```
+ * 
+ * ## Strict Rate Limiting
+ * 
+ * For auth endpoints to prevent brute-force:
+ * - **Window**: 1 minute
+ * - **Limit**: 10 requests per minute
+ * - **Purpose**: Prevent credential stuffing
+ * 
+ * ## Error Response
+ * 
+ * When rate limited:
+ * 
+ * ```json
+ * {
+ *   "error": "Rate limit exceeded",
+ *   "limit": 100,
+ *   "resetsAt": "2024-01-15T00:00:00.000Z"
+ * }
+ * ```
+ * 
+ * ## Implementation Note
+ * 
+ * Current implementation uses in-memory storage. For production
+ * with multiple server instances, replace with Redis:
+ * 
+ * ```typescript
+ * // Future: Redis implementation
+ * const redis = new Redis(process.env.REDIS_URL);
+ * const key = `ratelimit:${clientId}:${windowStart}`;
+ * const count = await redis.incr(key);
+ * await redis.expire(key, 86400);
+ * ```
+ * 
+ * @module middleware/rateLimit
  */
 
 import { Context, Next } from 'hono';

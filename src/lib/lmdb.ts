@@ -1,7 +1,86 @@
 /**
  * LMDB Database Setup for OnHyper.io
  * 
- * Fast key-value storage for app content and other non-relational data.
+ * High-performance key-value storage for frequently accessed content.
+ * Complements SQLite for data that needs fast reads without complex queries.
+ * 
+ * ## Why LMDB?
+ * 
+ * | Feature | SQLite | LMDB |
+ * |---------|--------|------|
+ * | Complex queries | ✓ | ✗ |
+ * | ACID transactions | ✓ | ✓ |
+ * | Read performance | Good | Excellent |
+ * | Write performance | Good | Excellent |
+ * | Use case | Auth, apps, usage | Content cache |
+ * 
+ * ## Data Stored in LMDB
+ * 
+ * - **App Content**: HTML, CSS, JS for fast rendering
+ * - **App Metadata**: Quick lookup by ID without joins
+ * - **User App Lists**: Pre-computed app IDs per user
+ * 
+ * ## Key Patterns
+ * 
+ * ```typescript
+ * // App content (rendered pages)
+ * app:{appId}:content → { appId, html, css, js, updatedAt }
+ * 
+ * // App metadata cache
+ * app:{appId}:meta → { appId, userId, name, slug }
+ * 
+ * // User's app list (for dashboard)
+ * user:{userId}:apps → [appId1, appId2, ...]
+ * ```
+ * 
+ * ## Usage
+ * 
+ * ```typescript
+ * import { 
+ *   initLMDB, 
+ *   AppContentStore, 
+ *   AppMetaStore,
+ *   UserAppsStore 
+ * } from './lib/lmdb.js';
+ * 
+ * // Initialize at startup
+ * initLMDB();
+ * 
+ * // Store app content
+ * await AppContentStore.save(appId, { 
+ *   appId, 
+ *   html: '<div>...</div>', 
+ *   css: '...', 
+ *   js: '...',
+ *   updatedAt: new Date().toISOString()
+ * });
+ * 
+ * // Retrieve content (fast!)
+ * const content = AppContentStore.get(appId);
+ * 
+ * // Get user's apps
+ * const appIds = UserAppsStore.list(userId);
+ * ```
+ * 
+ * ## Persistence
+ * 
+ * LMDB data is persisted to disk at the path specified by `config.lmdbPath`:
+ * - Development: `./data/onhyper.lmdb/`
+ * - Production: `$DATA_DIR/onhyper.lmdb/` or `$RAILWAY_VOLUME_MOUNT_PATH/onhyper.lmdb/`
+ * 
+ * ## Fallback Strategy
+ * 
+ * If LMDB read fails, fall back to SQLite:
+ * ```typescript
+ * const content = AppContentStore.get(appId);
+ * if (!content) {
+ *   // Fallback to SQLite
+ *   const app = getAppById(appId);
+ *   return { html: app.html, css: app.css, js: app.js };
+ * }
+ * ```
+ * 
+ * @module lib/lmdb
  */
 
 import { open, Database } from 'lmdb';

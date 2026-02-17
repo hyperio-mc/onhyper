@@ -1,13 +1,63 @@
 /**
- * Secrets management for OnHyper.io
+ * Secrets Management for OnHyper.io
  * 
- * Handles secure storage and retrieval of user API keys and secrets.
- * Secrets are encrypted at rest using AES-256-GCM with per-user salts.
+ * High-level API for storing and retrieving encrypted user secrets.
+ * Wraps the encryption module with database operations.
+ * 
+ * ## Design Principles
+ * 
+ * 1. **Never return plaintext**: Values are shown exactly once during creation.
+ * 2. **Normalize names**: All names converted to `SCOUT_API_KEY` format.
+ * 3. **Per-secret encryption**: Each secret has unique salt for key derivation.
+ * 4. **Ownership scoping**: Secrets are scoped to user IDs.
+ * 
+ * ## Usage Flow
+ * 
+ * ```typescript
+ * import { storeSecret, getSecretValue, listSecrets, deleteSecret } from './lib/secrets.js';
+ * 
+ * // User adds a new API key
+ * await storeSecret('user-uuid', 'SCOUT_API_KEY', 'sk-ant-api03-xxxxx');
+ * // → { id: "secret-uuid", name: "SCOUT_API_KEY", masked: "••••••••" }
+ * 
+ * // During proxy request, retrieve the decrypted value
+ * const apiKey = getSecretValue('user-uuid', 'SCOUT_API_KEY');
+ * // → "sk-ant-api03-xxxxx" or null if not found
+ * 
+ * // List secrets for dashboard (values always masked)
+ * const secrets = listSecrets('user-uuid');
+ * // → [{ id, name, masked: "••••••••", created_at }]
+ * 
+ * // Check if secret exists before proxying
+ * if (hasSecret('user-uuid', 'SCOUT_API_KEY')) {
+ *   // Safe to proxy
+ * }
+ * 
+ * // Delete a secret
+ * deleteSecret('user-uuid', 'SCOUT_API_KEY');
+ * ```
+ * 
+ * ## Security Considerations
+ * 
+ * - Values are encrypted with AES-256-GCM before database storage
+ * - Each secret gets a unique random salt
+ * - Decryption happens only in-memory during proxy requests
+ * - Values are never logged or returned in API responses
+ * 
+ * ## Integration Points
+ * 
+ * | Consumer | Usage |
+ * |----------|-------|
+ * | `routes/secrets.ts` | CRUD API for dashboard |
+ * | `routes/proxy.ts` | Retrieves values for API calls |
+ * | `lib/usage.ts` | Context for tracking |
+ * 
+ * @module lib/secrets
  */
 
 import { randomUUID } from 'crypto';
 import { getDatabase, Secret } from './db.js';
-import { encrypt, decrypt, generateSalt, maskSecret } from './encryption.js';
+import { encrypt, decrypt, generateSalt } from './encryption.js';
 
 /**
  * Store a new secret for a user

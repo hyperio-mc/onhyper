@@ -7,3 +7,4 @@ export * from './apps.js';
 export * from './usage.js';
 export * from './analytics.js';
 export * from './email.js';
+export * from './subdomains.js';

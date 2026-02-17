@@ -1,7 +1,94 @@
 /**
- * Authentication middleware for OnHyper.io
+ * Authentication Middleware for OnHyper.io
  * 
- * Validates JWT tokens and API keys, attaching user info to the request context.
+ * Provides authentication middleware for protecting routes.
+ * Supports multiple authentication methods: JWT, API keys, and app ownership.
+ * 
+ * ## Supported Authentication Methods
+ * 
+ * | Method | Header | Use Case |
+ * |--------|--------|----------|
+ * | JWT Token | `Authorization: Bearer <token>` | Dashboard sessions |
+ * | API Key | `X-API-Key: oh_live_xxx` | Programmatic access |
+ * | App Slug | `X-App-Slug: my-app` | Published apps |
+ * | App ID | `X-App-ID: uuid` | Internal use |
+ * 
+ * ## Middleware Functions
+ * 
+ * ### `requireAuth`
+ * Requires valid authentication. Returns 401 if not provided.
+ * 
+ * ```typescript
+ * // Apply to protected routes
+ * app.use('/api/*', requireAuth);
+ * 
+ * // Access user in handlers
+ * app.get('/api/me', requireAuth, (c) => {
+ *   const user = c.get('user');
+ *   return c.json(user);
+ * });
+ * ```
+ * 
+ * ### `optionalAuth`
+ * Sets user context if available, but doesn't require it.
+ * 
+ * ```typescript
+ * // User info if logged in, null otherwise
+ * app.get('/api/public-but-personalized', optionalAuth, (c) => {
+ *   const user = c.get('user'); // May be undefined
+ *   if (user) {
+ *     // Show personalized content
+ *   }
+ * });
+ * ```
+ * 
+ * ### `requirePlan(...plans)`
+ * Requires user to have specific plan(s).
+ * 
+ * ```typescript
+ * app.post('/api/premium-feature', 
+ *   requireAuth, 
+ *   requirePlan('PRO', 'BUSINESS'),
+ *   handler
+ * );
+ * ```
+ * 
+ * ### `requireAdminAuth`
+ * Requires admin key for protected admin endpoints.
+ * 
+ * ```typescript
+ * // Protect admin routes
+ * adminRoutes.use('*', requireAdminAuth);
+ * 
+ * // Client request
+ * fetch('/api/waitlist/admin/pending', {
+ *   headers: { 'X-Admin-Key': process.env.ONHYPER_MASTER_KEY }
+ * });
+ * ```
+ * 
+ * ### `getAuthUser(c)`
+ * Helper to safely extract user from context.
+ * 
+ * ```typescript
+ * const user = getAuthUser(c);
+ * if (!user) {
+ *   return c.json({ error: 'Not authenticated' }, 401);
+ * }
+ * ```
+ * 
+ * ## User Context
+ * 
+ * When authenticated, the following is available:
+ * 
+ * ```typescript
+ * interface UserContext {
+ *   userId: string;
+ *   email: string;
+ *   plan: 'FREE' | 'HOBBY' | 'PRO' | 'BUSINESS';
+ * }
+ * ```
+ * 
+ * @module middleware/auth
  */
 
 import { Context, Next } from 'hono';
