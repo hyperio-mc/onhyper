@@ -1,0 +1,23 @@
+# Large media files - don't deploy
+marketing/video-parts/
+marketing/*.mp4
+marketing/*.mp3
+marketing/*.wav
+marketing/*.aac
+marketing/stock-footage/
+marketing/cut*-assets/
+*.png
+!public/**/*.png
+
+# Development files
+.env.local
+.env.*.local
+*.log
+node_modules/
+.git/
+*.tsbuildinfo
+
+# Test files
+**/*.test.ts
+**/*.spec.ts
+coverage/

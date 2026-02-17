@@ -497,7 +497,11 @@ describe('subdomains', () => {
     it('should get user subdomains', async () => {
       await claimSubdomain(userId, subdomain);
       const subdomains = await getUserSubdomains(userId);
-      expect(subdomains).toEqual([subdomain]);
+      expect(subdomains).toHaveLength(1);
+      expect(subdomains[0].subdomain).toBe(subdomain);
+      expect(subdomains[0].app_id).toBeNull();
+      expect(subdomains[0].app_name).toBeNull();
+      expect(subdomains[0].claimed_at).toBeDefined();
     });
 
     it('should not allow non-owner to release', async () => {
