@@ -1,12 +1,48 @@
 /**
- * Crypto utilities for browser extension
- * Helper functions for API key management
+ * @fileoverview Cryptographic utility functions for the OnHyper Dev extension.
+ * 
+ * This module provides helper functions for API key management, including:
+ * - Key masking for safe display
+ * - Format validation per provider
+ * - Random ID generation
+ * 
+ * Note: This module is separate from `encryption.js` which handles
+ * actual cryptographic operations. This module focuses on key handling
+ * utilities that don't involve encryption/decryption.
+ * 
+ * @module lib/crypto-utils
+ * 
+ * @example
+ * // Mask a key for display
+ * const masked = hashKey('sk-proj-1234567890abcdef');
+ * // 'sk-...cdef'
+ * 
+ * // Validate a key format
+ * const result = validateKeyFormat('openai', 'sk-xxxx');
+ * if (!result.valid) console.error(result.error);
  */
 
 /**
- * Hash a key for display purposes (show only last 4 characters)
- * @param {string} key - The API key
- * @returns {string} The masked key (e.g., "sk-...abcd")
+ * Masks an API key for display, showing only prefix and last 4 characters.
+ * 
+ * Creates a display-safe version: prefix (3 chars max) + `...` + last 4 chars.
+ * This lets users identify keys without exposing the full secret.
+ * 
+ * @param {string} key - The API key to mask
+ * @returns {string} Masked key in format `xxx...yyyy` or `****` for short/invalid keys
+ * 
+ * @example
+ * hashKey('sk-proj-1234567890abcdef');
+ * // 'sk-...cdef'
+ * 
+ * hashKey('AIza-1234567890abcdef');
+ * // 'AIz...cdef'
+ * 
+ * hashKey('short');
+ * // '****'
+ * 
+ * hashKey(null);
+ * // '****'
  */
 export function hashKey(key) {
   if (!key || typeof key !== 'string') {
@@ -26,10 +62,42 @@ export function hashKey(key) {
 }
 
 /**
- * Validate the format of an API key for a given provider
- * @param {string} provider - The provider name
+ * @typedef {Object} KeyValidationResult
+ * @property {boolean} valid - Whether the key is valid
+ * @property {string} [error] - Error message if validation failed
+ */
+
+/**
+ * Validates the format of an API key for a specific provider.
+ * 
+ * Performs provider-specific validation checks:
+ * - Prefix validation (e.g., OpenAI keys start with `sk-`)
+ * - Length validation
+ * - Whitespace/newline checks
+ * 
+ * Supports: openai, anthropic, google, grok, deepseek
+ * Falls back to generic validation for unknown providers.
+ * 
+ * @param {string} provider - Provider name (case-insensitive)
  * @param {string} key - The API key to validate
- * @returns {{valid: boolean, error?: string}} Validation result
+ * @returns {KeyValidationResult} Validation result with `valid` and optional `error`
+ * 
+ * @example
+ * // Valid OpenAI key
+ * validateKeyFormat('openai', 'sk-proj-xxxxxxxxxx');
+ * // { valid: true }
+ * 
+ * // Invalid - wrong prefix
+ * validateKeyFormat('openai', 'invalid-key');
+ * // { valid: false, error: 'OpenAI keys should start with "sk-"' }
+ * 
+ * // Invalid - too short
+ * validateKeyFormat('anthropic', 'sk-ant-short');
+ * // { valid: false, error: 'Anthropic key appears too short' }
+ * 
+ * // Google key validation
+ * validateKeyFormat('google', 'AIza-1234567890abcdef');
+ * // { valid: true }
  */
 export function validateKeyFormat(provider, key) {
   if (!key || typeof key !== 'string') {
@@ -120,17 +188,30 @@ export function validateKeyFormat(provider, key) {
 }
 
 /**
- * Get supported provider names
- * @returns {string[]}
+ * Gets the list of provider names supported by this module's validators.
+ * 
+ * Note: This is different from the full provider list in `providers.js`.
+ * This returns providers that have specific format validation here.
+ * 
+ * @returns {string[]} Array of supported provider names (lowercase)
+ * 
+ * @example
+ * getSupportedProviders();
+ * // ['openai', 'anthropic', 'google', 'grok', 'deepseek']
  */
 export function getSupportedProviders() {
   return ['openai', 'anthropic', 'google', 'grok', 'deepseek'];
 }
 
 /**
- * Check if a provider is supported
- * @param {string} provider - Provider name to check
- * @returns {boolean}
+ * Checks if a provider has specific validation rules in this module.
+ * 
+ * @param {string} provider - Provider name to check (case-insensitive)
+ * @returns {boolean} `true` if the provider has a specific validator
+ * 
+ * @example
+ * isProviderSupported('openai');    // true
+ * isProviderSupported('unknown');   // false
  */
 export function isProviderSupported(provider) {
   const supported = getSupportedProviders();
@@ -138,9 +219,15 @@ export function isProviderSupported(provider) {
 }
 
 /**
- * Get display name for a provider
- * @param {string} provider - Provider identifier
- * @returns {string} Human-readable provider name
+ * Gets the human-readable display name for a provider.
+ * 
+ * @param {string} provider - Provider identifier (case-insensitive)
+ * @returns {string} Human-readable name, or the original identifier if unknown
+ * 
+ * @example
+ * getProviderDisplayName('openai');    // 'OpenAI'
+ * getProviderDisplayName('google');    // 'Google AI'
+ * getProviderDisplayName('unknown');   // 'unknown'
  */
 export function getProviderDisplayName(provider) {
   const names = {
@@ -154,9 +241,18 @@ export function getProviderDisplayName(provider) {
 }
 
 /**
- * Generate a random ID for tracking purposes
- * @param {number} length - Length of the ID (default 8)
- * @returns {string} Random alphanumeric ID
+ * Generates a cryptographically random alphanumeric ID.
+ * 
+ * Uses `crypto.getRandomValues()` for secure random generation.
+ * Useful for request IDs, session tokens, or tracking identifiers.
+ * 
+ * @param {number} [length=8] - Length of the generated ID (default: 8)
+ * @returns {string} Random alphanumeric string (a-z, A-Z, 0-9)
+ * 
+ * @example
+ * generateId();      // 'aB3xK9mP'
+ * generateId(16);    // 'xY8zQ2wE5tR7uI1o'
+ * generateId(4);     // 'a3Bc'
  */
 export function generateId(length = 8) {
   const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';

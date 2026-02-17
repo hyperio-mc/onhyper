@@ -1,21 +1,85 @@
 /**
- * OnHyper Dev - Popup Script
- * Handles API key management UI
+ * @fileoverview Popup UI script for the OnHyper Dev browser extension.
+ * 
+ * This module handles the extension popup interface for:
+ * - Displaying configured API providers and keys
+ * - Adding new provider/key combinations
+ * - Deleting existing keys
+ * - Managing key visibility toggle
+ * 
+ * The popup communicates with the service worker via chrome.runtime.sendMessage
+ * to set passwords and manage keys.
+ * 
+ * @module popup/popup
+ * @requires lib/storage
+ * 
+ * @example
+ * // Popup is auto-initialized on DOMContentLoaded
+ * // Users interact via the form interface
  */
 
 import { getKeys, saveKey, deleteKey, getProviderList } from '../lib/storage.js';
 
-// DOM Elements
+// ============================================
+// DOM Element References
+// ============================================
+
+/**
+ * Provider selection dropdown element.
+ * @type {HTMLSelectElement}
+ */
 const providerSelect = document.getElementById('provider-select');
+
+/**
+ * API key input field (password type by default).
+ * @type {HTMLInputElement}
+ */
 const apiKeyInput = document.getElementById('api-key-input');
+
+/**
+ * Toggle button for API key visibility.
+ * @type {HTMLButtonElement}
+ */
 const toggleVisibilityBtn = document.getElementById('toggle-visibility');
+
+/**
+ * Form element for adding new keys.
+ * @type {HTMLFormElement}
+ */
 const addKeyForm = document.getElementById('add-key-form');
+
+/**
+ * Submit button for the add key form.
+ * @type {HTMLButtonElement}
+ */
 const saveBtn = document.getElementById('save-btn');
+
+/**
+ * Container for status messages (success/error).
+ * @type {HTMLElement}
+ */
 const statusContainer = document.getElementById('status-container');
+
+/**
+ * Text element for status message content.
+ * @type {HTMLElement}
+ */
 const statusMessage = document.getElementById('status-message');
+
+/**
+ * Container for the list of saved keys.
+ * @type {HTMLElement}
+ */
 const keysList = document.getElementById('keys-list');
 
-// Provider display names
+// ============================================
+// Configuration
+// ============================================
+
+/**
+ * Human-readable display names for providers.
+ * @constant {Object.<string, string>}
+ */
 const PROVIDER_NAMES = {
   openai: 'OpenAI',
   anthropic: 'Anthropic',
@@ -24,19 +88,51 @@ const PROVIDER_NAMES = {
   ollama: 'Ollama'
 };
 
+// ============================================
 // State
-let isLoading = false;
+// ============================================
 
 /**
- * Initialize the popup
+ * Loading state flag to prevent duplicate submissions.
+ * @type {boolean}
+ */
+let isLoading = false;
+
+// ============================================
+// Initialization
+// ============================================
+
+/**
+ * Initializes the popup on load.
+ * 
+ * - Loads and displays saved keys
+ * - Sets up event listeners
+ * 
+ * @async
+ * @returns {Promise<void>}
  */
 async function init() {
   await loadSavedKeys();
   setupEventListeners();
 }
 
+// ============================================
+// Key Management
+// ============================================
+
 /**
- * Load and display saved keys
+ * Loads saved API keys from storage and renders the key list.
+ * 
+ * Retrieves all keys and displays each provider with masked key preview.
+ * Shows empty state message if no keys are saved.
+ * 
+ * @async
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * // Called on popup init
+ * await loadSavedKeys();
+ * // Renders: <div class="key-item">OpenAI: ••••...xxxx</div>
  */
 async function loadSavedKeys() {
   try {
@@ -72,9 +168,18 @@ async function loadSavedKeys() {
 }
 
 /**
- * Get a preview string for a key (last 4 chars)
- * @param {Object} keyData - The encrypted key data
- * @returns {string} Preview string like "sk-...abcd"
+ * Generates a preview string for a stored key.
+ * 
+ * Shows masked dots with last 4 characters if available.
+ * Used for safe display in the key list UI.
+ * 
+ * @param {Object} keyData - The stored key data object
+ * @param {string} [keyData.lastFour] - Last 4 characters of the key (optional)
+ * @returns {string} Preview string like "••••...abcd" or "••••••••"
+ * 
+ * @example
+ * getKeyPreview({ lastFour: 'abcd' });  // '••••...abcd'
+ * getKeyPreview({});                     // '••••••••'
  */
 function getKeyPreview(keyData) {
   if (keyData && keyData.lastFour) {
@@ -83,8 +188,16 @@ function getKeyPreview(keyData) {
   return '••••••••';
 }
 
+// ============================================
+// Event Handling
+// ============================================
+
 /**
- * Setup event listeners
+ * Sets up all event listeners for the popup.
+ * 
+ * - Toggle password visibility button
+ * - Form submission for adding keys
+ * - Delete button clicks (event delegation)
  */
 function setupEventListeners() {
   // Toggle password visibility
@@ -98,7 +211,16 @@ function setupEventListeners() {
 }
 
 /**
- * Toggle password visibility
+ * Toggles the API key input between password (hidden) and text (visible).
+ * 
+ * Updates the eye icon to reflect current visibility state.
+ * 
+ * @returns {void}
+ * 
+ * @example
+ * // Initially: input type="password", icon shows 👁
+ * togglePasswordVisibility();
+ * // Now: input type="text", icon shows 👁‍🗨
  */
 function togglePasswordVisibility() {
   const type = apiKeyInput.type === 'password' ? 'text' : 'password';
@@ -109,8 +231,19 @@ function togglePasswordVisibility() {
 }
 
 /**
- * Handle save key form submission
+ * Handles the add key form submission.
+ * 
+ * Validates input, saves the key to storage, and refreshes the key list.
+ * The key is stored with metadata including last 4 characters for preview.
+ * 
+ * @async
  * @param {Event} e - Form submit event
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * // Triggered by form submit
+ * // User selects 'openai', enters 'sk-xxxx'
+ * // Result: Key saved, form cleared, list refreshed
  */
 async function handleSaveKey(e) {
   e.preventDefault();
@@ -162,8 +295,19 @@ async function handleSaveKey(e) {
 }
 
 /**
- * Handle delete key button click
- * @param {Event} e - Click event
+ * Handles delete button clicks for removing stored keys.
+ * 
+ * Confirms deletion with user, removes key from storage, and refreshes list.
+ * Uses event delegation - listens on parent container.
+ * 
+ * @async
+ * @param {Event} e - Click event from keys list
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * // User clicks delete button on 'openai' key item
+ * // Confirm dialog appears
+ * // On confirm: key deleted, success message shown, list refreshed
  */
 async function handleDeleteKey(e) {
   if (!e.target.classList.contains('delete-btn')) return;
@@ -185,10 +329,26 @@ async function handleDeleteKey(e) {
   }
 }
 
+// ============================================
+// UI Utilities
+// ============================================
+
 /**
- * Show status message
- * @param {string} message - Message to display
- * @param {string} type - 'success' or 'error'
+ * Displays a status message in the popup.
+ * 
+ * Shows success (green) or error (red) message with auto-hide.
+ * Message auto-hides after 3 seconds.
+ * 
+ * @param {string} message - Message text to display
+ * @param {string} [type='success'] - Message type: 'success' or 'error'
+ * @returns {void}
+ * 
+ * @example
+ * showStatus('Key saved!', 'success');
+ * // Shows green message, auto-hides after 3s
+ * 
+ * showStatus('Failed to save', 'error');
+ * // Shows red message, auto-hides after 3s
  */
 function showStatus(message, type = 'success') {
   statusContainer.className = `status-container ${type}`;
@@ -202,8 +362,16 @@ function showStatus(message, type = 'success') {
 }
 
 /**
- * Set loading state
- * @param {boolean} loading - Loading state
+ * Sets the loading state for the popup UI.
+ * 
+ * Disables/enables form controls during async operations.
+ * 
+ * @param {boolean} loading - Whether to show loading state
+ * @returns {void}
+ * 
+ * @example
+ * setLoading(true);   // Disables form controls
+ * setLoading(false);  // Enables form controls
  */
 function setLoading(loading) {
   isLoading = loading;
@@ -212,5 +380,13 @@ function setLoading(loading) {
   apiKeyInput.disabled = loading;
 }
 
-// Initialize on DOM ready
+// ============================================
+// Startup
+// ============================================
+
+/**
+ * Initialize popup when DOM is ready.
+ * 
+ * @listens DOMContentLoaded
+ */
 document.addEventListener('DOMContentLoaded', init);

@@ -1,8 +1,29 @@
 /**
- * Service Worker for OnHyper Dev Extension
- * Intercepts proxy requests and routes them to real APIs with authentication
+ * @fileoverview Service Worker for the OnHyper Dev browser extension.
  * 
- * Uses chrome.declarativeNetRequest for interception (MV3 compliant)
+ * This module is the background script that handles:
+ * - API request interception and proxying using `chrome.declarativeNetRequest`
+ * - Session password management for key decryption
+ * - Dynamic rule registration for each configured provider
+ * - Icon status updates based on extension state
+ * - Message handling from popup and content scripts
+ * 
+ * Architecture:
+ * 1. User sets password → keys are decrypted and stored in memory
+ * 2. Rules are registered for each provider with decrypted keys
+ * 3. Proxy requests are automatically redirected and authenticated
+ * 4. Icon color indicates current state (unlocked/locked/error/empty)
+ * 
+ * @module background/service-worker
+ * @requires lib/storage
+ * @requires lib/encryption
+ * @requires lib/proxy-map
+ * @requires lib/errors
+ * 
+ * @example
+ * // The service worker auto-initializes on load
+ * // Users interact via messages from popup:
+ * chrome.runtime.sendMessage({ type: 'SET_PASSWORD', password: 'xxx' });
  */
 
 import { getKeys, getKey, getProviderList } from '../lib/storage.js';
@@ -14,13 +35,24 @@ import { ERRORS, mapHttpStatus, createError, createSuccess, errorLogger, logAndR
 // Session State (in-memory, cleared on reload)
 // ============================================
 
-/** @type {string|null} Current password (in memory only, not persisted) */
+/**
+ * Current password stored in session memory.
+ * Not persisted - cleared when service worker terminates.
+ * @type {string|null}
+ */
 let sessionPassword = null;
 
-/** @type {Object<string, string>} Decrypted API keys (provider -> plaintext key) */
+/**
+ * Decrypted API keys indexed by provider.
+ * Populated after successful password entry.
+ * @type {Object.<string, string>}
+ */
 let decryptedKeys = {};
 
-/** @type {boolean} Whether rules are currently registered */
+/**
+ * Whether declarativeNetRequest rules are currently registered.
+ * @type {boolean}
+ */
 let rulesRegistered = false;
 
 // ============================================
@@ -28,20 +60,31 @@ let rulesRegistered = false;
 // ============================================
 
 /**
- * Status types for the extension icon
+ * Extension icon status types.
+ * @readonly
  * @enum {string}
+ * @property {string} UNLOCKED - Green: Keys configured and decrypted
+ * @property {string} LOCKED - Yellow: Keys exist but need password
+ * @property {string} ERROR - Red: API error detected
+ * @property {string} EMPTY - Gray: No keys configured
  */
 const IconStatus = {
-  UNLOCKED: 'unlocked',  // Green - Keys configured, unlocked
-  LOCKED: 'locked',      // Yellow - Keys configured, locked (needs password)
-  ERROR: 'error',        // Red - API error detected
-  EMPTY: 'empty'         // Gray - No keys configured
+  UNLOCKED: 'unlocked',
+  LOCKED: 'locked',
+  ERROR: 'error',
+  EMPTY: 'empty'
 };
 
-/** @type {string} Current icon status */
+/**
+ * Current icon status.
+ * @type {IconStatus}
+ */
 let currentStatus = IconStatus.EMPTY;
 
-/** @type {Object<string, string>} Color mapping for icon status */
+/**
+ * Color mapping for each icon status.
+ * @constant {Object.<IconStatus, string>}
+ */
 const STATUS_COLORS = {
   [IconStatus.UNLOCKED]: 'green',
   [IconStatus.LOCKED]: 'yellow',
@@ -49,7 +92,10 @@ const STATUS_COLORS = {
   [IconStatus.EMPTY]: 'gray'
 };
 
-/** @type {Object<string, string>} Tooltip text for each status */
+/**
+ * Tooltip text for each icon status.
+ * @constant {Object.<IconStatus, string>}
+ */
 const STATUS_TOOLTIPS = {
   [IconStatus.UNLOCKED]: 'OnHyper: Unlocked ✓',
   [IconStatus.LOCKED]: 'OnHyper: Locked (click to unlock)',
@@ -57,12 +103,25 @@ const STATUS_TOOLTIPS = {
   [IconStatus.EMPTY]: 'OnHyper: No keys configured'
 };
 
-/** @type {number|null} Timer for error status reset */
+/**
+ * Timer handle for automatic error status reset.
+ * @type {number|null}
+ */
 let errorResetTimer = null;
 
 /**
- * Update the extension icon and tooltip based on status
- * @param {string} status - One of IconStatus values
+ * Updates the extension icon and tooltip based on status.
+ * 
+ * Changes the icon color and tooltip text to reflect the current
+ * extension state. Colors: green (unlocked), yellow (locked), red (error), gray (empty).
+ * 
+ * @async
+ * @param {IconStatus} status - One of the IconStatus enum values
+ * @returns {Promise<void>}
+ * 
+ * @example
+ * await updateIcon(IconStatus.UNLOCKED);  // Green icon
+ * await updateIcon(IconStatus.LOCKED);    // Yellow icon
  */
 async function updateIcon(status) {
   if (!STATUS_COLORS[status]) {
@@ -94,7 +153,13 @@ async function updateIcon(status) {
 }
 
 /**
- * Set error status and auto-reset after 30 seconds
+ * Sets the icon to error status and schedules automatic reset.
+ * 
+ * After 30 seconds, automatically resets to the appropriate status
+ * based on current state (unlocked, locked, or empty).
+ * 
+ * @async
+ * @returns {Promise<void>}
  */
 async function setErrorStatus() {
   await updateIcon(IconStatus.ERROR);
@@ -112,7 +177,15 @@ async function setErrorStatus() {
 }
 
 /**
- * Determine and set the appropriate status based on current state
+ * Determines and sets the appropriate icon status based on current state.
+ * 
+ * Logic:
+ * - No keys stored → EMPTY (gray)
+ * - Password set and keys decrypted → UNLOCKED (green)
+ * - Keys exist but locked → LOCKED (yellow)
+ * 
+ * @async
+ * @returns {Promise<void>}
  */
 async function determineAndSetStatus() {
   try {
@@ -138,12 +211,21 @@ async function determineAndSetStatus() {
 // Logging
 // ============================================
 
+/** Prefix for all console logs from this module */
 const LOG_PREFIX = '[OnHyper]';
 
+/**
+ * Logs an info message to console with module prefix.
+ * @param {...*} args - Arguments to log
+ */
 function log(...args) {
   console.log(LOG_PREFIX, ...args);
 }
 
+/**
+ * Logs an error message to console with module prefix.
+ * @param {...*} args - Arguments to log
+ */
 function logError(...args) {
   console.error(LOG_PREFIX, ...args);
 }
@@ -153,9 +235,29 @@ function logError(...args) {
 // ============================================
 
 /**
- * Set the session password and decrypt all keys
- * @param {string} password - The password from the user
- * @returns {Promise<Object>} Structured response with success/error
+ * Sets the session password and decrypts all stored API keys.
+ * 
+ * Process:
+ * 1. Stores password in memory
+ * 2. Retrieves all encrypted keys from storage
+ * 3. Attempts to decrypt each key
+ * 4. Registers proxy rules for successfully decrypted keys
+ * 5. Updates icon status
+ * 
+ * @async
+ * @param {string} password - The user's password for decryption
+ * @returns {Promise<Object>} Response with decrypted providers list
+ * @property {string[]} providers - Successfully decrypted provider IDs
+ * @property {string[]} failedProviders - Providers that failed decryption
+ * @property {string|null} warning - Warning message if any decryption failed
+ * @throws {Error} Via error response if unexpected failure
+ * 
+ * @example
+ * const result = await setSessionPassword('user-password');
+ * if (result.success) {
+ *   console.log('Decrypted:', result.providers);
+ *   if (result.warning) console.warn(result.warning);
+ * }
  */
 async function setSessionPassword(password) {
   try {
@@ -210,7 +312,13 @@ async function setSessionPassword(password) {
 }
 
 /**
- * Clear the session password and decrypted keys
+ * Clears the session password and all decrypted keys from memory.
+ * 
+ * Also unregisters all proxy rules and updates icon status.
+ * Called on explicit logout or when user wants to re-lock.
+ * 
+ * @async
+ * @returns {Promise<void>}
  */
 async function clearSessionPassword() {
   sessionPassword = null;
@@ -223,11 +331,22 @@ async function clearSessionPassword() {
 }
 
 /**
- * Decrypt a single key from encrypted storage data
- * @param {Object|string} encryptedData - The encrypted data object or serialized string
- * @param {string} password - The password for decryption
- * @returns {Promise<string>} The decrypted API key
- * @throws {Error} With error code from ERRORS if decryption fails
+ * Decrypts a single API key from encrypted storage data.
+ * 
+ * Handles both serialized strings and parsed objects with base64 fields.
+ * 
+ * @async
+ * @param {Object|string} encryptedData - Encrypted data object or serialized JSON string
+ * @param {string|Uint8Array} encryptedData.salt - Salt for key derivation
+ * @param {string|Uint8Array} encryptedData.iv - IV for AES-GCM decryption
+ * @param {string|Uint8Array} encryptedData.ciphertext - Encrypted API key
+ * @param {string} password - Password for decryption
+ * @returns {Promise<string>} Decrypted API key plaintext
+ * @throws {Error} With code 'DECRYPT_FAILED' if decryption fails
+ * 
+ * @example
+ * const encrypted = await getKey('openai');
+ * const decrypted = await decryptKey(encrypted, 'password');
  */
 async function decryptKey(encryptedData, password) {
   try {
@@ -261,8 +380,19 @@ async function decryptKey(encryptedData, password) {
 // ============================================
 
 /**
- * Build declarativeNetRequest rules for all providers with decrypted keys
- * @returns {Array|Promise<Array>} Array of rule objects
+ * Builds declarativeNetRequest rules for all providers with decrypted keys.
+ * 
+ * Each rule:
+ * - Matches proxy URLs using regex patterns
+ * - Redirects to real API endpoints
+ * - Adds authentication headers
+ * 
+ * @async
+ * @returns {Promise<Array<Object>>} Array of rule objects for declarativeNetRequest
+ * 
+ * @example
+ * const rules = await buildProxyRules();
+ * // [{ id: 1, priority: 1, action: { type: 'redirect', ... }, condition: { ... } }]
  */
 async function buildProxyRules() {
   const rules = [];
@@ -317,7 +447,14 @@ async function buildProxyRules() {
 }
 
 /**
- * Register all proxy rules dynamically
+ * Registers all proxy rules dynamically via declarativeNetRequest API.
+ * 
+ * Removes existing dynamic rules before adding new ones.
+ * If no providers have decrypted keys, unregisters all rules.
+ * 
+ * @async
+ * @returns {Promise<void>}
+ * @throws {Error} If rule registration fails
  */
 async function registerProxyRules() {
   try {
@@ -360,7 +497,10 @@ async function registerProxyRules() {
 }
 
 /**
- * Unregister all dynamic rules
+ * Unregisters all dynamic declarativeNetRequest rules.
+ * 
+ * @async
+ * @returns {Promise<void>}
  */
 async function unregisterAllRules() {
   try {
@@ -401,7 +541,10 @@ if (chrome.declarativeNetRequest.onRuleMatchedDebug) {
 // ============================================
 
 /**
- * Handle messages from popup and content scripts
+ * Message listener for popup and content script communication.
+ * 
+ * Handles messages asynchronously and returns responses via sendResponse.
+ * Returns `true` to indicate async response.
  */
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   log('Received message:', message.type);
@@ -426,9 +569,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 /**
- * Handle a message and return a response
+ * Handles incoming messages and routes to appropriate handlers.
+ * 
+ * Supported message types:
+ * - `SET_PASSWORD` - Set session password and decrypt keys
+ * - `CLEAR_PASSWORD` - Clear session and lock extension
+ * - `GET_STATUS` - Get current extension state
+ * - `GET_ERRORS` - Get error log for debugging
+ * - `CLEAR_ERRORS` - Clear error log
+ * - `KEYS_CHANGED` - Re-decrypt keys after storage change
+ * - `PROXY_REQUEST` - Fallback proxy via messaging (when rules don't work)
+ * 
+ * @async
  * @param {Object} message - The message object
- * @returns {Promise<Object>}
+ * @param {string} message.type - Message type identifier
+ * @returns {Promise<Object>} Response object with success/error
  */
 async function handleMessage(message) {
   switch (message.type) {
@@ -481,10 +636,18 @@ async function handleMessage(message) {
 }
 
 /**
- * Handle a proxy request via messaging
- * This is a fallback for when declarativeNetRequest rules don't cover all cases
- * @param {Object} message - The proxy request message
- * @returns {Promise<Object>}
+ * Handles a proxy request via messaging (fallback mode).
+ * 
+ * Used when declarativeNetRequest rules don't cover certain cases.
+ * Manually constructs and executes the API request.
+ * 
+ * @async
+ * @param {Object} message - Proxy request message
+ * @param {string} message.url - Original proxy URL
+ * @param {string} message.method - HTTP method (GET, POST, etc.)
+ * @param {Object} [message.headers] - Additional request headers
+ * @param {string} [message.body] - Request body for POST/PUT
+ * @returns {Promise<Object>} Response with status, headers, and body
  */
 async function handleProxyRequest(message) {
   const { url, method, headers, body } = message;
@@ -606,7 +769,14 @@ async function handleProxyRequest(message) {
 // ============================================
 
 /**
- * Initialize the service worker
+ * Initializes the service worker on startup.
+ * 
+ * - Logs extension info
+ * - Checks for stored keys
+ * - Sets appropriate icon status
+ * 
+ * @async
+ * @returns {Promise<void>}
  */
 async function initialize() {
   log('Service worker initialized');
@@ -648,7 +818,12 @@ initialize();
 // All session state (password, decrypted keys) is lost on termination.
 // The user will need to re-enter the password after service worker restarts.
 
-// Listen for install/update
+/**
+ * Listener for extension install/update events.
+ * 
+ * - Logs installation reason
+ * - Clears stale rules on update
+ */
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === 'install') {
     log('Extension installed');
@@ -659,7 +834,10 @@ chrome.runtime.onInstalled.addListener((details) => {
   }
 });
 
-// Listen for startup (after crash or force-kill)
+/**
+ * Listener for extension startup (after crash or force-kill).
+ * Re-initializes the service worker.
+ */
 chrome.runtime.onStartup.addListener(() => {
   log('Extension started');
   initialize();

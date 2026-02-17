@@ -1,13 +1,39 @@
 /**
- * Storage utilities for browser extension
- * Wrapper around chrome.storage.local for managing API keys
+ * @fileoverview Storage utilities for the OnHyper Dev browser extension.
+ * 
+ * This module provides a Promise-based wrapper around `chrome.storage.local` for
+ * managing encrypted API keys. All keys are stored in a single object keyed by
+ * provider name, with values containing encrypted key data (salt, IV, ciphertext).
+ * 
+ * @module lib/storage
+ * @requires chrome.storage.local
+ * 
+ * @example
+ * // Save an encrypted key
+ * await saveKey('openai', { salt, iv, ciphertext });
+ * 
+ * // Retrieve all stored providers
+ * const providers = await getProviderList();
+ * // ['openai', 'anthropic']
+ * 
+ * // Check if a key exists
+ * const hasOpenAI = await hasKey('openai');
  */
 
+/** @constant {string} STORAGE_KEY - The key used to store API keys in chrome.storage.local */
 const STORAGE_KEY = 'apiKeys';
 
 /**
- * Get all stored API keys
- * @returns {Promise<Object>} Object mapping provider names to encrypted key data
+ * Retrieves all stored API keys from chrome.storage.local.
+ * 
+ * @returns {Promise<Object.<string, Object>>} Object mapping provider names to their
+ *   encrypted key data. Returns an empty object `{}` if no keys are stored.
+ * @throws {Error} If chrome.storage.local access fails (propagates chrome.runtime.lastError)
+ * 
+ * @example
+ * const keys = await getKeys();
+ * console.log(keys);
+ * // { openai: { salt: '...', iv: '...', ciphertext: '...' } }
  */
 export async function getKeys() {
   return new Promise((resolve, reject) => {
@@ -22,10 +48,22 @@ export async function getKeys() {
 }
 
 /**
- * Save an encrypted API key for a provider
- * @param {string} provider - The provider name (e.g., 'openai', 'anthropic')
- * @param {Object} encryptedData - The encrypted key data {salt, iv, ciphertext}
+ * Saves an encrypted API key for a specific provider.
+ * 
+ * If a key already exists for the provider, it will be overwritten.
+ * 
+ * @param {string} provider - The provider identifier (e.g., 'openai', 'anthropic', 'openrouter')
+ * @param {Object} encryptedData - The encrypted key data object
+ * @param {string|Uint8Array} encryptedData.salt - Salt used for key derivation (base64 or binary)
+ * @param {string|Uint8Array} encryptedData.iv - Initialization vector for AES-GCM (base64 or binary)
+ * @param {string|Uint8Array} encryptedData.ciphertext - Encrypted API key (base64 or binary)
  * @returns {Promise<void>}
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * // After encrypting with password
+ * const { salt, iv, ciphertext } = await encryptWithPassword('sk-xxxx', password);
+ * await saveKey('openai', { salt, iv, ciphertext });
  */
 export async function saveKey(provider, encryptedData) {
   const keys = await getKeys();
@@ -42,9 +80,17 @@ export async function saveKey(provider, encryptedData) {
 }
 
 /**
- * Delete an API key for a provider
- * @param {string} provider - The provider name to delete
- * @returns {Promise<boolean>} True if key was deleted, false if it didn't exist
+ * Deletes an API key for a specific provider.
+ * 
+ * @param {string} provider - The provider identifier to delete
+ * @returns {Promise<boolean>} `true` if the key was deleted, `false` if the key didn't exist
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * const deleted = await deleteKey('openai');
+ * if (deleted) {
+ *   console.log('OpenAI key removed');
+ * }
  */
 export async function deleteKey(provider) {
   const keys = await getKeys();
@@ -64,9 +110,17 @@ export async function deleteKey(provider) {
 }
 
 /**
- * Get a single key by provider name
- * @param {string} provider - The provider name
- * @returns {Promise<Object|null>} The encrypted key data or null if not found
+ * Retrieves the encrypted key data for a single provider.
+ * 
+ * @param {string} provider - The provider identifier
+ * @returns {Promise<Object|null>} The encrypted key data object, or `null` if not found
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * const keyData = await getKey('openai');
+ * if (keyData) {
+ *   const decrypted = await decryptWithPassword(keyData.ciphertext, keyData.iv, keyData.salt, password);
+ * }
  */
 export async function getKey(provider) {
   const keys = await getKeys();
@@ -74,9 +128,16 @@ export async function getKey(provider) {
 }
 
 /**
- * Check if a provider has a stored key
- * @param {string} provider - The provider name
- * @returns {Promise<boolean>}
+ * Checks if a provider has a stored API key.
+ * 
+ * @param {string} provider - The provider identifier
+ * @returns {Promise<boolean>} `true` if a key exists for the provider
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * if (await hasKey('openai')) {
+ *   console.log('OpenAI key is configured');
+ * }
  */
 export async function hasKey(provider) {
   const keys = await getKeys();
@@ -84,8 +145,14 @@ export async function hasKey(provider) {
 }
 
 /**
- * Get list of all provider names with stored keys
- * @returns {Promise<string[]>}
+ * Gets a list of all provider names that have stored keys.
+ * 
+ * @returns {Promise<string[]>} Array of provider identifiers with stored keys
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * const providers = await getProviderList();
+ * // ['openai', 'anthropic', 'openrouter']
  */
 export async function getProviderList() {
   const keys = await getKeys();
@@ -93,8 +160,16 @@ export async function getProviderList() {
 }
 
 /**
- * Clear all stored API keys
+ * Removes all stored API keys from storage.
+ * 
+ * Use with caution - this operation cannot be undone.
+ * 
  * @returns {Promise<void>}
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * // Clear all keys (e.g., on logout)
+ * await clearAll();
  */
 export async function clearAll() {
   return new Promise((resolve, reject) => {
@@ -109,8 +184,14 @@ export async function clearAll() {
 }
 
 /**
- * Get the number of stored keys
- * @returns {Promise<number>}
+ * Gets the count of stored API keys.
+ * 
+ * @returns {Promise<number>} Number of providers with stored keys
+ * @throws {Error} If chrome.storage.local access fails
+ * 
+ * @example
+ * const count = await getKeyCount();
+ * console.log(`${count} API keys configured`);
  */
 export async function getKeyCount() {
   const keys = await getKeys();

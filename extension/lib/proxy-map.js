@@ -1,14 +1,57 @@
 /**
- * Proxy URL mapping configuration and utilities
- * Maps local proxy URLs to real API endpoints with proper authentication
+ * @fileoverview Proxy URL mapping configuration and utilities for the OnHyper Dev extension.
+ * 
+ * This module defines how local proxy URLs are mapped to real API endpoints.
+ * When a web app makes a request to a proxy URL (e.g., `/proxy/openai/v1/chat/completions`),
+ * the extension intercepts it, adds authentication headers, and forwards to the real API.
+ * 
+ * Supported providers:
+ * - **OpenAI** - GPT-4, GPT-3.5, DALL-E, embeddings
+ * - **Anthropic** - Claude models
+ * - **OpenRouter** - Unified API for multiple LLM providers
+ * - **Scout (Atoms)** - ScoutOS Atoms API for AI agents
+ * - **Ollama** - Local LLM server (no auth required)
+ * 
+ * @module lib/proxy-map
+ * 
+ * @example
+ * // Check if a URL should be proxied
+ * const match = matchProxyUrl('/proxy/openai/v1/chat/completions');
+ * if (match) {
+ *   console.log(match.provider); // 'openai'
+ *   console.log(match.path);     // 'v1/chat/completions'
+ * }
+ * 
+ * // Build the real API URL
+ * const realUrl = buildRealUrl('openai', 'v1/chat/completions');
+ * // 'https://api.openai.com/v1/chat/completions'
  */
 
 /**
- * Proxy mapping configuration for each API provider
- * Each provider has:
- * - pattern: RegExp to match proxy URL path
- * - target: Target URL template ($1 is replaced with captured path)
- * - authHeader: Function to generate auth headers from API key
+ * @typedef {Object} ProviderConfig
+ * @property {RegExp} pattern - Pattern to match proxy URL paths
+ * @property {string} target - Target URL template ($1 is replaced with captured path)
+ * @property {function(string): Object.<string, string>} authHeader - Function to generate auth headers from API key
+ */
+
+/**
+ * Proxy mapping configuration for each API provider.
+ * 
+ * Each provider configuration defines:
+ * - `pattern`: RegExp to match and capture the path from proxy URLs
+ * - `target`: Target URL template where `$1` is replaced by the captured path
+ * - `authHeader`: Function that takes an API key and returns headers object
+ * 
+ * @constant {Object.<string, ProviderConfig>}
+ * 
+ * @example
+ * // Get auth headers for OpenAI
+ * const headers = PROXY_MAP.openai.authHeader('sk-xxxx');
+ * // { 'Authorization': 'Bearer sk-xxxx' }
+ * 
+ * // Get auth headers for Anthropic
+ * const headers = PROXY_MAP.anthropic.authHeader('sk-ant-xxxx');
+ * // { 'x-api-key': 'sk-ant-xxxx', 'anthropic-version': '2023-06-01' }
  */
 export const PROXY_MAP = {
   openai: {
@@ -46,9 +89,32 @@ export const PROXY_MAP = {
 };
 
 /**
- * Match a URL against proxy patterns
- * @param {string} url - The URL or path to match
- * @returns {{provider: string, path: string} | null} Match result or null if no match
+ * @typedef {Object} ProxyMatch
+ * @property {string} provider - The provider identifier (e.g., 'openai')
+ * @property {string} path - The captured path component (e.g., 'v1/chat/completions')
+ */
+
+/**
+ * Matches a URL against proxy patterns to determine if it should be proxied.
+ * 
+ * Handles full URLs (http://, https://, chrome-extension://) and paths.
+ * Returns the provider and captured path if matched, or null if not a proxy URL.
+ * 
+ * @param {string} url - The URL or path to check (e.g., '/proxy/openai/v1/models')
+ * @returns {ProxyMatch|null} Match result with provider and path, or null if no match
+ * 
+ * @example
+ * // Match a path
+ * matchProxyUrl('/proxy/openai/v1/models');
+ * // { provider: 'openai', path: 'v1/models' }
+ * 
+ * // Match a full URL
+ * matchProxyUrl('https://app.example.com/proxy/anthropic/v1/complete');
+ * // { provider: 'anthropic', path: 'v1/complete' }
+ * 
+ * // No match
+ * matchProxyUrl('/api/users');
+ * // null
  */
 export function matchProxyUrl(url) {
   // Extract pathname from full URL if needed
@@ -76,11 +142,23 @@ export function matchProxyUrl(url) {
 }
 
 /**
- * Build the real API URL from provider and captured path
+ * Builds the real API URL from a provider and captured path.
+ * 
+ * Takes the provider's target template and substitutes `$1` with the path.
+ * Optionally appends a query string.
+ * 
  * @param {string} provider - Provider identifier (e.g., 'openai', 'anthropic')
- * @param {string} path - Captured path from proxy URL
- * @param {string} [queryString=''] - Optional query string to append
+ * @param {string} path - Captured path from proxy URL (e.g., 'v1/chat/completions')
+ * @param {string} [queryString=''] - Optional query string to append (with or without leading '?')
  * @returns {string} The real API URL
+ * @throws {Error} If provider is not found in PROXY_MAP
+ * 
+ * @example
+ * buildRealUrl('openai', 'v1/chat/completions');
+ * // 'https://api.openai.com/v1/chat/completions'
+ * 
+ * buildRealUrl('openai', 'v1/models', '?limit=10');
+ * // 'https://api.openai.com/v1/models?limit=10'
  */
 export function buildRealUrl(provider, path, queryString = '') {
   const config = PROXY_MAP[provider];
@@ -101,10 +179,24 @@ export function buildRealUrl(provider, path, queryString = '') {
 }
 
 /**
- * Get authentication headers for a provider
+ * Gets authentication headers for a provider using its API key.
+ * 
+ * Returns an object with the appropriate headers for the provider's API.
+ * Different providers use different header names and formats.
+ * 
  * @param {string} provider - Provider identifier
- * @param {string} key - API key for the provider
- * @returns {Object} Headers object for authentication
+ * @param {string} key - The decrypted API key for the provider
+ * @returns {Object.<string, string>} Headers object for authentication
+ * @throws {Error} If provider is not found in PROXY_MAP
+ * 
+ * @example
+ * // OpenAI uses Bearer token
+ * getAuthHeaders('openai', 'sk-xxxx');
+ * // { 'Authorization': 'Bearer sk-xxxx' }
+ * 
+ * // Anthropic uses x-api-key header
+ * getAuthHeaders('anthropic', 'sk-ant-xxxx');
+ * // { 'x-api-key': 'sk-ant-xxxx', 'anthropic-version': '2023-06-01' }
  */
 export function getAuthHeaders(provider, key) {
   const config = PROXY_MAP[provider];
@@ -116,9 +208,26 @@ export function getAuthHeaders(provider, key) {
 }
 
 /**
- * Check if a URL is localhost or file:// protocol
+ * Checks if a URL points to localhost or is a file:// URL.
+ * 
+ * Used to determine if requests should bypass proxy rules.
+ * Localhost requests typically don't need CORS handling.
+ * 
+ * Checks for:
+ * - `file://` protocol
+ * - `localhost` hostname
+ * - `127.0.0.1`, `0.0.0.0`, `::1` IPs
+ * - `.localhost`, `.local` TLDs
+ * - Private IP ranges (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+ * 
  * @param {string} url - URL to check
- * @returns {boolean} True if localhost or file:// URL
+ * @returns {boolean} `true` if URL is localhost or file://
+ * 
+ * @example
+ * isLocalhost('http://localhost:3000/api');     // true
+ * isLocalhost('http://127.0.0.1:8080/test');    // true
+ * isLocalhost('http://192.168.1.5/internal');   // true
+ * isLocalhost('https://api.openai.com/v1');     // false
  */
 export function isLocalhost(url) {
   try {
@@ -176,17 +285,27 @@ export function isLocalhost(url) {
 }
 
 /**
- * Get list of supported providers
- * @returns {string[]} Array of provider identifiers
+ * Gets a list of all supported provider identifiers.
+ * 
+ * @returns {string[]} Array of provider identifiers from PROXY_MAP
+ * 
+ * @example
+ * getProviders();
+ * // ['openai', 'anthropic', 'openrouter', 'scout', 'ollama']
  */
 export function getProviders() {
   return Object.keys(PROXY_MAP);
 }
 
 /**
- * Check if a provider is supported
+ * Checks if a provider is supported by the proxy system.
+ * 
  * @param {string} provider - Provider identifier to check
- * @returns {boolean} True if provider is supported
+ * @returns {boolean} `true` if the provider exists in PROXY_MAP
+ * 
+ * @example
+ * isProviderSupported('openai');    // true
+ * isProviderSupported('unknown');    // false
  */
 export function isProviderSupported(provider) {
   return provider in PROXY_MAP;
