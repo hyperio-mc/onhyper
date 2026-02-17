@@ -12,21 +12,42 @@
     <header class="header">
       <span class="logo">⚡</span>
       <h1 class="title">OnHyper Dev</h1>
+      <button id="debug-btn" class="debug-btn" title="View debug logs">🔧</button>
     </header>
+
+    <!-- Extension Status -->
+    <div id="extension-status" class="extension-status" hidden>
+      <span class="status-indicator"></span>
+      <span class="status-text"></span>
+    </div>
+
+    <!-- Error Display -->
+    <div id="error-container" class="error-container" hidden>
+      <div class="error-header">
+        <span class="error-icon">⚠️</span>
+        <span id="error-message" class="error-message"></span>
+      </div>
+      <p id="error-fix" class="error-fix"></p>
+      <button id="error-action-btn" class="btn btn-error-action" hidden></button>
+      <button id="error-dismiss" class="error-dismiss" title="Dismiss">✕</button>
+    </div>
 
     <!-- Add Key Form -->
     <section class="add-key-section">
       <form id="add-key-form">
         <div class="form-group">
           <label for="provider-select">Provider</label>
-          <select id="provider-select" required>
-            <option value="">Select a provider</option>
-            <option value="openai">OpenAI</option>
-            <option value="anthropic">Anthropic</option>
-            <option value="openrouter">OpenRouter</option>
-            <option value="scout">Scout</option>
-            <option value="ollama">Ollama</option>
-          </select>
+          <div class="select-wrapper">
+            <select id="provider-select" required>
+              <option value="">Select a provider</option>
+              <option value="openai">OpenAI</option>
+              <option value="anthropic">Anthropic</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="scout">Scout</option>
+              <option value="ollama">Ollama</option>
+            </select>
+            <span id="provider-error-badge" class="error-badge" hidden>!</span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -53,11 +74,28 @@
 
     <!-- Saved Keys List -->
     <section class="saved-keys-section">
-      <h2 class="section-title">Saved Keys</h2>
+      <div class="section-header">
+        <h2 class="section-title">Saved Keys</h2>
+        <span id="error-count-badge" class="error-count-badge" hidden title="Recent errors">0 errors</span>
+      </div>
       <div id="keys-list" class="keys-list">
         <p class="empty-state">No API keys saved yet</p>
       </div>
     </section>
+
+    <!-- Debug Panel -->
+    <div id="debug-panel" class="debug-panel" hidden>
+      <div class="debug-header">
+        <h3>Debug Logs</h3>
+        <div class="debug-actions">
+          <button id="clear-errors-btn" class="btn-clear">Clear</button>
+          <button id="close-debug-btn" class="btn-close">✕</button>
+        </div>
+      </div>
+      <div id="debug-content" class="debug-content">
+        <p class="empty-state">No errors logged</p>
+      </div>
+    </div>
   </div>
 
   <script src="popup.js" type="module"></script>

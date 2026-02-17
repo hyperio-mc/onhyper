@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OnHyper Dev - Provider Test Page</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    h1 {
+      font-size: 24px;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+    
+    .subtitle {
+      color: #888;
+      margin-bottom: 24px;
+      font-size: 14px;
+    }
+    
+    .warning {
+      background: rgba(255, 193, 7, 0.15);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 13px;
+    }
+    
+    .warning strong {
+      color: #ffc107;
+    }
+    
+    .provider-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    
+    .provider-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      transition: border-color 0.2s;
+    }
+    
+    .provider-card:hover {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .provider-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .provider-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 600;
+    }
+    
+    .provider-icon.openai { background: linear-gradient(135deg, #74c0fc, #1c7ed6); }
+    .provider-icon.anthropic { background: linear-gradient(135deg, #d5915a, #c27602); }
+    .provider-icon.openrouter { background: linear-gradient(135deg, #69db7c, #2f9e44); }
+    .provider-icon.scout { background: linear-gradient(135deg, #da77f2, #9c36b5); }
+    .provider-icon.ollama { background: linear-gradient(135deg, #868e96, #495057); }
+    
+    .provider-info h3 {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+    
+    .provider-info p {
+      font-size: 12px;
+      color: #888;
+    }
+    
+    .test-section {
+      margin-top: 12px;
+    }
+    
+    .test-section label {
+      display: block;
+      font-size: 12px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    
+    .api-key-input {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.2);
+      color: #fff;
+      font-size: 13px;
+      margin-bottom: 8px;
+    }
+    
+    .api-key-input::placeholder {
+      color: #666;
+    }
+    
+    .api-key-input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-row {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: #fff;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.1);
+      color: #ccc;
+    }
+    
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .result-box {
+      margin-top: 12px;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-family: 'SF Mono', Monaco, 'Courier New', monospace;
+      max-height: 150px;
+      overflow-y: auto;
+      display: none;
+    }
+    
+    .result-box.show {
+      display: block;
+    }
+    
+    .result-box.success {
+      background: rgba(46, 160, 67, 0.15);
+      border: 1px solid rgba(46, 160, 67, 0.3);
+      color: #3fb950;
+    }
+    
+    .result-box.error {
+      background: rgba(248, 81, 73, 0.15);
+      border: 1px solid rgba(248, 81, 73, 0.3);
+      color: #f85149;
+    }
+    
+    .result-box.pending {
+      background: rgba(255, 193, 7, 0.15);
+      border: 1px solid rgba(255, 193, 7, 0.3);
+      color: #d29922;
+    }
+    
+    .result-box pre {
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+    
+    .status-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    
+    .status-badge.ok { background: #2ea043; color: #fff; }
+    .status-badge.fail { background: #da3633; color: #fff; }
+    .status-badge.pending { background: #d29922; color: #000; }
+    
+    .section-title {
+      margin-top: 32px;
+      margin-bottom: 16px;
+      font-size: 18px;
+      color: #fff;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding-bottom: 8px;
+    }
+    
+    .info-box {
+      background: rgba(99, 179, 237, 0.1);
+      border: 1px solid rgba(99, 179, 237, 0.3);
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin-bottom: 24px;
+    }
+    
+    .info-box code {
+      background: rgba(0, 0, 0, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'SF Mono', Monaco, monospace;
+    }
+    
+    .ollama-note {
+      font-style: italic;
+      color: #888;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 OnHyper Dev - Provider Test Page</h1>
+    <p class="subtitle">Test API key injection for each provider through the extension proxy</p>
+    
+    <div class="warning">
+      <strong>⚠️ Security Note:</strong> This test page verifies that auth headers are properly injected 
+      by the extension. API keys stored in the extension are never exposed to page JavaScript - 
+      they are added by the service worker during request interception.
+    </div>
+    
+    <div class="info-box">
+      <strong>How it works:</strong> Click "Test Connection" to make a request through the proxy endpoint 
+      (e.g., <code>/proxy/openai/v1/models</code>). The extension service worker intercepts these requests 
+      and injects authentication headers before forwarding to the real API.
+    </div>
+    
+    <div class="provider-grid">
+      <!-- OpenAI -->
+      <div class="provider-card">
+        <div class="provider-header">
+          <div class="provider-icon openai">O</div>
+          <div class="provider-info">
+            <h3>OpenAI</h3>
+            <p>GPT-4, GPT-3.5, DALL-E, Embeddings</p>
+          </div>
+        </div>
+        <div class="test-section">
+          <label>API Key (sk-...)</label>
+          <input type="password" class="api-key-input" id="openai-key" placeholder="sk-..." />
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="testProvider('openai')">Test Connection</button>
+            <button class="btn btn-secondary" onclick="listModels('openai')">List Models</button>
+          </div>
+          <div class="result-box" id="openai-result"></div>
+        </div>
+      </div>
+      
+      <!-- Anthropic -->
+      <div class="provider-card">
+        <div class="provider-header">
+          <div class="provider-icon anthropic">A</div>
+          <div class="provider-info">
+            <h3>Anthropic</h3>
+            <p>Claude models</p>
+          </div>
+        </div>
+        <div class="test-section">
+          <label>API Key (sk-ant-...)</label>
+          <input type="password" class="api-key-input" id="anthropic-key" placeholder="sk-ant-api03-..." />
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="testProvider('anthropic')">Test Connection</button>
+          </div>
+          <div class="result-box" id="anthropic-result"></div>
+        </div>
+      </div>
+      
+      <!-- OpenRouter -->
+      <div class="provider-card">
+        <div class="provider-header">
+          <div class="provider-icon openrouter">R</div>
+          <div class="provider-info">
+            <h3>OpenRouter</h3>
+            <p>Unified API for multiple LLMs</p>
+          </div>
+        </div>
+        <div class="test-section">
+          <label>API Key (sk-or-...)</label>
+          <input type="password" class="api-key-input" id="openrouter-key" placeholder="sk-or-..." />
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="testProvider('openrouter')">Test Connection</button>
+            <button class="btn btn-secondary" onclick="listModels('openrouter')">List Models</button>
+          </div>
+          <div class="result-box" id="openrouter-result"></div>
+        </div>
+      </div>
+      
+      <!-- Scout -->
+      <div class="provider-card">
+        <div class="provider-header">
+          <div class="provider-icon scout">S</div>
+          <div class="provider-info">
+            <h3>Scout (Atoms)</h3>
+            <p>ScoutOS Atoms API</p>
+          </div>
+        </div>
+        <div class="test-section">
+          <label>API Key (secret_...)</label>
+          <input type="password" class="api-key-input" id="scout-key" placeholder="secret_..." />
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="testProvider('scout')">Test Connection</button>
+          </div>
+          <div class="result-box" id="scout-result"></div>
+        </div>
+      </div>
+      
+      <!-- Ollama -->
+      <div class="provider-card">
+        <div class="provider-header">
+          <div class="provider-icon ollama">Ol</div>
+          <div class="provider-info">
+            <h3>Ollama</h3>
+            <p>Local LLM server</p>
+          </div>
+        </div>
+        <div class="test-section">
+          <p class="ollama-note">No API key required - connects to localhost:11434</p>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="testProvider('ollama')">Test Connection</button>
+            <button class="btn btn-secondary" onclick="listModels('ollama')">List Models</button>
+          </div>
+          <div class="result-box" id="ollama-result"></div>
+        </div>
+      </div>
+    </div>
+    
+    <h2 class="section-title">📋 Header Verification</h2>
+    <div class="info-box">
+      <p>The table below shows what headers should be injected for each provider. Use browser DevTools 
+      (Network tab) to verify that these headers are present in the proxied requests.</p>
+    </div>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+      <thead>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <th style="text-align: left; padding: 8px;">Provider</th>
+          <th style="text-align: left; padding: 8px;">Headers Injected</th>
+        </tr>
+      </thead>
+      <tbody style="font-size: 13px;">
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 8px;">OpenAI</td>
+          <td style="padding: 8px;"><code>Authorization: Bearer ${key}</code></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 8px;">Anthropic</td>
+          <td style="padding: 8px;"><code>x-api-key: ${key}</code>, <code>anthropic-version: 2023-06-01</code></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 8px;">OpenRouter</td>
+          <td style="padding: 8px;"><code>Authorization: Bearer ${key}</code>, <code>HTTP-Referer: https://onhyper.io</code>, <code>X-Title: OnHyper Dev</code></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+          <td style="padding: 8px;">Scout</td>
+          <td style="padding: 8px;"><code>Authorization: Bearer ${key}</code></td>
+        </tr>
+        <tr>
+          <td style="padding: 8px;">Ollama</td>
+          <td style="padding: 8px;"><em>None</em> (runs locally, no auth required)</td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <h2 class="section-title">🔧 Debug Info</h2>
+    <div id="debug-info" style="font-family: monospace; font-size: 12px; opacity: 0.7;">
+      Extension ID: <span id="extension-id">Not detected</span><br>
+      Page URL: <span id="page-url"></span>
+    </div>
+  </div>
+  
+  <script type="module">
+    // Provider configurations
+    const PROVIDERS = {
+      openai: {
+        name: 'OpenAI',
+        testUrl: '/proxy/openai/v1/models',
+        keyPrefix: 'sk-'
+      },
+      anthropic: {
+        name: 'Anthropic', 
+        testUrl: '/proxy/anthropic/v1/messages',
+        keyPrefix: 'sk-ant-'
+      },
+      openrouter: {
+        name: 'OpenRouter',
+        testUrl: '/proxy/openrouter/models',
+        keyPrefix: 'sk-or-'
+      },
+      scout: {
+        name: 'Scout',
+        testUrl: '/proxy/scout-atoms/info',
+        keyPrefix: 'secret_'
+      },
+      ollama: {
+        name: 'Ollama',
+        testUrl: '/proxy/ollama/api/tags',
+        keyPrefix: ''
+      }
+    };
+    
+    // Set page URL
+    document.getElementById('page-url').textContent = window.location.href;
+    
+    // Try to detect if we're in an extension context
+    if (window.chrome && chrome.runtime) {
+      document.getElementById('extension-id').textContent = chrome.runtime.id || 'Unknown';
+    }
+    
+    // Show result in result box
+    function showResult(providerId, status, message, data = null) {
+      const resultBox = document.getElementById(`${providerId}-result`);
+      resultBox.className = `result-box show ${status}`;
+      
+      let content = `<span class="status-badge ${status}">${status}</span>\n`;
+      content += message;
+      
+      if (data) {
+        content += `\n\n<pre>${JSON.stringify(data, null, 2)}</pre>`;
+      }
+      
+      resultBox.innerHTML = content;
+    }
+    
+    // Test provider connection
+    window.testProvider = async function(providerId) {
+      const provider = PROVIDERS[providerId];
+      const keyInput = document.getElementById(`${providerId}-key`);
+      const key = keyInput ? keyInput.value : '';
+      
+      showResult(providerId, 'pending', 'Testing connection...');
+      
+      try {
+        // Build request options
+        const options = {
+          method: providerId === 'anthropic' ? 'POST' : 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        };
+        
+        // For Anthropic, we need a minimal body
+        if (providerId === 'anthropic') {
+          options.body = JSON.stringify({
+            model: 'claude-3-sonnet-20240229',
+            max_tokens: 10,
+            messages: [{ role: 'user', content: 'test' }]
+          });
+        }
+        
+        const response = await fetch(provider.testUrl, options);
+        
+        if (response.ok) {
+          const data = await response.json();
+          showResult(providerId, 'ok', `${provider.name} connection successful! Status: ${response.status}`, data);
+        } else {
+          const errorText = await response.text();
+          let errorData;
+          try {
+            errorData = JSON.parse(errorText);
+          } catch {
+            errorData = { error: errorText };
+          }
+          showResult(providerId, 'fail', `${provider.name} error: ${response.status}`, errorData);
+        }
+      } catch (error) {
+        showResult(providerId, 'fail', `Connection failed: ${error.message}`);
+      }
+    };
+    
+    // List models for providers that support it
+    window.listModels = async function(providerId) {
+      const provider = PROVIDERS[providerId];
+      showResult(providerId, 'pending', 'Fetching models...');
+      
+      let modelsUrl;
+      switch (providerId) {
+        case 'openai':
+          modelsUrl = '/proxy/openai/v1/models';
+          break;
+        case 'openrouter':
+          modelsUrl = '/proxy/openrouter/models';
+          break;
+        case 'ollama':
+          modelsUrl = '/proxy/ollama/api/tags';
+          break;
+        default:
+          showResult(providerId, 'fail', 'List models not supported for this provider');
+          return;
+      }
+      
+      try {
+        const response = await fetch(modelsUrl);
+        
+        if (response.ok) {
+          const data = await response.json();
+          const models = data.models || data.data || data;
+          showResult(providerId, 'ok', `Found models:`, models);
+        } else {
+          const errorData = await response.json().catch(() => ({}));
+          showResult(providerId, 'fail', `Error: ${response.status}`, errorData);
+        }
+      } catch (error) {
+        showResult(providerId, 'fail', `Request failed: ${error.message}`);
+      }
+    };
+    
+    console.log('OnHyper Dev Test Page loaded');
+    console.log('Providers:', PROVIDERS);
+  </script>
+</body>
+</html>
