@@ -235,6 +235,12 @@ export const PROXY_ENDPOINTS = {
     secretKey: 'SCOUT_API_KEY',
     description: 'ScoutOS Platform API - Agents, Workflows, Tables, Drive, Collections. Example: POST /proxy/scoutos/world/{agent_id}/_interact',
   },
+  'onhyper': {
+    target: 'https://onhyper.io',
+    secretKey: 'ONHYPER_API_KEY',
+    description: 'OnHyper API - manage apps, secrets, dashboard. Enable in Settings.',
+    self: true,
+  },
   'scout-atoms': {
     target: 'https://api.scoutos.com',
     secretKey: 'SCOUT_API_KEY',
