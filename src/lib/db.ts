@@ -25,9 +25,11 @@
  * ```
  * users ─┬─< secrets (user's API keys, encrypted)
  *        ├─< apps (published applications)
- *        └─< api_keys (programmatic access tokens)
+ *        ├─< api_keys (programmatic access tokens)
+ *        └─< subdomain_reservations (owned subdomains)
  * 
  * apps ───< usage (API call tracking)
+ *        └─< subdomain_reservations (linked subdomains)
  * 
  * waitlist_entries ───< waitlist_referrals
  * ```
@@ -197,6 +199,9 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_apps_slug ON apps(slug);
   `);
 
+  // Migration: Add subdomain columns to apps table if they don't exist
+  migrateAppsTable(db);
+
   // Usage tracking
   db.exec(`
     CREATE TABLE IF NOT EXISTS usage (
@@ -308,6 +313,52 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_leads_session ON leads(session_id);
     CREATE INDEX IF NOT EXISTS idx_leads_created ON leads(created_at);
   `);
+
+  // Subdomain reservations (track subdomain ownership)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS subdomain_reservations (
+      subdomain TEXT PRIMARY KEY,
+      owner_id TEXT NOT NULL,
+      app_id TEXT,
+      claimed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (owner_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_subdomain_reservations_owner ON subdomain_reservations(owner_id);
+  `);
+}
+
+/**
+ * Migrate apps table to add subdomain columns
+ * SQLite doesn't support ALTER TABLE ADD COLUMN IF NOT EXISTS,
+ * so we check for column existence first.
+ * Also, SQLite doesn't allow UNIQUE on ALTER TABLE ADD COLUMN,
+ * so we create a separate unique index.
+ */
+function migrateAppsTable(db: Database.Database): void {
+  // Get current table info
+  const tableInfo = db.prepare('PRAGMA table_info(apps)').all() as { name: string }[];
+  const existingColumns = new Set(tableInfo.map(col => col.name));
+
+  // Add subdomain column if missing (without UNIQUE - will add index separately)
+  if (!existingColumns.has('subdomain')) {
+    db.exec(`ALTER TABLE apps ADD COLUMN subdomain TEXT`);
+  }
+
+  // Add subdomain_claimed_at column if missing
+  if (!existingColumns.has('subdomain_claimed_at')) {
+    db.exec(`ALTER TABLE apps ADD COLUMN subdomain_claimed_at DATETIME`);
+  }
+
+  // Add subdomain_owner_id column if missing
+  if (!existingColumns.has('subdomain_owner_id')) {
+    db.exec(`ALTER TABLE apps ADD COLUMN subdomain_owner_id TEXT`);
+  }
+
+  // Create unique index on subdomain if not exists
+  // This ensures subdomains are unique across all apps
+  db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_apps_subdomain ON apps(subdomain) WHERE subdomain IS NOT NULL`);
 }
 
 // Type exports
@@ -349,6 +400,9 @@ export interface App {
   js: string | null;
   created_at: string;
   updated_at: string;
+  subdomain: string | null;
+  subdomain_claimed_at: string | null;
+  subdomain_owner_id: string | null;
 }
 
 export interface UsageRecord {
@@ -408,4 +462,11 @@ export interface Lead {
   email: string;
   session_id: string | null;
   created_at: string;
+}
+
+export interface SubdomainReservation {
+  subdomain: string;
+  owner_id: string;
+  app_id: string | null;
+  claimed_at: string;
 }
