@@ -1,7 +1,51 @@
 /**
  * SQLite Database Setup for OnHyper.io
  * 
- * Handles structured data: users, secrets, apps, API keys, usage tracking
+ * Handles structured data storage with ACID guarantees:
+ * - Users and authentication data
+ * - Encrypted API secrets
+ * - Published apps metadata
+ * - API keys for programmatic access
+ * - Usage tracking and analytics
+ * - Waitlist and lead management
+ * 
+ * ## Architecture
+ * 
+ * SQLite is chosen for:
+ * - Zero-config embedded database
+ * - Full ACID transactions
+ * - Complex queries with JOINs
+ * - Reliable persistence
+ * - Easy backup (single file)
+ * 
+ * For high-performance content serving, see `lmdb.ts`.
+ * 
+ * ## Schema Overview
+ * 
+ * ```
+ * users ─┬─< secrets (user's API keys, encrypted)
+ *        ├─< apps (published applications)
+ *        └─< api_keys (programmatic access tokens)
+ * 
+ * apps ───< usage (API call tracking)
+ * 
+ * waitlist_entries ───< waitlist_referrals
+ * ```
+ * 
+ * ## Initialization
+ * 
+ * ```typescript
+ * import { initDatabase, getDatabase } from './lib/db.js';
+ * 
+ * // Call once at startup
+ * initDatabase();
+ * 
+ * // Get instance for queries
+ * const db = getDatabase();
+ * const users = db.prepare('SELECT * FROM users').all();
+ * ```
+ * 
+ * @module lib/db
  */
 
 import Database from 'better-sqlite3';
@@ -10,6 +54,26 @@ import { mkdirSync, existsSync } from 'fs';
 import { dirname } from 'path';
 
 let db: Database.Database | null = null;
+let testMode = false;
+
+/**
+ * Enable test mode - uses in-memory database and allows resetting
+ * Must be called before initDatabase()
+ */
+export function enableTestMode(): void {
+  testMode = true;
+}
+
+/**
+ * Reset the database connection (for testing)
+ * Closes existing connection and allows re-initialization
+ */
+export function resetDatabase(): void {
+  if (db) {
+    db.close();
+    db = null;
+  }
+}
 
 /**
  * Initialize the SQLite database
@@ -20,11 +84,15 @@ export function initDatabase(): Database.Database {
     return db;
   }
 
-  // Ensure data directory exists
-  const dbPath = config.sqlitePath;
-  const dbDir = dirname(dbPath);
-  if (!existsSync(dbDir)) {
-    mkdirSync(dbDir, { recursive: true });
+  // In test mode, use in-memory database
+  const dbPath = testMode ? ':memory:' : config.sqlitePath;
+  
+  // Ensure data directory exists (skip for in-memory)
+  if (!testMode && dbPath !== ':memory:') {
+    const dbDir = dirname(dbPath);
+    if (!existsSync(dbDir)) {
+      mkdirSync(dbDir, { recursive: true });
+    }
   }
 
   db = new Database(dbPath);
