@@ -24,6 +24,7 @@ import { unsubscribe } from './routes/unsubscribe.js';
 import { blog } from './routes/blog.js';
 import { chat } from './routes/chat.js';
 import { subdomains } from './routes/subdomains.js';
+import { settings } from './routes/settings.js';
 import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { subdomainRouter } from './middleware/subdomain.js';
@@ -137,6 +138,9 @@ app.route('/api/waitlist', waitlist);
 
 // Subdomain routes (mixed public/protected - handled in-module)
 app.route('/api/subdomains', subdomains);
+
+// Settings routes (uses own auth - supports JWT and API key)
+app.route('/api/settings', settings);
 
 // Protected API routes
 const protectedApi = new Hono();
