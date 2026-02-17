@@ -255,3 +255,13 @@ export function deleteApiKey(userId: string, keyId: string): boolean {
   const result = db.prepare('DELETE FROM api_keys WHERE id = ? AND user_id = ?').run(keyId, userId);
   return result.changes > 0;
 }
+
+/**
+ * Get a user's API key value by user ID
+ * Returns the first active API key for the user (oh_live_xxx format)
+ */
+export function getUserApiKeyByUserId(userId: string): string | null {
+  const db = getDatabase();
+  const keyRecord = db.prepare('SELECT key FROM api_keys WHERE user_id = ? LIMIT 1').get(userId) as { key: string } | undefined;
+  return keyRecord?.key || null;
+}

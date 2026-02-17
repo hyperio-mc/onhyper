@@ -113,7 +113,8 @@ import { streamSSE } from 'hono/streaming';
 import { PROXY_ENDPOINTS, config } from '../config.js';
 import { getSecretValue } from '../lib/secrets.js';
 import { getAppBySlug, getAppById } from '../lib/apps.js';
-import { getApiKeyByKey, verifyToken } from '../lib/users.js';
+import { getApiKeyByKey, verifyToken, getUserApiKeyByUserId } from '../lib/users.js';
+import { getUserSettings } from '../lib/db.js';
 import { recordUsage } from '../lib/usage.js';
 import { trackProxyRequest } from '../lib/analytics.js';
 
@@ -211,8 +212,33 @@ proxy.all('/:endpoint/*', async (c) => {
     }, 401);
   }
   
-  // Get the user's secret for this endpoint
-  const secretValue = getSecretValue(identity.userId, endpointConfig.secretKey);
+  // Get the secret value for this endpoint
+  let secretValue: string | null;
+  
+  // Handle self-endpoints (like 'onhyper') differently
+  if ((endpointConfig as any).self) {
+    // Check if user has enabled this feature
+    const userSettings = getUserSettings(identity.userId);
+    if (!userSettings || userSettings.onhyper_api_enabled !== 1) {
+      return c.json({
+        error: 'OnHyper API access not enabled. Enable it in Settings.',
+      }, 403);
+    }
+    
+    // Get user's own API key
+    const userApiKey = getUserApiKeyByUserId(identity.userId);
+    if (!userApiKey) {
+      return c.json({
+        error: 'No API key found. Generate one in Dashboard.',
+      }, 401);
+    }
+    
+    // Use user's own API key as the secret value
+    secretValue = userApiKey;
+  } else {
+    // Normal flow: get secret from storage
+    secretValue = getSecretValue(identity.userId, endpointConfig.secretKey);
+  }
   
   if (!secretValue) {
     return c.json({
