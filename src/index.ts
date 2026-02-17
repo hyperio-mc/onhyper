@@ -99,6 +99,21 @@ app.get('/api', (c) => {
   });
 });
 
+// API status check (public)
+app.get('/api/status', (c) => {
+  return c.json({
+    status: 'ok',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    services: {
+      auth: 'operational',
+      chat: process.env.SCOUTOS_API_KEY ? 'operational' : 'not_configured',
+      email: process.env.RESEND_API_KEY ? 'operational' : 'not_configured',
+      analytics: process.env.POSTHOG_API_KEY ? 'operational' : 'not_configured',
+    },
+  });
+});
+
 // Auth routes (public)
 app.route('/api/auth', auth);
 
@@ -199,7 +214,7 @@ async function main() {
     const port = config.port;
     const host = config.host;
 
-    const server = serve({
+    serve({
       fetch: app.fetch,
       port: port,
       hostname: host,
