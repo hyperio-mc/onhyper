@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OnHyper Dev</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <span class="logo">⚡</span>
+      <h1 class="title">OnHyper Dev</h1>
+    </header>
+
+    <!-- Add Key Form -->
+    <section class="add-key-section">
+      <form id="add-key-form">
+        <div class="form-group">
+          <label for="provider-select">Provider</label>
+          <select id="provider-select" required>
+            <option value="">Select a provider</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="openrouter">OpenRouter</option>
+            <option value="scout">Scout</option>
+            <option value="ollama">Ollama</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="api-key-input">API Key</label>
+          <div class="input-wrapper">
+            <input type="password" id="api-key-input" placeholder="Enter your API key" required>
+            <button type="button" id="toggle-visibility" class="icon-btn" title="Show/Hide key">
+              <span class="eye-icon">👁</span>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="save-btn">
+          <span class="btn-text">Save Key</span>
+          <span class="btn-loading" hidden>💾 Saving...</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Status Messages -->
+    <div id="status-container" class="status-container" hidden>
+      <span id="status-message"></span>
+    </div>
+
+    <!-- Saved Keys List -->
+    <section class="saved-keys-section">
+      <h2 class="section-title">Saved Keys</h2>
+      <div id="keys-list" class="keys-list">
+        <p class="empty-state">No API keys saved yet</p>
+      </div>
+    </section>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+</html>

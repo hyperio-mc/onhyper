@@ -1,0 +1,336 @@
+/* OnHyper Dev - Popup Styles */
+/* Dark theme matching OnHyper brand */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  width: 320px;
+  min-height: 200px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  background-color: #0f172a;
+  color: #f8fafc;
+}
+
+.container {
+  padding: 16px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #334155;
+}
+
+.logo {
+  font-size: 20px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #f8fafc;
+}
+
+/* Form Styles */
+.add-key-section {
+  padding: 12px 0;
+}
+
+.form-group {
+  margin-bottom: 12px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+select {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #f8fafc;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+
+select:hover {
+  border-color: #2563eb;
+}
+
+select:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+select option {
+  background-color: #1e293b;
+  color: #f8fafc;
+}
+
+.input-wrapper {
+  display: flex;
+  gap: 8px;
+}
+
+input[type="password"],
+input[type="text"] {
+  flex: 1;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: #f8fafc;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+}
+
+input[type="password"]::placeholder,
+input[type="text"]::placeholder {
+  color: #64748b;
+}
+
+input[type="password"]:hover,
+input[type="text"]:hover {
+  border-color: #2563eb;
+}
+
+input[type="password"]:focus,
+input[type="text"]:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  background-color: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.icon-btn:hover {
+  background-color: #334155;
+  border-color: #2563eb;
+}
+
+.icon-btn:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
+.eye-icon {
+  font-size: 14px;
+  opacity: 0.7;
+}
+
+.icon-btn:hover .eye-icon {
+  opacity: 1;
+}
+
+/* Buttons */
+.btn {
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, transform 0.1s;
+}
+
+.btn-primary {
+  color: #fff;
+  background-color: #2563eb;
+}
+
+.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+.btn-primary:disabled {
+  background-color: #1e40af;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-danger {
+  color: #fca5a5;
+  background-color: transparent;
+  border: 1px solid #dc2626;
+  font-size: 12px;
+  padding: 4px 8px;
+  width: auto;
+}
+
+.btn-danger:hover {
+  background-color: #7f1d1d;
+  border-color: #ef4444;
+  color: #fee2e2;
+}
+
+.btn-loading {
+  display: none;
+}
+
+.btn-loading[hidden] {
+  display: none;
+}
+
+.btn-primary:disabled .btn-text {
+  display: none;
+}
+
+.btn-primary:disabled .btn-loading {
+  display: inline;
+}
+
+/* Status Messages */
+.status-container {
+  margin: 12px 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.status-container[hidden] {
+  display: none;
+}
+
+.status-container.success {
+  background-color: #059669;
+  color: #d1fae5;
+}
+
+.status-container.error {
+  background-color: #dc2626;
+  color: #fee2e2;
+}
+
+/* Saved Keys List */
+.saved-keys-section {
+  padding-top: 12px;
+  border-top: 1px solid #334155;
+}
+
+.section-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 8px;
+}
+
+.keys-list {
+  min-height: 40px;
+}
+
+.empty-state {
+  color: #64748b;
+  font-style: italic;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.key-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background-color: #1e293b;
+  border-radius: 6px;
+  border: 1px solid #334155;
+}
+
+.key-item:last-child {
+  margin-bottom: 0;
+}
+
+.key-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.key-provider {
+  font-weight: 600;
+  color: #f8fafc;
+  text-transform: capitalize;
+  min-width: 80px;
+}
+
+.key-preview {
+  color: #94a3b8;
+  font-family: 'Monaco', 'Menlo', monospace;
+  font-size: 12px;
+}
+
+.key-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Button States */
+.btn-primary:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.4);
+}
+
+.btn-danger:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.3);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.key-item {
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.btn-loading {
+  animation: pulse 1s ease-in-out infinite;
+}
