@@ -57,7 +57,8 @@
  * 
  * | Endpoint | Target | Auth Format |
  * |----------|--------|-------------|
- * | `scout-atoms` | api.scoutos.com | `Bearer` |
+ * | `scoutos` | api.scoutos.com | `Bearer` |
+ * | `scout-atoms` | api.scoutos.com | `Bearer` (deprecated) |
  * | `ollama` | ollama.com/v1 | `Bearer` |
  * | `openrouter` | openrouter.ai/api/v1 | `Bearer` |
  * | `anthropic` | api.anthropic.com/v1 | `x-api-key` |
@@ -66,14 +67,19 @@
  * ## Example Usage
  * 
  * ```javascript
- * // In a published app
- * const response = await fetch('/proxy/scout-atoms/world/agent123/_interact', {
+ * // In a published app - ScoutOS Agent chat
+ * const response = await fetch('/proxy/scoutos/world/agent123/_interact', {
  *   method: 'POST',
  *   headers: {
  *     'Content-Type': 'application/json',
  *     'X-App-Slug': 'my-app'
  *   },
  *   body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] })
+ * });
+ * 
+ * // ScoutOS Tables
+ * const rows = await fetch('/proxy/scoutos/v2/collections/col_xxx/rows', {
+ *   headers: { 'X-App-Slug': 'my-app' }
  * });
  * ```
  * 

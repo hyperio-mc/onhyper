@@ -230,10 +230,15 @@ export const config = {
  * Maps endpoint slugs to target URLs and secret key names
  */
 export const PROXY_ENDPOINTS = {
+  'scoutos': {
+    target: 'https://api.scoutos.com',
+    secretKey: 'SCOUT_API_KEY',
+    description: 'ScoutOS Platform API - Agents, Workflows, Tables, Drive, Collections. Example: POST /proxy/scoutos/world/{agent_id}/_interact',
+  },
   'scout-atoms': {
     target: 'https://api.scoutos.com',
     secretKey: 'SCOUT_API_KEY',
-    description: 'Scout OS Agents API - Use /world/{agent_id}/_interact for chat',
+    description: 'Scout OS Agents API (deprecated - use scoutos instead)',
   },
   'ollama': {
     target: 'https://ollama.com/v1',
