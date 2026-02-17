@@ -19,7 +19,11 @@
       </div>
       <div class="feature-highlight">
         <h4>🌐 App hosting</h4>
-        <p>Publish apps at <code>onhyper.io/a/{slug}</code></p>
+        <p>Publish at <code>onhyper.io/a/{slug}</code> or <code>{subdomain}.onhyper.io</code></p>
+      </div>
+      <div class="feature-highlight">
+        <h4>🔗 Custom subdomains</h4>
+        <p>Claim a unique subdomain for your app</p>
       </div>
       <div class="feature-highlight">
         <h4>🆓 Free tier</h4>
@@ -62,10 +66,32 @@ curl -X POST https://onhyper.io/api/apps \
   -H "Content-Type: application/json" \
   -d '{"name": "My App", "slug": "my-app", "html": "&lt;html&gt;...&lt;/html&gt;"}'
 
-# Publish app
+# Publish app (optionally with a subdomain)
 curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
+  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"subdomain": "my-app"}'</code></pre>
+    <p>App becomes available at:</p>
+    <ul>
+      <li><code>https://onhyper.io/a/{slug}</code> (always)</li>
+      <li><code>https://{subdomain}.onhyper.io</code> (if subdomain claimed)</li>
+    </ul>
+
+    <h3>5. Custom Subdomains</h3>
+    <p>Each user can claim <strong>one unique subdomain</strong> for their apps.</p>
+    <pre><code># Check availability
+curl "https://onhyper.io/api/subdomains/check?name=my-app"
+
+# Claim a subdomain
+curl -X POST https://onhyper.io/api/subdomains/claim \
+  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "Content-Type: application/json" \
+  -d '{"subdomain": "my-app"}'
+
+# List your subdomains
+curl https://onhyper.io/api/subdomains/mine \
   -H "Authorization: Bearer &lt;session_token&gt;"</code></pre>
-    <p>App becomes available at <code>https://onhyper.io/a/{slug}</code></p>
+    <p class="note"><strong>Rules:</strong> 3-63 chars, lowercase letters/numbers/hyphens only. Reserved names (api, www, admin, blog) are blocked.</p>
   </section>
 
   <section class="skill-section">
@@ -228,10 +254,41 @@ curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
         <tr>
           <td><code>/api/apps/:id/publish</code></td>
           <td>POST</td>
-          <td>Publish app live</td>
+          <td>Publish app (optional <code>subdomain</code> field)</td>
         </tr>
       </tbody>
     </table>
+
+    <h3>Subdomains</h3>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Endpoint</th>
+          <th>Method</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>/api/subdomains/check?name=X</code></td>
+          <td>GET</td>
+          <td>Check subdomain availability</td>
+        </tr>
+        <tr>
+          <td><code>/api/subdomains/claim</code></td>
+          <td>POST</td>
+          <td>Claim a subdomain</td>
+        </tr>
+        <tr>
+          <td><code>/api/subdomains/mine</code></td>
+          <td>GET</td>
+          <td>List your claimed subdomains</td>
+        </tr>
+        <tr>
+          <td><code>/api/subdomains/:name</code></td>
+          <td>DELETE</td>
+          <td>Release a subdomain</td>
+        </tr>
   </section>
 
   <section class="skill-section">
