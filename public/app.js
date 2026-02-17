@@ -352,8 +352,43 @@ async function loadDashboard() {
     
     // Load API token
     await loadApiToken();
+    
+    // Load settings
+    await loadSettings();
   } catch (err) {
     document.getElementById('stats').innerHTML = '<p>Failed to load stats</p>';
+  }
+}
+
+async function loadSettings() {
+  const checkbox = document.getElementById('onhyper-api-enabled');
+  if (!checkbox) return;
+  
+  try {
+    const result = await api('/settings');
+    checkbox.checked = result.onhyper_api_enabled || false;
+    
+    // Add event listener
+    checkbox.addEventListener('change', toggleOnhyperApi);
+  } catch (err) {
+    console.error('Failed to load settings:', err);
+  }
+}
+
+async function toggleOnhyperApi(event) {
+  const checkbox = event.target;
+  const enabled = checkbox.checked;
+  
+  try {
+    await api('/settings', {
+      method: 'PUT',
+      body: JSON.stringify({ onhyper_api_enabled: enabled })
+    });
+    showToast(enabled ? 'OnHyper API access enabled' : 'OnHyper API access disabled', 'success');
+  } catch (err) {
+    // Revert on error
+    checkbox.checked = !enabled;
+    showToast('Failed to update setting: ' + err.message, 'error');
   }
 }
 
