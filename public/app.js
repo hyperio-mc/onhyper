@@ -461,7 +461,8 @@ async function loadApps() {
   }
   
   try {
-    const apps = await api('/apps');
+    const response = await api('/apps');
+    const apps = response.apps || [];
     const list = document.getElementById('app-list');
     
     if (apps.length === 0) {
@@ -607,7 +608,8 @@ async function loadKeys() {
   }
   
   try {
-    const secrets = await api('/secrets');
+    const response = await api('/secrets');
+    const secrets = response.secrets || [];
     const list = document.getElementById('key-list');
     
     if (secrets.length === 0) {
