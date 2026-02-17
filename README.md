@@ -169,13 +169,41 @@ Pre-configured proxy endpoints for common AI APIs:
 
 | Endpoint | Target API | Secret Key |
 |----------|-----------|------------|
-| `/proxy/scout-atoms` | Scout OS Agents API | `SCOUT_API_KEY` |
-| `/proxy/ollama` | Ollama API | `OLLAMA_API_KEY` |
-| `/proxy/openrouter` | OpenRouter API | `OPENROUTER_API_KEY` |
-| `/proxy/anthropic` | Anthropic API | `ANTHROPIC_API_KEY` |
+| `/proxy/scoutos` | ScoutOS Platform (Agents, Tables, Drive, Workflows) | `SCOUT_API_KEY` |
 | `/proxy/openai` | OpenAI API | `OPENAI_API_KEY` |
+| `/proxy/anthropic` | Anthropic API | `ANTHROPIC_API_KEY` |
+| `/proxy/openrouter` | OpenRouter API | `OPENROUTER_API_KEY` |
+| `/proxy/ollama` | Ollama API | `OLLAMA_API_KEY` |
+| `/proxy/onhyper/*` | OnHyper API (self-API) | `ONHYPER_API_KEY` |
 
-### Authentication Methods
+**Note**: `/proxy/scout-atoms` is deprecated - use `/proxy/scoutos` instead.
+
+**Note**: `/proxy/onhyper` is a special "self-api" endpoint. Users must enable it in Settings. It uses the user's own API token, not a stored secret.
+
+### ScoutOS Proxy Examples
+
+```javascript
+// Agent chat (streaming)
+fetch('/proxy/scoutos/world/{agent_id}/_interact', {
+  method: 'POST',
+  headers: {
+    'X-App-Slug': window.ONHYPER.appSlug,
+    'Content-Type': 'application/json',
+    'Accept': 'text/event-stream'
+  },
+  body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] })
+})
+
+// Scout Tables
+fetch('/proxy/scoutos/v2/collections/{collection_id}/rows', {
+  headers: { 'X-App-Slug': window.ONHYPER.appSlug }
+})
+
+// Drive
+fetch('/proxy/scoutos/drive/download/{file_id}', {
+  headers: { 'X-App-Slug': window.ONHYPER.appSlug }
+})
+```
 
 The proxy supports three authentication methods:
 
