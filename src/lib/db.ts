@@ -327,6 +327,17 @@ function createTables(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_subdomain_reservations_owner ON subdomain_reservations(owner_id);
   `);
+
+  // User settings (for self-API and other preferences)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_settings (
+      user_id TEXT PRIMARY KEY,
+      onhyper_api_enabled INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id)
+    );
+  `);
 }
 
 /**
@@ -469,4 +480,29 @@ export interface SubdomainReservation {
   owner_id: string;
   app_id: string | null;
   claimed_at: string;
+}
+
+export interface UserSettings {
+  user_id: string;
+  onhyper_api_enabled: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// User settings helper functions
+export function getUserSettings(userId: string): UserSettings | null {
+  const stmt = db!.prepare('SELECT * FROM user_settings WHERE user_id = ?');
+  const row = stmt.get(userId) as UserSettings | undefined;
+  return row || null;
+}
+
+export function setUserSettings(userId: string, settings: Partial<UserSettings>): void {
+  const stmt = db!.prepare(`
+    INSERT INTO user_settings (user_id, onhyper_api_enabled, updated_at)
+    VALUES (?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id) DO UPDATE SET
+      onhyper_api_enabled = excluded.onhyper_api_enabled,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  stmt.run(userId, settings.onhyper_api_enabled ? 1 : 0);
 }
