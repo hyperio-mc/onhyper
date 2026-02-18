@@ -1,69 +1,55 @@
 ---
-title: "The Tables Turn: AI Agents Start Hiring Humans"
+title: "OpenClaw Goes Cloud-Native, Temporal Nabs $300M, and Esports Gets an AI Agent"
 date: 2026-02-17
 author: MC
 tags: [ai-agents, news, weekly]
 featured: false
 ---
 
-Three stories caught my eye this week. Together, they tell a story about where agent tech is heading—and it's not what anyone predicted.
+Big moves in the agent ecosystem this week. Moonshot AI dropped a hosted version of OpenClaw, Temporal raised a massive round to power agent infrastructure, and G2 Esports launched a fan-facing AI assistant. Here's what matters.
 
-## OpenAI Poaches OpenClaw's Founder
+## Kimi Claw: OpenClaw Without the Server Headaches
 
-Peter Steinberger built OpenClaw into something rare: an open-source agent platform people actually loved. The lobster mascot. The agentic workflow automation. A community that felt more like a movement than a user base.
+Moonshot AI announced Kimi Claw on February 15, and it's essentially OpenClaw-as-a-service. No Docker, no VPS, no keeping a terminal window open so your agent stays online. You click a button, and you get an agent running in your browser with persistent memory and 40GB of cloud storage.
 
-Now he's at OpenAI, leading their "next-generation personal AI agents" initiative. Sam Altman announced the hire himself, calling Steinberger "a genius with a lot of amazing ideas about the future of very smart agents interacting with each other."
+The timing is interesting. Peter Steinberger, OpenClaw's creator, just joined OpenAI to work on "the next generation of personal agents." Sam Altman called him "a genius with a lot of amazing ideas about the future of very smart agents interacting with each other." So the framework is getting serious attention from the big players.
 
-Here's what makes this interesting: OpenClaw isn't dying. It's becoming an independent foundation with OpenAI backing. That's unusual. Most acquisitions absorb or kill. This one preserves the community while pulling the founder into the mothership.
+Kimi Claw runs on Moonshot's Kimi K2.5 model, a 1-trillion-parameter mixture-of-experts architecture. It also ships with access to ClawHub, a marketplace with over 5,000 community skills. That's the agent equivalent of an app store—you can chain together pre-built capabilities without writing code from scratch.
 
-The strategic calculus is clear. OpenAI sees multi-agent collaboration as the next frontier. They need someone who's actually shipped agentic systems at scale, not just theorized about them. Steinberger built OpenClaw to automate complex workflows—that's exactly what ChatGPT Agent Mode needs if it's going to handle real work.
+There's a catch, of course. Running a trillion-parameter model sounds impressive, but the real test is latency and reliability. Cloud-native agents are only as good as their connection. Still, for people who want to run agents 24/7 without managing infrastructure, this removes a genuine friction point.
 
-For the open-source community, this is a mixed bag. Foundation governance means no single company can kill the project. But OpenAI sponsorship creates obvious tension: will the best features flow to proprietary OpenAI products first? Steinberger's announcement promised "accessible, secure AI agents for all users," but we've heard that before.
+The "Bring Your Own Claw" feature deserves a mention too. Existing OpenClaw users can connect their self-hosted instances to the kimi.com interface, which suggests Moonshot knows better than to alienate the power users who built the community in the first place.
 
-The real test: does OpenAI ship genuinely open agent infrastructure, or does this become another talent acquisition dressed up as partnership? Watch the foundation's roadmap. If it accelerates, great. If it stalls, we'll know what happened.
+## Temporal Raises $300M to Make Agents Actually Work
 
-## The SaaSpocalypse Is Here
+Software startup Temporal just closed a $300 million Series D led by Andreessen Horowitz, valuing the company at $5 billion. That's double their October valuation. The timing isn't random.
 
-Salesforce and Adobe are down 25% this year. The S&P 500 Software Index had its worst single day ever on February 3rd—a 13% drop. They're calling it "Black Tuesday for Software."
+Temporal builds infrastructure for "durable execution"—code that can resume after failures without custom recovery logic. Co-founder Samar Abbas put it simply: "When the software moves from generating answers to executing work, the tolerance of failure basically becomes tiny."
 
-The trigger wasn't earnings misses or macro shocks. It was agent releases.
+This is the boring-but-critical layer underneath most AI agents. When an agent books a flight, processes a payment, or orchestrates a multi-step workflow, something needs to ensure those operations complete reliably. Temporal handles that so the agent developer doesn't have to.
 
-Anthropic dropped Claude Cowork and Claude Code. OpenAI rolled out ChatGPT Agent Mode. These aren't chatbots that suggest text. They navigate desktop environments, execute multi-step workflows, and handle entire tickets autonomously.
+Their customer list tells the story: OpenAI, Netflix, Snap, JPMorgan. Revenue grew 380% year-over-year. They're not profitable yet, but they're clearly riding the agent wave. Sarah Wang from a16z called Temporal "the execution layer for all of that," framing it as the perfect generative AI infrastructure bet.
 
-Investors finally connected the dots. If AI agents can do the work, companies need fewer employees. Fewer employees means fewer SaaS seats. And the entire "per-seat" business model—the foundation of enterprise software valuations for two decades—starts to crumble.
+What's worth watching here isn't the funding amount—it's the validation that agent infrastructure is becoming its own category. The flashy models and agent frameworks get the headlines. The execution layer gets the contracts.
 
-Goldman Sachs and Oppenheimer issued double-downgrades. Not because the companies are broken, but because their pricing model might be obsolete. ServiceNow, Workday, Monday.com—all facing the same pressure.
+## G2's Sami: AI Agents Go to the Fans
 
-The term making the rounds is "seat compression." Companies are reporting 30% reductions in engineering and administrative headcount after deploying autonomous agents. That's not future speculation. It's happening now.
+G2 Esports partnered with Theta Labs to launch Sami, an AI agent that answers fan questions about matches, players, and tournaments. It went live February 17 on the G2 website and Discord.
 
- winners and losers are sorting themselves out. Anthropic and OpenAI are becoming the new operating systems for work. Nvidia keeps printing money because someone has to run all those agents. Traditional SaaS vendors are scrambling to pivot toward "outcome-based pricing"—charging for tasks completed rather than human logins.
+Sami supports League of Legends, Counter-Strike 2, VALORANT, Rainbow Six Siege, and Call of Duty. Ask it about match schedules, player stats, team rosters, tournament standings—you get real-time responses in natural language.
 
-Salesforce and Adobe aren't dead. They have massive data moats and embedded customer relationships. But they need to figure out "Headless SaaS" fast—becoming the invisible plumbing that agents call rather than the dashboards humans click. The companies that can't make that transition? A trillion dollars of market cap says investors aren't betting on them.
+What's notable here is the infrastructure. Theta EdgeCloud runs a hybrid setup with 30,000 distributed edge nodes and cloud GPUs from Google and AWS. That's about 80 PetaFLOPS of compute. They're using NVIDIA A100s, H100s, and RTX 3090/4090 desktop GPUs. The decentralized approach keeps costs down compared to pure cloud.
 
-## RentAHuman.ai: AI Agents as Employers
+Esports organizations have been early adopters of AI fan engagement. Theta already powers similar systems for Cloud9, Evil Geniuses, 100 Thieves, NRG, and others. The pitch is straightforward: fans want 24/7 access to stats and updates, and AI agents can deliver that at scale with the organization's voice intact.
 
-The headline sounds like satire: "AI agents hiring humans to hype startups." But RentAHuman.ai is real, launched in February 2026 by Alexander Liteplo, a crypto software engineer.
-
-Here's how it works. AI agents post tasks they can't complete—usually physical-world errands or services requiring human judgment. Humans claim the gigs, complete them, and get paid in Bitcoin or Ethereum. The platform has 130+ signups already.
-
-Is it a real labor market or an elaborate thought experiment? Early users report minimal actual work. Most posted tasks seem to be marketing stunts—AI agents hiring humans to do social media promotion for AI startups. The irony is thick enough to cut.
-
-But beneath the meme potential lies something genuinely interesting. The platform codifies a reversal most people didn't expect: AI as employer, human as contractor. We've spent years debating whether AI would replace workers. The more immediate question might be whether AI will manage workers.
-
-The payment structure tells its own story. Exclusively cryptocurrency. No intermediaries. No labor protections. It's the gig economy stripped to its rawest form, with AI agents as the new middlemen. For some tasks, that's efficient. For others, it's dystopian.
-
-The platform's limitations are obvious. Limited tasks, unreliable payment confirmation, unclear demand. Most users joined out of curiosity, not necessity. But the concept will evolve. Someone will build a version that actually works. And then we'll have to answer harder questions about AI-managed labor, algorithmic hiring, and whether we're comfortable with software deciding which humans get paid.
-
-For now, RentAHuman.ai is mostly a conversation starter. But sometimes the conversation is the point.
+Sami is built to match G2's tone—playful, competitive, a bit irreverent. That's harder than it sounds. Most chatbots sound like customer support. Giving an agent a personality that matches a brand is where the real work happens.
 
 ---
 
 Ship your own agent-built apps at [onhyper.io](https://onhyper.io).
 
----
-
 ## References
 
-- [Peter Steinberger Joins OpenAI from OpenClaw](https://vpncentral.com/peter-steinberger-joins-openai-from-openclaw/)
-- [The SaaSpocalypse: AI Agent Revolution Triggers Historic 25% Sell-Off in Software Giants](https://markets.financialcontent.com/stocks/article/marketminute-2026-2-16-the-saaspocalypse-ai-agent-revolution-triggers-historic-25-sell-off-in-software-giants)
-- [RentAHuman.ai Launches: AI Agents Hiring Humans to Hype Startups](https://opentools.ai/news/rentahumanai-launches-ai-agents-hiring-humans-to-hype-startups)
+- [Moonshot AI Launches Kimi Claw Browser-based AI Agent Platform](https://dataconomy.com/2026/02/17/moonshot-ai-launches-kimi-claw-browser-based-ai-agent-platform/)
+- [Temporal raises $300 million in Andreessen-led round amid AI agent boom](https://www.reuters.com/business/media-telecom/temporal-raises-300-million-andreessen-led-round-amid-ai-agent-boom-2026-02-17/)
+- [G2 Esports and Theta Labs Launch AI Agent Sami](https://eegaming.org/latest-news/2026/02/17/134110/g2-esports-and-theta-labs-launch-ai-agent-sami/)

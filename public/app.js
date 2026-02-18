@@ -478,19 +478,42 @@ async function loadApps() {
     let list = document.querySelector('#tab-apps #app-list') || document.getElementById('app-list');
 
     if (apps.length === 0) {
-      list.innerHTML = '<p>No apps yet. Create your first app!</p>';
+      list.innerHTML = `
+        <div class="empty-state">
+          <h3>No apps yet</h3>
+          <p>Create your first app to get started.</p>
+          <button onclick="showCreateAppModal()" class="btn-primary">Create App</button>
+        </div>
+      `;
     } else {
-      list.innerHTML = apps.map(app => `
-        <div class="app-card">
-          <h3>${app.name}</h3>
-          <p>${app.description || 'No description'}</p>
-          <div class="app-actions">
-            <a href="/a/${app.slug}" target="_blank">View</a>
-            <button onclick="editApp('${app.id}')">Edit</button>
-            <button onclick="deleteApp('${app.id}')" class="btn-danger">Delete</button>
+      list.innerHTML = `
+        <div class="app-grid">
+          ${apps.map(app => `
+            <div class="app-card">
+              <div class="app-card-header">
+                <div class="app-icon">📄</div>
+                <div>
+                  <h3 class="app-card-title">${escapeHtml(app.name)}</h3>
+                  <span class="app-status app-status--active">Active</span>
+                </div>
+              </div>
+              <p class="app-card-meta">
+                <a href="https://onhyper.io/a/${app.slug}" target="_blank">onhyper.io/a/${app.slug}</a>
+              </p>
+              <div class="app-card-actions">
+                <button onclick="editApp('${app.id}')" class="btn-secondary">Edit</button>
+                <button onclick="deleteApp('${app.id}')" class="btn-danger">Delete</button>
+              </div>
+            </div>
+          `).join('')}
+          <div class="app-card app-card--new" onclick="showCreateAppModal()">
+            <div class="app-card-new-content">
+              <span class="app-card-new-icon">+</span>
+              <span>Create New App</span>
+            </div>
           </div>
         </div>
-      `).join('');
+      `;
     }
 
     // Initialize subdomain functionality
@@ -498,6 +521,12 @@ async function loadApps() {
   } catch (err) {
     showError(err.message);
   }
+}
+
+// Placeholder for create app modal (will be implemented in task-020)
+function showCreateAppModal() {
+  // For now, scroll to the form
+  document.getElementById('app-form')?.scrollIntoView({ behavior: 'smooth' });
 }
 
 // Subdomain functionality
