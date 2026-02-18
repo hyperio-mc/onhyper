@@ -49,7 +49,7 @@
  * This enables apps to make proxy requests:
  * 
  * ```javascript
- * const response = await fetch(`${ONHYPER.proxyBase}/scout-atoms/...`, {
+ * const response = await fetch(`${ONHYPER.proxyBase}/scoutos/...`, {
  *   method: 'POST',
  *   headers: { 'X-App-Slug': ONHYPER.appSlug },
  *   body: JSON.stringify({ ... })
@@ -92,6 +92,7 @@
 import { Hono } from 'hono';
 import { getAppBySlug } from '../lib/apps.js';
 import { AppContentStore } from '../lib/lmdb.js';
+import { trackAppView } from '../lib/appAnalytics.js';
 
 const render = new Hono();
 
@@ -128,6 +129,23 @@ render.get('/:slug', async (c) => {
   
   // Get content from LMDB
   const content = AppContentStore.get(app.id);
+  
+  // Track page view (async, non-blocking)
+  const referrer = c.req.header('referer') || undefined;
+  const userAgent = c.req.header('user-agent') || undefined;
+  const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 
+             c.req.header('x-real-ip') || 
+             (c.env as any)?.ip ||
+             'unknown';
+  
+  // Use setImmediate for non-blocking tracking
+  setImmediate(() => {
+    try {
+      trackAppView(app.id, { referrer, userAgent, ipAddress: ip });
+    } catch (e) {
+      console.error('[Analytics] Failed to track view:', e);
+    }
+  });
   
   const html = content?.html || app.html || '';
   const css = content?.css || app.css || '';

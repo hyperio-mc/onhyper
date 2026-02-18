@@ -186,18 +186,18 @@
 |--------|-------|
 | Status | ✅ 200 OK |
 | Response Time | 0.348s |
-| Response | Lists 5 proxy endpoints: scout-atoms, ollama, openrouter, anthropic, openai |
+| Response | Lists 6 proxy endpoints: scoutos, scout-atoms (deprecated), ollama, openrouter, anthropic, openai |
 
 Sample:
 ```json
 {"endpoints":[
-  {"name":"scout-atoms","target":"https://api.scoutos.com","secretKey":"SCOUT_API_KEY","description":"Scout OS Agents API"},
+  {"name":"scoutos","target":"https://api.scoutos.com","secretKey":"SCOUT_API_KEY","description":"ScoutOS Platform API - Agents, Workflows, Tables, Drive, Collections"},
   {"name":"ollama","target":"https://ollama.com/v1","secretKey":"OLLAMA_API_KEY"},
   ...
 ]}
 ```
 
-### 2. GET /proxy/scout-atoms/drive/download
+### 2. GET /proxy/scoutos/drive/download
 | Test Case | Status | Result |
 |-----------|--------|--------|
 | No auth | ✅ 401 | `{"error":"Authentication required..."}` |
@@ -206,7 +206,7 @@ Sample:
 
 **Note:** Endpoint works correctly - returns 401 because test user has no SCOUT_API_KEY secret.
 
-### 3. POST /proxy/scout-atoms/drive/upload
+### 3. POST /proxy/scoutos/drive/upload
 | Metric | Value |
 |--------|-------|
 | Status | ⚠️ 422 Unprocessable Entity |

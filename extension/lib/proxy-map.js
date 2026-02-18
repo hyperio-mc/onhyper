@@ -76,9 +76,15 @@ export const PROXY_MAP = {
       'X-Title': 'OnHyper Dev'
     })
   },
+  scoutos: {
+    pattern: /^\/proxy\/scoutos\/(.*)$/,
+    target: 'https://api.scoutos.com/$1',
+    authHeader: (key) => ({ 'Authorization': `Bearer ${key}` })
+  },
+  // Legacy alias for backwards compatibility
   scout: {
     pattern: /^\/proxy\/scout-atoms\/(.*)$/,
-    target: 'https://atoms.api.scoutos.com/$1',
+    target: 'https://api.scoutos.com/$1',
     authHeader: (key) => ({ 'Authorization': `Bearer ${key}` })
   },
   ollama: {

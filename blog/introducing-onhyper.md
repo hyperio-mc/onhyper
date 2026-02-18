@@ -239,7 +239,7 @@ const weather = await fetch('/proxy/weather-api/current?city=NYC');
 Using ScoutOS Atoms, you can build agents that maintain conversation history:
 
 ```javascript
-const response = await fetch('/proxy/scout-atoms/v2/workflows/YOUR_WORKFLOW_ID/execute', {
+const response = await fetch('/proxy/scoutos/v2/workflows/YOUR_WORKFLOW_ID/execute', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({

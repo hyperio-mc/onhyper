@@ -5,7 +5,7 @@
 **Recommendation: Hybrid approach - ScoutOS backend for rapid MVP, migrate to custom build if needed.**
 
 OnHyper is uniquely positioned to leverage ScoutOS because:
-1. We already proxy ScoutOS Atoms: `/proxy/scout-atoms`
+1. We already proxy ScoutOS Atoms: `/proxy/scoutos`
 2. ScoutOS handles RAG + conversation history out of the box
 3. We can launch in days, not weeks
 4. Dogfooding our proxy validates the OnHyper product
@@ -580,7 +580,7 @@ without a backend.
    - Requires: OLLAMA_API_KEY
    - Local model support
 
-5. `/proxy/scout-atoms/*` → Scout OS Atoms
+5. `/proxy/scoutos/*` → Scout OS Atoms
    - Requires: SCOUT_API_KEY
    - Scout Atoms API
 
@@ -915,7 +915,7 @@ Compare to:
 
 **ScoutOS** is a platform for building AI workflows, agents, and RAG applications without managing infrastructure. It's part of the hyper.io ecosystem (founded by Tom Wilson).
 
-**OnHyper already proxies ScoutOS Atoms:** `/proxy/scout-atoms`
+**OnHyper already proxies ScoutOS Atoms:** `/proxy/scoutos`
 
 ### Core Capabilities
 
@@ -979,7 +979,7 @@ for await (const item of response) {
 
 ### Integration via OnHyper Proxy
 
-Since OnHyper already proxies ScoutOS Atoms (`/proxy/scout-atoms`), we can invoke ScoutOS through our own infrastructure:
+Since OnHyper already proxies ScoutOS Atoms (`/proxy/scoutos`), we can invoke ScoutOS through our own infrastructure:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -1004,7 +1004,7 @@ Since OnHyper already proxies ScoutOS Atoms (`/proxy/scout-atoms`), we can invok
 │   │                 Chat API Route                        │   │
 │   │                                                      │   │
 │   │   1. Parse user message                              │   │
-│   │   2. Call /proxy/scout-atoms → ScoutOS workflow     │   │
+│   │   2. Call /proxy/scoutos → ScoutOS workflow     │   │
 │   │   3. Stream response back                            │   │
 │   │   4. Track in PostHog                                │   │
 │   │                                                      │   │
@@ -1067,7 +1067,7 @@ Since OnHyper already proxies ScoutOS Atoms (`/proxy/scout-atoms`), we can invok
 
 **Step 4: Deploy & Connect**
 - Get workflow ID
-- Call via OnHyper proxy: `/proxy/scout-atoms/v2/workflows/{id}/execute`
+- Call via OnHyper proxy: `/proxy/scoutos/v2/workflows/{id}/execute`
 
 ### ScoutOS Copilot Widget (Beta)
 
@@ -1112,7 +1112,7 @@ ScoutOS offers an embeddable Copilot widget (currently in beta). This would prov
 2. Upload OnHyper knowledge base content
 3. Build chat workflow with RAG
 4. Create simple frontend widget
-5. Connect via `/proxy/scout-atoms`
+5. Connect via `/proxy/scoutos`
 6. Launch in days, not weeks
 
 **Phase 2: Evaluate & Decide (Month 1-3)**
@@ -1145,7 +1145,7 @@ Frontend Widget (Svelte)
 OnHyper Backend (/api/chat)
         │
         ▼
-/proxy/scout-atoms → ScoutOS Workflow
+/proxy/scoutos → ScoutOS Workflow
         │
         ├── Knowledge Base (OnHyper docs)
         ├── LLM (Claude/GPT)
@@ -1355,7 +1355,7 @@ Match OnHyper's existing design:
 
 1. **Phase 1 (Now):** ScoutOS backend + custom frontend widget
    - Fastest time to market
-   - Dogfoods our `/proxy/scout-atoms` endpoint
+   - Dogfoods our `/proxy/scoutos` endpoint
    - RAG + conversation history handled by ScoutOS
 
 2. **Phase 2 (Month 1-3):** Evaluate performance & costs

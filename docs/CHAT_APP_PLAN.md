@@ -25,7 +25,7 @@ Add a support chat feature to OnHyper that uses ScoutOS Agents for AI-powered re
 | `POST /world/{agent_id}/_interact_sync` | POST | Sync chat (JSON response) |
 | `POST /drive/upload` | POST | Upload documents for RAG |
 
-**Via OnHyper proxy:** `POST /proxy/scout-atoms/world/{agent_id}/_interact`
+**Via OnHyper proxy:** `POST /proxy/scoutos/world/{agent_id}/_interact`
 
 ---
 
@@ -147,7 +147,7 @@ Keys are encrypted with AES-256-GCM. They never touch the browser.
 **Command:**
 ```bash
 # Replace {AGENT_ID} with your agent ID
-curl -X POST "https://onhyper.io/proxy/scout-atoms/world/{AGENT_ID}/_interact_sync" \
+curl -X POST "https://onhyper.io/proxy/scoutos/world/{AGENT_ID}/_interact_sync" \
   -H "X-App-Slug: support-chat" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"content":{"text":"What is OnHyper?"}}]}'
@@ -193,13 +193,13 @@ railway variable set SCOUTOS_SUPPORT_AGENT_ID=cmlo9s6t320kv5ts6xqz1ke84
 - Pass through SSE events from ScoutOS
 
 **Success Criteria:**
-- [ ] `POST /proxy/scout-atoms/world/{id}/_interact` returns SSE stream
+- [ ] `POST /proxy/scoutos/world/{id}/_interact` returns SSE stream
 - [ ] Events arrive incrementally (not buffered)
 - [ ] Non-streaming endpoints still work
 
 **Test:**
 ```bash
-curl -N "https://onhyper.io/proxy/scout-atoms/world/{AGENT_ID}/_interact" \
+curl -N "https://onhyper.io/proxy/scoutos/world/{AGENT_ID}/_interact" \
   -H "X-App-Slug: support-chat" \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"content":{"text":"Hello"}}]}'

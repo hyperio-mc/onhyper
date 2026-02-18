@@ -208,7 +208,7 @@ user:{userId}:apps      → [appId1, appId2, ...]
 │                          Proxy Request Flow                                   │
 │                                                                               │
 │  Client Request:                                                              │
-│  POST /proxy/scout-atoms/world/agent123/_interact                            │
+│  POST /proxy/scoutos/world/agent123/_interact                                 │
 │  Headers: { X-App-Slug: "my-app" }                                           │
 │  Body: { messages: [...] }                                                    │
 │       │                                                                        │
@@ -216,7 +216,7 @@ user:{userId}:apps      → [appId1, appId2, ...]
 │  ┌─────────────────────────────────────────────────────────────────────────┐ │
 │  │               1. Endpoint Validation                                     │ │
 │  │                                                                          │ │
-│  │   endpoint = "scout-atoms"                                              │ │
+│  │   endpoint = "scoutos"                                                   │ │
 │  │   config = PROXY_ENDPOINTS[endpoint]                                    │ │
 │  │   target = "https://api.scoutos.com"                                    │ │
 │  │   secretKey = "SCOUT_API_KEY"                                           │ │
@@ -400,10 +400,10 @@ async function requireAuth(c, next) {
 // src/config.ts
 
 export const PROXY_ENDPOINTS = {
-  'scout-atoms': {
+  'scoutos': {
     target: 'https://api.scoutos.com',
     secretKey: 'SCOUT_API_KEY',
-    description: 'Scout OS Agents API',
+    description: 'ScoutOS Platform API - Agents, Workflows, Tables, Drive',
   },
   'ollama': {
     target: 'https://ollama.com/v1',

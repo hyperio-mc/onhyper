@@ -23,11 +23,11 @@
  * {
  *   "endpoints": [
  *     {
- *       "name": "scout-atoms",
+ *       "name": "scoutos",
  *       "target": "https://api.scoutos.com",
  *       "secretKey": "SCOUT_API_KEY",
- *       "description": "Scout OS Agents API",
- *       "usage": "POST /proxy/scout-atoms/..."
+ *       "description": "ScoutOS Platform API - Agents, Workflows, Tables, Drive, Collections",
+ *       "usage": "POST /proxy/scoutos/..."
  *     }
  *   ]
  * }
@@ -58,7 +58,7 @@
  * | Endpoint | Target | Auth Format |
  * |----------|--------|-------------|
  * | `scoutos` | api.scoutos.com | `Bearer` |
- * | `scout-atoms` | api.scoutos.com | `Bearer` (deprecated) |
+ * | `scout-atoms` | api.scoutos.com | `Bearer` (deprecated, use scoutos) |
  * | `ollama` | ollama.com/v1 | `Bearer` |
  * | `openrouter` | openrouter.ai/api/v1 | `Bearer` |
  * | `anthropic` | api.anthropic.com/v1 | `x-api-key` |
@@ -87,7 +87,7 @@
  * 
  * Server-Sent Events (SSE) responses are streamed directly to the client:
  * ```javascript
- * const response = await fetch('/proxy/scout-atoms/world/agent/_interact', {
+ * const response = await fetch('/proxy/scoutos/world/agent/_interact', {
  *   method: 'POST',
  *   headers: { 'Accept': 'text/event-stream' },
  *   body: JSON.stringify({ messages: [...], stream: true })
@@ -117,6 +117,7 @@ import { getApiKeyByKey, verifyToken, getUserApiKeyByUserId } from '../lib/users
 import { getUserSettings } from '../lib/db.js';
 import { recordUsage } from '../lib/usage.js';
 import { trackProxyRequest } from '../lib/analytics.js';
+import { trackAppApiCall } from '../lib/appAnalytics.js';
 
 const proxy = new Hono();
 
@@ -332,6 +333,17 @@ proxy.all('/:endpoint/*', async (c) => {
         success: response.status >= 200 && response.status < 400,
       });
       
+      // Track per-app analytics (only if app is identified)
+      if (identity.appId) {
+        setImmediate(() => {
+          try {
+            trackAppApiCall(identity.appId!, { endpoint, status: response.status, duration });
+          } catch (e) {
+            console.error('[AppAnalytics] Failed to track SSE call:', e);
+          }
+        });
+      }
+      
       // Stream the SSE response
       return streamSSE(c, async (stream) => {
         const reader = response.body?.getReader();
@@ -372,6 +384,17 @@ proxy.all('/:endpoint/*', async (c) => {
       durationMs: duration,
       success: response.status >= 200 && response.status < 400,
     });
+    
+    // Track per-app analytics (only if app is identified)
+    if (identity.appId) {
+      setImmediate(() => {
+        try {
+          trackAppApiCall(identity.appId!, { endpoint, status: response.status, duration });
+        } catch (e) {
+          console.error('[AppAnalytics] Failed to track API call:', e);
+        }
+      });
+    }
     
     // Build response headers (filter sensitive ones)
     const responseHeaders: Record<string, string> = {};
@@ -429,6 +452,17 @@ proxy.all('/:endpoint/*', async (c) => {
       durationMs: duration,
       success: false,
     });
+    
+    // Track per-app analytics for failed request (only if app is identified)
+    if (identity.appId) {
+      setImmediate(() => {
+        try {
+          trackAppApiCall(identity.appId!, { endpoint, status: 0, duration });
+        } catch (e) {
+          console.error('[AppAnalytics] Failed to track failed API call:', e);
+        }
+      });
+    }
     
     if (error instanceof Error) {
       if (error.name === 'AbortError') {

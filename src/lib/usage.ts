@@ -18,7 +18,7 @@
  *   id: string;
  *   api_key_id: string | null;  // If using API key
  *   app_id: string | null;       // If from published app
- *   endpoint: string;            // e.g., "scout-atoms"
+ *   endpoint: string;            // e.g., "scoutos"
  *   status: number;              // HTTP status code
  *   duration: number;            // Response time in ms
  *   created_at: string;
@@ -33,7 +33,7 @@
  * // Record a proxy request
  * recordUsage({
  *   appId: 'app-uuid',
- *   endpoint: 'scout-atoms',
+ *   endpoint: 'scoutos',
  *   status: 200,
  *   duration: 342
  * });

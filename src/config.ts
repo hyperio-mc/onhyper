@@ -40,7 +40,7 @@
  * validateProductionSecrets();  // Throws if invalid
  * 
  * // Access proxy endpoint configuration
- * const endpoint = PROXY_ENDPOINTS['scout-atoms'];
+ * const endpoint = PROXY_ENDPOINTS['scoutos'];
  * // { target: 'https://api.scoutos.com', secretKey: 'SCOUT_API_KEY', ... }
  * ```
  * 

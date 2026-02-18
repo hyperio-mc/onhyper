@@ -39,7 +39,7 @@ The server will start at `http://localhost:3000`.
 │   ┌────────────────────────────────────────────────────────────────┐    │
 │   │                        Published App                             │    │
 │   │                                                                 │    │
-│   │   fetch('/proxy/scout-atoms/world/{id}/_interact', {           │    │
+│   │   fetch('/proxy/scoutos/world/{id}/_interact', {                │    │
 │   │     method: 'POST',                                             │    │
 │   │     headers: { 'X-App-Slug': 'my-app' },                        │    │
 │   │     body: JSON.stringify({ messages: [...] })                   │    │

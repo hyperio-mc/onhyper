@@ -36,7 +36,7 @@ ScoutOS Atoms is... well, it's an AI agent platform with RAG (retrieval-augmente
 
 Here's the thing: **OnHyper already proxies ScoutOS Atoms.**
 
-The `POST /proxy/scout-atoms` endpoint was already there in our proxy configuration. We'd built it for *other people* to use ScoutOS through OnHyper.
+The `POST /proxy/scoutos` endpoint was already there in our proxy configuration. We'd built it for *other people* to use ScoutOS through OnHyper.
 
 Wait a second.
 
@@ -60,7 +60,7 @@ OnHyper would proxy itself.
            │
            ▼
 ┌─────────────────────┐
-│   /proxy/scout-atoms│  (OnHyper proxying... OnHyper's backend dependency)
+│   /proxy/scoutos   │  (OnHyper proxying... OnHyper's backend dependency)
 └──────────┬──────────┘
            │
            ▼
@@ -84,7 +84,7 @@ Then we created a simple workflow:
 
 **Day 2:** We built a Svelte chat widget component. Floating bubble, expandable window, message bubbles, typing indicator — standard stuff. Hooked it up to our `/api/chat` endpoint.
 
-**Day 3:** We wired the backend route to call `/proxy/scout-atoms/v2/workflows/{id}/execute`. Because remember: OnHyper already proxies ScoutOS.
+**Day 3:** We wired the backend route to call `/proxy/scoutos/v2/workflows/{id}/execute`. Because remember: OnHyper already proxies ScoutOS.
 
 **Total time: ~3 days to a working AI support chat.**
 

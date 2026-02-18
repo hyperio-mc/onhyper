@@ -19,7 +19,7 @@
 │   ┌─────────────────────────────────────────────────────────────┐   │
 │   │                    Published App                              │   │
 │   │                                                               │   │
-│   │   fetch('/proxy/scout-atoms', {                              │   │
+│   │   fetch('/proxy/scoutos', {                                   │   │
 │   │     method: 'POST',                                          │   │
 │   │     body: JSON.stringify({ prompt: "Hello" })                │   │
 │   │   })                                                         │   │
@@ -28,7 +28,7 @@
 │                              │                                       │
 └──────────────────────────────┼───────────────────────────────────────┘
                                │
-                               │ 1. Request to /proxy/scout-atoms
+                               │ 1. Request to /proxy/scoutos
                                │    (no API key in browser)
                                ▼
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -104,7 +104,7 @@ Pre-defined proxy routes for common APIs:
 
 | Endpoint | Target | Secret Key |
 |----------|--------|------------|
-| `/proxy/scout-atoms` | `api.scoutos.com/atoms` | `SCOUT_API_KEY` |
+| `/proxy/scoutos` | `api.scoutos.com` | `SCOUT_API_KEY` |
 | `/proxy/ollama` | `ollama.com/v1` | `OLLAMA_API_KEY` |
 | `/proxy/openrouter` | `openrouter.ai/api/v1` | `OPENROUTER_API_KEY` |
 | `/proxy/anthropic` | `api.anthropic.com/v1` | `ANTHROPIC_API_KEY` |
@@ -346,11 +346,11 @@ const LMDB_KEYS = {
 ```javascript
 // lib/proxy-config.js
 export const PROXY_ENDPOINTS = {
-  'scout-atoms': {
-    target: 'https://api.scoutos.com/atoms',
+  'scoutos': {
+    target: 'https://api.scoutos.com',
     secretKey: 'SCOUT_API_KEY',
     authHeader: (key) => `Bearer ${key}`,
-    description: 'Scout OS Atoms API'
+    description: 'ScoutOS Platform API - Agents, Workflows, Tables, Drive'
   },
   'ollama': {
     target: 'https://ollama.com/v1',
@@ -551,7 +551,7 @@ export default app;
 
 ### Week 4: Proxy Service
 - [ ] Implement proxy endpoint logic in Hono
-- [ ] Add pre-configured endpoints (scout-atoms, ollama, etc.)
+- [ ] Add pre-configured endpoints (scoutos, ollama, etc.)
 - [ ] Request logging and usage tracking
 
 ### Week 5: App Publishing

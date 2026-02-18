@@ -53,7 +53,7 @@ curl -X POST https://onhyper.io/api/secrets \
   -H "Authorization: Bearer &lt;session_token&gt;" \
   -H "Content-Type: application/json" \
   -d '{"provider": "openai", "key": "sk-..."}'</code></pre>
-    <p>Supported providers: <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>scout-atoms</code>, <code>ollama</code></p>
+    <p>Supported providers: <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>scoutos</code>, <code>ollama</code></p>
 
     <h3>3. Build App</h3>
     <p>Create an HTML/CSS/JS app. Use fetch to call AI APIs through OnHyper's proxy.</p>
@@ -117,8 +117,8 @@ curl https://onhyper.io/api/subdomains/mine \
           <td>OpenRouter API (<code>openrouter.ai/api/v1</code>)</td>
         </tr>
         <tr>
-          <td><code>/proxy/scout-atoms/*</code></td>
-          <td>ScoutOS Agents/Drive</td>
+          <td><code>/proxy/scoutos/*</code></td>
+          <td>ScoutOS Platform (Agents, Workflows, Tables, Drive)</td>
         </tr>
         <tr>
           <td><code>/proxy/ollama/*</code></td>

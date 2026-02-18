@@ -85,7 +85,12 @@ test('matchProxyUrl matches OpenRouter proxy path', () => {
   assertDeepEqual(result, { provider: 'openrouter', path: 'chat/completions' });
 });
 
-test('matchProxyUrl matches Scout proxy path', () => {
+test('matchProxyUrl matches ScoutOS proxy path', () => {
+  const result = matchProxyUrl('/proxy/scoutos/run');
+  assertDeepEqual(result, { provider: 'scoutos', path: 'run' });
+});
+
+test('matchProxyUrl matches legacy scout-atoms proxy path', () => {
   const result = matchProxyUrl('/proxy/scout-atoms/run');
   assertDeepEqual(result, { provider: 'scout', path: 'run' });
 });
