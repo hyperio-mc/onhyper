@@ -71,6 +71,144 @@ nav {
   color: var(--text);
 }
 
+/* ============================================
+   MOBILE NAVIGATION
+   ============================================ */
+
+/* Hamburger button - hidden on desktop */
+.nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem;
+  z-index: 1001;
+}
+
+.hamburger {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--text);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.hamburger::before,
+.hamburger::after {
+  content: '';
+  position: absolute;
+  width: 24px;
+  height: 2px;
+  background: var(--text);
+  left: 0;
+  transition: all 0.2s ease;
+}
+
+.hamburger::before {
+  top: -7px;
+}
+
+.hamburger::after {
+  top: 7px;
+}
+
+/* Hamburger animation when open */
+.nav-open .hamburger {
+  background: transparent;
+}
+
+.nav-open .hamburger::before {
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.nav-open .hamburger::after {
+  top: 0;
+  transform: rotate(-45deg);
+}
+
+/* Mobile breakpoint */
+@media (max-width: 768px) {
+  /* Show hamburger button */
+  .nav-toggle {
+    display: block;
+  }
+  
+  /* Reduce nav padding on mobile */
+  nav {
+    padding: 0.75rem 1rem;
+    position: relative;
+  }
+  
+  /* Position nav links as dropdown */
+  .nav-links {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-direction: column;
+    padding: 0;
+    gap: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+  }
+  
+  /* Open state */
+  .nav-open .nav-links {
+    max-height: 400px;
+    padding: 1rem 0;
+  }
+  
+  /* Style individual links */
+  .nav-links a,
+  .nav-links button {
+    width: 100%;
+    padding: 0.875rem 1.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-size: 1rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  
+  .nav-links a:hover,
+  .nav-links button:hover {
+    background: var(--bg-alt);
+  }
+  
+  .nav-links a:last-child,
+  .nav-links button:last-child {
+    border-bottom: none;
+  }
+  
+  /* Style buttons in mobile menu */
+  .nav-links .btn-primary,
+  .nav-links .btn-secondary {
+    margin: 0.5rem 1rem;
+    width: calc(100% - 2rem);
+    text-align: center;
+    border-radius: var(--radius);
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 480px) {
+  nav {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .logo {
+    font-size: 1.25rem;
+  }
+}
+
 /* Main */
 main {
   max-width: 960px;
