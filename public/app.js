@@ -525,10 +525,145 @@ async function loadApps() {
   }
 }
 
-// Placeholder for create app modal (will be implemented in task-020)
+// Create app modal
 function showCreateAppModal() {
-  // For now, scroll to the form
-  document.getElementById('app-form')?.scrollIntoView({ behavior: 'smooth' });
+  const modalContent = `
+    <form id="modal-app-form" onsubmit="createAppFromModal(event)">
+      <div class="form-group">
+        <label for="modal-app-name">App Name</label>
+        <input type="text" id="modal-app-name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="modal-app-slug">Slug (URL path)</label>
+        <input type="text" id="modal-app-slug" name="slug" required pattern="[a-z0-9-]+">
+      </div>
+      <div class="form-group">
+        <label for="modal-app-description">Description</label>
+        <textarea id="modal-app-description" name="description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="modal-app-html">HTML</label>
+        <textarea id="modal-app-html" name="html" rows="5" placeholder="<div>Your app HTML...</div>"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="modal-app-css">CSS</label>
+        <textarea id="modal-app-css" name="css" rows="3" placeholder="/* Your styles */"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="modal-app-js">JavaScript</label>
+        <textarea id="modal-app-js" name="js" rows="5" placeholder="// Use /proxy/endpoint to call APIs"></textarea>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Create App</button>
+      </div>
+    </form>
+  `;
+  showModal('Create New App', modalContent);
+  
+  // Auto-generate slug from name
+  const nameInput = document.getElementById('modal-app-name');
+  const slugInput = document.getElementById('modal-app-slug');
+  nameInput.addEventListener('input', () => {
+    slugInput.value = nameInput.value
+      .toLowerCase()
+      .replace(/[^a-z0-9-]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  });
+}
+
+async function createAppFromModal(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  
+  try {
+    const app = await api('/apps', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: formData.get('name'),
+        slug: formData.get('slug'),
+        description: formData.get('description'),
+        html: formData.get('html'),
+        css: formData.get('css'),
+        js: formData.get('js')
+      })
+    });
+    
+    closeModal();
+    loadApps();
+    showToast('App created successfully!', 'success');
+  } catch (err) {
+    showToast('Failed to create app: ' + err.message, 'error');
+  }
+}
+
+async function editApp(appId) {
+  try {
+    const response = await api('/apps');
+    const app = response.apps.find(a => a.id === appId);
+    if (!app) throw new Error('App not found');
+    
+    const modalContent = `
+      <form id="modal-app-form" onsubmit="updateAppFromModal(event, '${appId}')">
+        <div class="form-group">
+          <label for="modal-app-name">App Name</label>
+          <input type="text" id="modal-app-name" name="name" value="${escapeHtml(app.name)}" required>
+        </div>
+        <div class="form-group">
+          <label for="modal-app-slug">Slug (URL path)</label>
+          <input type="text" id="modal-app-slug" name="slug" value="${app.slug}" required pattern="[a-z0-9-]+" readonly>
+        </div>
+        <div class="form-group">
+          <label for="modal-app-description">Description</label>
+          <textarea id="modal-app-description" name="description" rows="2">${escapeHtml(app.description || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="modal-app-html">HTML</label>
+          <textarea id="modal-app-html" name="html" rows="5">${escapeHtml(app.html || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="modal-app-css">CSS</label>
+          <textarea id="modal-app-css" name="css" rows="3">${escapeHtml(app.css || '')}</textarea>
+        </div>
+        <div class="form-group">
+          <label for="modal-app-js">JavaScript</label>
+          <textarea id="modal-app-js" name="js" rows="5">${escapeHtml(app.js || '')}</textarea>
+        </div>
+        <div class="modal-actions">
+          <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" class="btn-primary">Save Changes</button>
+        </div>
+      </form>
+    `;
+    showModal('Edit App', modalContent);
+  } catch (err) {
+    showToast('Failed to load app: ' + err.message, 'error');
+  }
+}
+
+async function updateAppFromModal(e, appId) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  
+  try {
+    await api('/apps/' + appId, {
+      method: 'PUT',
+      body: JSON.stringify({
+        name: formData.get('name'),
+        description: formData.get('description'),
+        html: formData.get('html'),
+        css: formData.get('css'),
+        js: formData.get('js')
+      })
+    });
+    
+    closeModal();
+    loadApps();
+    showToast('App updated successfully!', 'success');
+  } catch (err) {
+    showToast('Failed to update app: ' + err.message, 'error');
+  }
 }
 
 // Subdomain functionality
