@@ -366,7 +366,10 @@ async function loadDashboard() {
     // Load settings
     await loadSettings();
 
-    // Load apps for the apps tab (it's the default active tab)
+    // Initialize tabs and load apps (apps is default active tab)
+    if (typeof initTabs === 'function') {
+      initTabs();
+    }
     loadApps();
   } catch (err) {
     document.getElementById('stats').innerHTML = '<p>Failed to load stats</p>';
