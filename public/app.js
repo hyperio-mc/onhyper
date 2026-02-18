@@ -197,6 +197,7 @@ function updateNav() {
   if (currentUser) {
     nav.innerHTML = `
       <a href="#/" class="logo">H</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false"><span class="hamburger"></span></button>
       <div class="nav-links">
         <a href="#/dashboard">Dashboard</a>
         <a href="#/blog">Blog</a>
@@ -208,6 +209,7 @@ function updateNav() {
   } else {
     nav.innerHTML = `
       <a href="#/" class="logo">H</a>
+      <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false"><span class="hamburger"></span></button>
       <div class="nav-links">
         <a href="#/blog">Blog</a>
         <a href="#/skill">For Agents</a>
@@ -217,6 +219,46 @@ function updateNav() {
       </div>
     `;
   }
+  
+  // Initialize mobile nav toggle
+  initMobileNav();
+}
+
+// Toggle mobile navigation
+function toggleMobileNav() {
+  const nav = document.getElementById('nav');
+  const toggle = nav.querySelector('.nav-toggle');
+  const isOpen = nav.classList.toggle('nav-open');
+  toggle.setAttribute('aria-expanded', isOpen);
+}
+
+// Close mobile nav when clicking a link
+function closeMobileNav() {
+  const nav = document.getElementById('nav');
+  const toggle = nav.querySelector('.nav-toggle');
+  nav.classList.remove('nav-open');
+  if (toggle) toggle.setAttribute('aria-expanded', 'false');
+}
+
+// Initialize mobile nav listeners
+function initMobileNav() {
+  const nav = document.getElementById('nav');
+  const toggle = nav.querySelector('.nav-toggle');
+  const links = nav.querySelectorAll('.nav-links a');
+  
+  if (toggle) {
+    toggle.addEventListener('click', toggleMobileNav);
+  }
+  
+  // Close menu when clicking a link
+  links.forEach(link => {
+    link.addEventListener('click', closeMobileNav);
+  });
+  
+  // Close on Escape key
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeMobileNav();
+  });
 }
 
 // Page-specific handlers
