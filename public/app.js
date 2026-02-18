@@ -551,33 +551,67 @@ function showCreateAppModal() {
     <form id="modal-app-form" onsubmit="createAppFromModal(event)">
       <div class="form-group">
         <label for="modal-app-name">App Name</label>
-        <input type="text" id="modal-app-name" name="name" required>
+        <input type="text" id="modal-app-name" name="name" required placeholder="My Awesome App">
       </div>
       <div class="form-group">
         <label for="modal-app-slug">Slug (URL path)</label>
-        <input type="text" id="modal-app-slug" name="slug" required pattern="[a-z0-9-]+">
+        <div class="slug-preview">
+          <span class="slug-prefix">onhyper.io/a/</span>
+          <input type="text" id="modal-app-slug" name="slug" required pattern="[a-z0-9-]+" placeholder="my-app">
+        </div>
       </div>
-      <div class="form-group">
-        <label for="modal-app-description">Description</label>
-        <textarea id="modal-app-description" name="description" rows="2"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="modal-app-html">HTML</label>
-        <textarea id="modal-app-html" name="html" rows="5" placeholder="<div>Your app HTML...</div>"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="modal-app-css">CSS</label>
-        <textarea id="modal-app-css" name="css" rows="3" placeholder="/* Your styles */"></textarea>
-      </div>
-      <div class="form-group">
-        <label for="modal-app-js">JavaScript</label>
-        <textarea id="modal-app-js" name="js" rows="5" placeholder="// Use /proxy/endpoint to call APIs"></textarea>
+      <div class="agent-notice">
+        <strong>🤖 Agents:</strong> Read the skill docs at <a href="https://markdown.new/https://onhyper.io/pages/skill.html" target="_blank">markdown.new/.../skill.html</a>
       </div>
       <div class="modal-actions">
         <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
         <button type="submit" class="btn-primary">Create App</button>
       </div>
+      <p class="form-hint">After creating, use the Edit button to add your HTML, CSS, and JavaScript code.</p>
     </form>
+    <style>
+      .slug-preview {
+        display: flex;
+        align-items: center;
+        gap: 0;
+        background: var(--bg-alt);
+        border-radius: 8px;
+        overflow: hidden;
+      }
+      .slug-preview input {
+        border: none;
+        border-radius: 0;
+        flex: 1;
+        background: transparent;
+      }
+      .slug-prefix {
+        color: var(--text-muted);
+        font-size: 0.9em;
+        padding: 0 12px;
+      }
+      .agent-notice {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        border: 1px solid #4f46e5;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-size: 0.9rem;
+        color: #e0e7ff;
+      }
+      .agent-notice a {
+        color: #a5b4fc;
+        text-decoration: underline;
+      }
+      .agent-notice a:hover {
+        color: #c7d2fe;
+      }
+      .form-hint {
+        text-align: center;
+        color: var(--text-muted);
+        font-size: 0.85rem;
+        margin-top: 12px;
+      }
+    </style>
   `;
   showModal('Create New App', modalContent);
   
@@ -603,16 +637,16 @@ async function createAppFromModal(e) {
       body: JSON.stringify({
         name: formData.get('name'),
         slug: formData.get('slug'),
-        description: formData.get('description'),
-        html: formData.get('html'),
-        css: formData.get('css'),
-        js: formData.get('js')
+        description: '',
+        html: '',
+        css: '',
+        js: ''
       })
     });
     
     closeModal();
     loadApps();
-    showToast('App created successfully!', 'success');
+    showToast('App created! Click Edit to add your code.', 'success');
   } catch (err) {
     showToast('Failed to create app: ' + err.message, 'error');
   }
