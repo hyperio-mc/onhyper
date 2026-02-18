@@ -85,7 +85,7 @@ const routes = {
   '/signup': 'pages/signup.html',
   '/dashboard': 'pages/dashboard.html',
   '/apps': 'pages/apps.html',
-  '/keys': 'pages/keys.html',
+  '/keys': 'pages/dashboard.html', // Redirect handled in initPageHandlers
   '/domains': 'pages/domains.html',
   '/waitlist': 'pages/waitlist.html',
   '/chat': 'pages/chat.html',
@@ -220,12 +220,20 @@ function initPageHandlers(path, routeParams = {}) {
       break;
     case '/dashboard':
       loadDashboard();
+      // Load tab content based on URL param
+      const url = new URL(window.location.href);
+      const tab = url.searchParams.get('tab');
+      if (tab === 'keys') {
+        loadKeys();
+      }
       break;
     case '/apps':
-      loadApps();
+      // Redirect to dashboard apps tab for backward compatibility
+      navigate('/dashboard?tab=apps');
       break;
     case '/keys':
-      loadKeys();
+      // Redirect to dashboard keys tab for backward compatibility
+      navigate('/dashboard?tab=keys');
       break;
     case '/waitlist':
       setupWaitlistForm();
@@ -343,18 +351,21 @@ async function loadDashboard() {
     navigate('/login');
     return;
   }
-  
+
   try {
     const stats = await api('/dashboard/stats');
     document.getElementById('stat-apps').textContent = stats.appCount || 0;
     document.getElementById('stat-secrets').textContent = stats.keysConfigured || 0;
     document.getElementById('stat-calls').textContent = stats.requestCount || 0;
-    
+
     // Load API token
     await loadApiToken();
-    
+
     // Load settings
     await loadSettings();
+
+    // Load apps for the apps tab (it's the default active tab)
+    loadApps();
   } catch (err) {
     document.getElementById('stats').innerHTML = '<p>Failed to load stats</p>';
   }
@@ -459,12 +470,13 @@ async function loadApps() {
     navigate('/login');
     return;
   }
-  
+
   try {
     const response = await api('/apps');
     const apps = response.apps || [];
-    const list = document.getElementById('app-list');
-    
+    // Support both tab context (#tab-apps #app-list) and standalone page (#app-list)
+    let list = document.querySelector('#tab-apps #app-list') || document.getElementById('app-list');
+
     if (apps.length === 0) {
       list.innerHTML = '<p>No apps yet. Create your first app!</p>';
     } else {
@@ -480,7 +492,7 @@ async function loadApps() {
         </div>
       `).join('');
     }
-    
+
     // Initialize subdomain functionality
     initSubdomainSection();
   } catch (err) {
@@ -1057,6 +1069,49 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// Modal management
+function showModal(title, content) {
+  // Remove existing modal if any
+  closeModal();
+  
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay active';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-header">
+        <h2>${escapeHtml(title)}</h2>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-content">${content}</div>
+    </div>
+  `;
+  
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) closeModal();
+  });
+  
+  document.body.appendChild(overlay);
+  document.body.style.overflow = 'hidden';
+  
+  // Focus trap (basic)
+  overlay.querySelector('.modal-close').focus();
+}
+
+function closeModal() {
+  const modal = document.querySelector('.modal-overlay');
+  if (modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.remove(), 150);
+  }
+  document.body.style.overflow = '';
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeModal();
+});
 
 // Copy agent prompt to clipboard
 async function copyAgentPrompt() {
