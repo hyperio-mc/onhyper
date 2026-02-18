@@ -76,6 +76,19 @@ let currentUser = null;
  */
 const API_BASE = '/api';
 
+// Provider icons (emoji fallback, or use SVG)
+const PROVIDER_ICONS = {
+  'OPENAI_API_KEY': { icon: '🤖', name: 'OpenAI', color: '#10a37f' },
+  'ANTHROPIC_API_KEY': { icon: '🧠', name: 'Anthropic', color: '#d97706' },
+  'OPENROUTER_API_KEY': { icon: '🔀', name: 'OpenRouter', color: '#6366f1' },
+  'SCOUT_API_KEY': { icon: '🔭', name: 'Scout', color: '#8b5cf6' },
+  'OLLAMA_API_KEY': { icon: '🦙', name: 'Ollama', color: '#64748b' }
+};
+
+function getProviderInfo(keyName) {
+  return PROVIDER_ICONS[keyName] || { icon: '🔑', name: keyName.replace('_API_KEY', ''), color: '#6b7280' };
+}
+
 // ============================================================================
 // ROUTER
 // ============================================================================
@@ -485,11 +498,19 @@ async function loadApps() {
     if (apps.length === 0) {
       list.innerHTML = `
         <div class="empty-state">
-          <h3>No apps yet</h3>
-          <p>Create your first app to get started.</p>
-          <button onclick="showCreateAppModal()" class="btn-primary">Create App</button>
+          <div class="empty-state-icon">🚀</div>
+          <h3>Create Your First App</h3>
+          <p>Build web apps that securely call AI APIs. Your code runs in the browser, your keys stay safe on our servers.</p>
+          <button onclick="showCreateAppModal()" class="btn-primary btn-large">
+            <span>Get Started</span>
+          </button>
+          <div class="empty-state-hint">
+            <span>💡</span> Try the <a href="#/skill">For Agents</a> page to see how AI can build apps for you
+          </div>
         </div>
       `;
+      // Don't call initSubdomainSection() for empty state
+      return;
     } else {
       list.innerHTML = `
         <div class="app-grid">
@@ -794,7 +815,21 @@ async function loadKeys() {
     const list = document.getElementById('key-list');
     
     if (secrets.length === 0) {
-      list.innerHTML = '<p>No API keys stored. Add your first key!</p>';
+      list.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon">🔐</div>
+          <h3>Add Your First API Key</h3>
+          <p>Store your API keys securely. They're encrypted and never exposed to browsers. Your apps can use them through the proxy.</p>
+          <div class="empty-state-providers">
+            <span class="provider-badge">OpenAI</span>
+            <span class="provider-badge">Anthropic</span>
+            <span class="provider-badge">OpenRouter</span>
+            <span class="provider-badge">Scout</span>
+            <span class="provider-badge">Ollama</span>
+          </div>
+          <p class="empty-state-hint">Keys are injected server-side, so they never appear in your app's code.</p>
+        </div>
+      `;
       return;
     }
     
@@ -1277,10 +1312,88 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
-// Close on Escape key
+// Keyboard shortcuts
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeModal();
+  // Ignore if typing in input/textarea
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) {
+    return;
+  }
+  
+  // ? - Show shortcuts help
+  if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+    e.preventDefault();
+    showShortcutsHelp();
+    return;
+  }
+  
+  // Escape - Close modal
+  if (e.key === 'Escape') {
+    closeModal();
+    return;
+  }
+  
+  // n - New app
+  if (e.key === 'n' || e.key === 'N') {
+    e.preventDefault();
+    if (currentUser && typeof showCreateAppModal === 'function') {
+      showCreateAppModal();
+    }
+    return;
+  }
+  
+  // 1, 2, 3 - Switch tabs
+  if (e.key === '1') {
+    e.preventDefault();
+    if (typeof switchTab === 'function') switchTab('apps');
+    return;
+  }
+  if (e.key === '2') {
+    e.preventDefault();
+    if (typeof switchTab === 'function') switchTab('keys');
+    return;
+  }
+  if (e.key === '3') {
+    e.preventDefault();
+    if (typeof switchTab === 'function') switchTab('settings');
+    return;
+  }
 });
+
+// Show keyboard shortcuts help modal
+function showShortcutsHelp() {
+  const content = `
+    <div class="shortcuts-help">
+      <h3>Keyboard Shortcuts</h3>
+      <div class="shortcut-list">
+        <div class="shortcut">
+          <kbd>n</kbd>
+          <span>Create new app</span>
+        </div>
+        <div class="shortcut">
+          <kbd>1</kbd>
+          <span>Go to Apps tab</span>
+        </div>
+        <div class="shortcut">
+          <kbd>2</kbd>
+          <span>Go to Keys tab</span>
+        </div>
+        <div class="shortcut">
+          <kbd>3</kbd>
+          <span>Go to Settings tab</span>
+        </div>
+        <div class="shortcut">
+          <kbd>?</kbd>
+          <span>Show this help</span>
+        </div>
+        <div class="shortcut">
+          <kbd>Esc</kbd>
+          <span>Close modal</span>
+        </div>
+      </div>
+    </div>
+  `;
+  showModal('Keyboard Shortcuts', content);
+}
 
 // Copy agent prompt to clipboard
 async function copyAgentPrompt() {
