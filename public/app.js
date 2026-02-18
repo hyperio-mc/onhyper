@@ -528,13 +528,19 @@ async function loadApps() {
   }
 
   try {
-    // Load apps with analytics in a single call
-    const [response, analyticsResponse] = await Promise.all([
-      api('/apps'),
-      api('/apps/analytics?days=30')
-    ]);
+    // Load apps (required)
+    const response = await api('/apps');
     const apps = response.apps || [];
-    const analyticsData = analyticsResponse.apps || [];
+    
+    // Load analytics (optional - gracefully handle failure)
+    let analyticsData = [];
+    try {
+      const analyticsResponse = await api('/apps/analytics?days=30');
+      analyticsData = analyticsResponse.apps || [];
+    } catch (analyticsError) {
+      console.warn('Analytics unavailable:', analyticsError.message);
+      // Continue without analytics - apps still show
+    }
     
     // Create a map of app analytics for quick lookup
     const analyticsMap = new Map(analyticsData.map(a => [a.id, a]));
