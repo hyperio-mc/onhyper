@@ -338,6 +338,46 @@ function createTables(db: Database.Database): void {
       FOREIGN KEY (user_id) REFERENCES users(id)
     );
   `);
+
+  // Per-app analytics (views and API calls)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_analytics (
+      id TEXT PRIMARY KEY,
+      app_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      endpoint TEXT,
+      referrer TEXT,
+      user_agent TEXT,
+      ip_hash TEXT,
+      status INTEGER,
+      duration INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_app_analytics_app ON app_analytics(app_id);
+    CREATE INDEX IF NOT EXISTS idx_app_analytics_event ON app_analytics(event_type);
+    CREATE INDEX IF NOT EXISTS idx_app_analytics_created ON app_analytics(created_at);
+  `);
+
+  // App analytics summary (daily aggregates for fast queries)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_analytics_daily (
+      id TEXT PRIMARY KEY,
+      app_id TEXT NOT NULL,
+      date TEXT NOT NULL,
+      view_count INTEGER DEFAULT 0,
+      api_call_count INTEGER DEFAULT 0,
+      error_count INTEGER DEFAULT 0,
+      avg_duration INTEGER DEFAULT 0,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+      UNIQUE(app_id, date)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_app_analytics_daily_app ON app_analytics_daily(app_id);
+    CREATE INDEX IF NOT EXISTS idx_app_analytics_daily_date ON app_analytics_daily(date);
+  `);
 }
 
 /**
@@ -486,6 +526,30 @@ export interface UserSettings {
   user_id: string;
   onhyper_api_enabled: number;
   created_at: string;
+  updated_at: string;
+}
+
+export interface AppAnalyticsEvent {
+  id: string;
+  app_id: string;
+  event_type: 'view' | 'api_call';
+  endpoint: string | null;
+  referrer: string | null;
+  user_agent: string | null;
+  ip_hash: string | null;
+  status: number | null;
+  duration: number | null;
+  created_at: string;
+}
+
+export interface AppAnalyticsDaily {
+  id: string;
+  app_id: string;
+  date: string;
+  view_count: number;
+  api_call_count: number;
+  error_count: number;
+  avg_duration: number;
   updated_at: string;
 }
 

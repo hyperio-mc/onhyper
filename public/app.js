@@ -486,8 +486,17 @@ async function loadApps() {
   }
 
   try {
-    const response = await api('/apps');
+    // Load apps with analytics in a single call
+    const [response, analyticsResponse] = await Promise.all([
+      api('/apps'),
+      api('/apps/analytics?days=30')
+    ]);
     const apps = response.apps || [];
+    const analyticsData = analyticsResponse.apps || [];
+    
+    // Create a map of app analytics for quick lookup
+    const analyticsMap = new Map(analyticsData.map(a => [a.id, a]));
+    
     // Support both tab context (#tab-apps #app-list) and standalone page (#app-list)
     let list = document.querySelector('#tab-apps #app-list') || document.getElementById('app-list');
 
@@ -510,7 +519,9 @@ async function loadApps() {
     } else {
       list.innerHTML = `
         <div class="app-grid">
-          ${apps.map(app => `
+          ${apps.map(app => {
+            const stats = analyticsMap.get(app.id) || { views: 0, apiCalls: 0, errors: 0 };
+            return `
             <div class="app-card">
               <div class="app-card-header">
                 <div class="app-icon">📄</div>
@@ -522,12 +533,32 @@ async function loadApps() {
               <p class="app-card-meta">
                 <a href="https://onhyper.io/a/${app.slug}" target="_blank">onhyper.io/a/${app.slug}</a>
               </p>
+              <div class="app-card-stats">
+                <div class="app-stat">
+                  <span class="stat-icon">👁</span>
+                  <span class="stat-value">${formatNumber(stats.views)}</span>
+                  <span class="stat-label">views</span>
+                </div>
+                <div class="app-stat">
+                  <span class="stat-icon">⚡</span>
+                  <span class="stat-value">${formatNumber(stats.apiCalls)}</span>
+                  <span class="stat-label">calls</span>
+                </div>
+                ${stats.errors > 0 ? `
+                <div class="app-stat app-stat--error">
+                  <span class="stat-icon">⚠️</span>
+                  <span class="stat-value">${formatNumber(stats.errors)}</span>
+                  <span class="stat-label">errors</span>
+                </div>
+                ` : ''}
+              </div>
               <div class="app-card-actions">
                 <button onclick="editApp('${app.id}')" class="btn-secondary">Edit</button>
+                <button onclick="showAppAnalytics('${app.id}')" class="btn-secondary">Stats</button>
                 <button onclick="deleteApp('${app.id}')" class="btn-danger">Delete</button>
               </div>
             </div>
-          `).join('')}
+          `}).join('')}
           <div class="app-card app-card--new" onclick="showCreateAppModal()">
             <div class="app-card-new-content">
               <span class="app-card-new-icon">+</span>
@@ -543,6 +574,225 @@ async function loadApps() {
   } catch (err) {
     showError(err.message);
   }
+}
+
+// Format numbers nicely (1234 → 1.2K)
+function formatNumber(num) {
+  if (num >= 1000000) {
+    return (num / 1000000).toFixed(1) + 'M';
+  }
+  if (num >= 1000) {
+    return (num / 1000).toFixed(1) + 'K';
+  }
+  return num.toString();
+}
+
+// Show detailed analytics for an app
+async function showAppAnalytics(appId) {
+  try {
+    const [appResponse, analytics] = await Promise.all([
+      api('/apps/' + appId),
+      api('/apps/' + appId + '/analytics?days=30')
+    ]);
+    const app = appResponse;
+    
+    const modalContent = `
+      <div class="analytics-modal">
+        <div class="analytics-header">
+          <h3>${escapeHtml(app.name)}</h3>
+          <div class="analytics-period">Last 30 days</div>
+        </div>
+        
+        <div class="analytics-overview">
+          <div class="analytics-stat">
+            <div class="stat-big">${formatNumber(analytics.totalViews)}</div>
+            <div class="stat-label">Total Views</div>
+          </div>
+          <div class="analytics-stat">
+            <div class="stat-big">${formatNumber(analytics.totalApiCalls)}</div>
+            <div class="stat-label">API Calls</div>
+          </div>
+          <div class="analytics-stat ${analytics.totalErrors > 0 ? 'analytics-stat--warning' : ''}">
+            <div class="stat-big">${formatNumber(analytics.totalErrors)}</div>
+            <div class="stat-label">Errors</div>
+          </div>
+          <div class="analytics-stat">
+            <div class="stat-big">${analytics.avgDuration}ms</div>
+            <div class="stat-label">Avg Duration</div>
+          </div>
+        </div>
+        
+        ${analytics.topEndpoints.length > 0 ? `
+        <div class="analytics-section">
+          <h4>Top Endpoints</h4>
+          <div class="endpoint-list">
+            ${analytics.topEndpoints.map(ep => `
+              <div class="endpoint-item">
+                <code>${escapeHtml(ep.endpoint)}</code>
+                <span class="endpoint-count">${formatNumber(ep.count)} calls</span>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+        
+        ${analytics.dailyStats.length > 0 ? `
+        <div class="analytics-section">
+          <h4>Daily Activity</h4>
+          <div class="daily-chart">
+            ${analytics.dailyStats.slice(0, 14).reverse().map(day => `
+              <div class="daily-bar" style="--views: ${Math.min(day.views / (analytics.totalViews || 1) * 100, 100)}%; --calls: ${Math.min(day.apiCalls / (analytics.totalApiCalls || 1) * 100, 100)}%;">
+                <div class="bar-label">${formatDateShort(day.date)}</div>
+                <div class="bars">
+                  <div class="bar bar--views" title="${day.views} views"></div>
+                  <div class="bar bar--calls" title="${day.apiCalls} calls"></div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+        ` : ''}
+        
+        <div class="analytics-url">
+          <a href="https://onhyper.io/a/${app.slug}" target="_blank">onhyper.io/a/${app.slug}</a>
+        </div>
+      </div>
+      <style>
+        .analytics-modal {}
+        .analytics-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
+        .analytics-header h3 {
+          margin: 0;
+        }
+        .analytics-period {
+          color: var(--text-muted);
+          font-size: 0.85rem;
+        }
+        .analytics-overview {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 16px;
+          margin-bottom: 24px;
+        }
+        .analytics-stat {
+          text-align: center;
+          padding: 16px;
+          background: var(--bg-alt);
+          border-radius: 8px;
+        }
+        .analytics-stat--warning {
+          background: #fef3c7;
+        }
+        .stat-big {
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: var(--text-primary);
+        }
+        .analytics-stat--warning .stat-big {
+          color: #d97706;
+        }
+        .stat-label {
+          font-size: 0.8rem;
+          color: var(--text-muted);
+        }
+        .analytics-section {
+          margin-bottom: 20px;
+        }
+        .analytics-section h4 {
+          margin: 0 0 12px 0;
+          font-size: 0.9rem;
+          color: var(--text-muted);
+        }
+        .endpoint-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .endpoint-item {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 8px 12px;
+          background: var(--bg-alt);
+          border-radius: 6px;
+        }
+        .endpoint-item code {
+          font-size: 0.85rem;
+          color: var(--text-primary);
+        }
+        .endpoint-count {
+          color: var(--text-muted);
+          font-size: 0.85rem;
+        }
+        .daily-chart {
+          display: flex;
+          gap: 4px;
+          height: 60px;
+          align-items: flex-end;
+        }
+        .daily-bar {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+        }
+        .bar-label {
+          font-size: 0.6rem;
+          color: var(--text-muted);
+          margin-bottom: 4px;
+        }
+        .bars {
+          display: flex;
+          gap: 2px;
+          width: 100%;
+          height: 40px;
+          align-items: flex-end;
+        }
+        .bar {
+          flex: 1;
+          border-radius: 2px 2px 0 0;
+          min-height: 2px;
+        }
+        .bar--views {
+          background: #10b981;
+          height: calc(var(--views, 0) * 0.4);
+        }
+        .bar--calls {
+          background: #3b82f6;
+          height: calc(var(--calls, 0) * 0.4);
+        }
+        .analytics-url {
+          text-align: center;
+          padding-top: 16px;
+          border-top: 1px solid var(--border-color);
+        }
+        .analytics-url a {
+          color: var(--accent-color);
+        }
+        @media (max-width: 500px) {
+          .analytics-overview {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+      </style>
+    `;
+    showModal('App Analytics', modalContent);
+  } catch (err) {
+    showToast('Failed to load analytics: ' + err.message, 'error');
+  }
+}
+
+// Format date short (2024-01-15 → Jan 15)
+function formatDateShort(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric'
+  });
 }
 
 // Create app modal

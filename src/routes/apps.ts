@@ -167,6 +167,7 @@ import {
   getSubdomainOwner,
   releaseSubdomain,
 } from '../lib/subdomains.js';
+import { getAppAnalytics, getUserAppsWithAnalytics } from '../lib/appAnalytics.js';
 
 const apps = new Hono();
 
@@ -459,6 +460,82 @@ apps.post('/:id/publish', async (c) => {
     const message = error instanceof Error ? error.message : 'Failed to publish app';
     return c.json({ success: false, error: message }, 500);
   }
+});
+
+/**
+ * GET /api/apps/:id/analytics
+ * Get analytics for a specific app
+ * 
+ * Returns views, API calls, and usage stats for a user's app.
+ * Only accessible by the app owner.
+ */
+apps.get('/:id/analytics', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const id = c.req.param('id');
+  const app = getAppById(id);
+  
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  // Verify ownership
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  // Get days parameter (default 30)
+  const days = parseInt(c.req.query('days') || '30', 10);
+  const clampedDays = Math.min(Math.max(days, 1), 365); // Clamp 1-365 days
+  
+  const analytics = getAppAnalytics(id, clampedDays);
+  
+  return c.json({
+    appId: analytics.appId,
+    totalViews: analytics.totalViews,
+    totalApiCalls: analytics.totalApiCalls,
+    totalErrors: analytics.totalErrors,
+    avgDuration: analytics.avgDuration,
+    dailyStats: analytics.dailyStats,
+    topEndpoints: analytics.topEndpoints,
+  });
+});
+
+/**
+ * GET /api/apps/analytics
+ * Get analytics for all user's apps
+ * 
+ * Returns a summary for each app the user owns.
+ */
+apps.get('/analytics', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  // Get days parameter (default 30)
+  const days = parseInt(c.req.query('days') || '30', 10);
+  const clampedDays = Math.min(Math.max(days, 1), 365); // Clamp 1-365 days
+  
+  const apps = getUserAppsWithAnalytics(user.userId, clampedDays);
+  
+  return c.json({
+    apps: apps.map(a => ({
+      id: a.id,
+      name: a.name,
+      slug: a.slug,
+      views: a.views,
+      apiCalls: a.apiCalls,
+      errors: a.errors,
+      url: `${config.baseUrl}/a/${a.slug}`,
+    })),
+    days: clampedDays,
+  });
 });
 
 /**

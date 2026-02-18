@@ -232,4 +232,52 @@
     margin-left: 0;
   }
 }
+
+/* App Card Stats */
+.app-card-stats {
+  display: flex;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  margin: 12px 0;
+}
+
+.app-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+}
+
+.app-stat .stat-icon {
+  font-size: 1rem;
+}
+
+.app-stat .stat-value {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.app-stat .stat-label {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.app-stat--error .stat-value {
+  color: #dc2626;
+}
+
+/* Update app-card-actions for more buttons */
+.app-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.app-card-actions .btn-secondary {
+  flex: 1;
+  min-width: 60px;
+  text-align: center;
+}
 </style>
