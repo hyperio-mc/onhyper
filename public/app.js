@@ -230,12 +230,8 @@ function initPageHandlers(path, routeParams = {}) {
       break;
     case '/dashboard':
       loadDashboard();
-      // Load tab content based on URL param
-      const url = new URL(window.location.href);
-      const tab = url.searchParams.get('tab');
-      if (tab === 'keys') {
-        loadKeys();
-      }
+      // Initialize tab switching
+      initDashboardTabs();
       break;
     case '/apps':
       // Redirect to dashboard apps tab for backward compatibility
@@ -1450,6 +1446,50 @@ function showToast(message, type) {
     toast.style.animation = 'fadeOut 0.3s ease';
     setTimeout(() => toast.remove(), 300);
   }, 3000);
+}
+
+// Dashboard tab switching
+function switchTab(tabName) {
+  // Update URL
+  const url = new URL(window.location.href);
+  url.searchParams.set('tab', tabName);
+  window.history.replaceState(null, '', url);
+
+  // Update tab buttons
+  document.querySelectorAll('.dashboard-tabs .tab').forEach(tab => {
+    const isActive = tab.dataset.tab === tabName;
+    tab.classList.toggle('active', isActive);
+    tab.setAttribute('aria-selected', isActive);
+  });
+
+  // Update tab panels
+  document.querySelectorAll('.tab-panel').forEach(panel => {
+    panel.classList.toggle('active', panel.id === `tab-${tabName}`);
+  });
+
+  // Load tab content
+  if (tabName === 'keys' && typeof loadKeys === 'function') {
+    loadKeys();
+  }
+}
+
+function initDashboardTabs() {
+  const url = new URL(window.location.href);
+  const tab = url.searchParams.get('tab');
+
+  // Validate tab name, default to 'apps'
+  const validTabs = ['apps', 'keys', 'settings'];
+  const activeTab = validTabs.includes(tab) ? tab : 'apps';
+
+  switchTab(activeTab);
+
+  // Add click listeners to tab buttons
+  document.querySelectorAll('.dashboard-tabs .tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.dataset.tab;
+      if (tabName) switchTab(tabName);
+    });
+  });
 }
 
 // Hash change listener
