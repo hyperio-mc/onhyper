@@ -84,9 +84,9 @@ const routes = {
   '/login': 'pages/login.html',
   '/signup': 'pages/signup.html',
   '/dashboard': 'pages/dashboard.html',
-  '/apps': 'pages/apps.html',
+  '/apps': 'pages/dashboard.html', // Redirect handled in initPageHandlers
   '/keys': 'pages/dashboard.html', // Redirect handled in initPageHandlers
-  '/domains': 'pages/domains.html',
+  '/domains': 'pages/dashboard.html', // Redirect handled in initPageHandlers
   '/waitlist': 'pages/waitlist.html',
   '/chat': 'pages/chat.html',
   '/blog': 'pages/blog.html',
@@ -186,12 +186,9 @@ function updateNav() {
       <a href="#/" class="logo">H</a>
       <div class="nav-links">
         <a href="#/dashboard">Dashboard</a>
-        <a href="#/apps">Apps</a>
-        <a href="#/domains">Domains</a>
         <a href="#/blog">Blog</a>
         <a href="#/skill">For Agents</a>
         <a href="#/chat">Chat</a>
-        <a href="#/keys">API Keys</a>
         <button onclick="logout()" class="btn-secondary">Logout</button>
       </div>
     `;
@@ -234,6 +231,11 @@ function initPageHandlers(path, routeParams = {}) {
     case '/keys':
       // Redirect to dashboard keys tab for backward compatibility
       navigate('/dashboard?tab=keys');
+      break;
+    case '/domains':
+      // Redirect to dashboard settings tab (domains feature now in settings)
+      navigate('/dashboard?tab=settings');
+      showToast('Domain management is now in Settings', 'success');
       break;
     case '/waitlist':
       setupWaitlistForm();
