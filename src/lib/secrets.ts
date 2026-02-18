@@ -223,3 +223,236 @@ export async function updateSecret(userId: string, name: string, value: string):
     updated_at: now,
   };
 }
+
+// ============================================================================
+// CUSTOM SECRETS (User-defined API backends with configurable auth)
+// ============================================================================
+
+import { CustomSecret } from './db.js';
+
+/**
+ * Create a new custom secret for a user
+ * 
+ * @param userId - The user's ID
+ * @param name - Display name for the custom API
+ * @param baseUrl - Base URL for the API (e.g., 'https://api.example.com/v1')
+ * @param apiKey - The API key to use for authentication
+ * @param authType - 'bearer' for Bearer token, 'custom' for custom header
+ * @param authHeader - For custom auth, the header name (e.g., 'X-API-Key')
+ * @returns The created custom secret (without the plaintext key)
+ */
+export async function createCustomSecret(
+  userId: string,
+  name: string,
+  baseUrl: string,
+  apiKey: string,
+  authType: 'bearer' | 'custom',
+  authHeader?: string
+): Promise<Omit<CustomSecret, 'api_key'>> {
+  const db = getDatabase();
+  
+  // Validate inputs
+  if (!name || name.length < 1 || name.length > 64) {
+    throw new Error('Name must be 1-64 characters');
+  }
+  
+  if (!baseUrl) {
+    throw new Error('Base URL is required');
+  }
+  
+  // Validate base URL
+  try {
+    new URL(baseUrl);
+  } catch {
+    throw new Error('Invalid base URL');
+  }
+  
+  if (!apiKey) {
+    throw new Error('API key is required');
+  }
+  
+  if (authType === 'custom' && !authHeader) {
+    throw new Error('Custom auth header name is required for custom auth type');
+  }
+  
+  // Check if name already exists for this user
+  const existing = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ?')
+    .get(userId, name);
+  if (existing) {
+    throw new Error(`A custom API named "${name}" already exists`);
+  }
+  
+  // Encrypt the API key
+  const salt = generateSalt();
+  const { encrypted, iv } = encrypt(apiKey, salt);
+  
+  // Store in database
+  const id = randomUUID();
+  const now = new Date().toISOString();
+  
+  db.prepare(`
+    INSERT INTO custom_secrets (id, user_id, name, base_url, api_key, auth_type, auth_header, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, userId, name, baseUrl, `${encrypted}:${iv}:${salt}`, authType, authHeader || null, now);
+  
+  return {
+    id,
+    user_id: userId,
+    name,
+    base_url: baseUrl,
+    auth_type: authType,
+    auth_header: authHeader || null,
+    created_at: now,
+  };
+}
+
+/**
+ * List all custom secrets for a user (with masked API keys)
+ */
+export function listCustomSecrets(userId: string): Array<Omit<CustomSecret, 'api_key'> & { masked: string }> {
+  const db = getDatabase();
+  
+  const secrets = db.prepare(`
+    SELECT id, user_id, name, base_url, auth_type, auth_header, created_at 
+    FROM custom_secrets 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC
+  `).all(userId) as Array<Omit<CustomSecret, 'api_key'>>;
+  
+  return secrets.map(s => ({
+    ...s,
+    masked: '••••••••••••••••',
+  }));
+}
+
+/**
+ * Get a custom secret by ID with decrypted API key
+ */
+export function getCustomSecretValue(userId: string, id: string): { baseUrl: string; apiKey: string; authType: string; authHeader: string | null } | null {
+  const db = getDatabase();
+  
+  const secret = db.prepare('SELECT * FROM custom_secrets WHERE id = ? AND user_id = ?')
+    .get(id, userId) as CustomSecret | undefined;
+  
+  if (!secret) {
+    return null;
+  }
+  
+  try {
+    // Decrypt the API key (stored as encrypted:iv:salt)
+    const [encrypted, iv, salt] = secret.api_key.split(':');
+    const apiKey = decrypt(encrypted, iv, salt);
+    
+    return {
+      baseUrl: secret.base_url,
+      apiKey,
+      authType: secret.auth_type,
+      authHeader: secret.auth_header,
+    };
+  } catch (error) {
+    console.error(`Failed to decrypt custom secret ${id}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Delete a custom secret by ID
+ */
+export function deleteCustomSecret(userId: string, id: string): boolean {
+  const db = getDatabase();
+  const result = db.prepare('DELETE FROM custom_secrets WHERE id = ? AND user_id = ?')
+    .run(id, userId);
+  return result.changes > 0;
+}
+
+/**
+ * Get a custom secret by ID (metadata only, no API key)
+ */
+export function getCustomSecret(userId: string, id: string): Omit<CustomSecret, 'api_key'> | null {
+  const db = getDatabase();
+  
+  const secret = db.prepare(`
+    SELECT id, user_id, name, base_url, auth_type, auth_header, created_at 
+    FROM custom_secrets 
+    WHERE id = ? AND user_id = ?
+  `).get(id, userId) as Omit<CustomSecret, 'api_key'> | undefined;
+  
+  return secret || null;
+}
+
+/**
+ * Update a custom secret
+ */
+export async function updateCustomSecret(
+  userId: string,
+  id: string,
+  updates: {
+    name?: string;
+    base_url?: string;
+    api_key?: string;
+    auth_type?: 'bearer' | 'custom';
+    auth_header?: string | null;
+  }
+): Promise<Omit<CustomSecret, 'api_key'>> {
+  const db = getDatabase();
+  
+  // Check that secret exists and belongs to user
+  const existing = db.prepare('SELECT * FROM custom_secrets WHERE id = ? AND user_id = ?')
+    .get(id, userId) as CustomSecret | undefined;
+  
+  if (!existing) {
+    throw new Error('Custom secret not found');
+  }
+  
+  // Validate base_url if provided
+  if (updates.base_url) {
+    try {
+      new URL(updates.base_url);
+    } catch {
+      throw new Error('Invalid base URL');
+    }
+  }
+  
+  // Validate name uniqueness if changing
+  if (updates.name && updates.name !== existing.name) {
+    const duplicate = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ? AND id != ?')
+      .get(userId, updates.name, id);
+    if (duplicate) {
+      throw new Error(`A custom API named "${updates.name}" already exists`);
+    }
+  }
+  
+  // If updating API key, encrypt it
+  let apiKeyValue = existing.api_key;
+  if (updates.api_key) {
+    const salt = generateSalt();
+    const { encrypted, iv } = encrypt(updates.api_key, salt);
+    apiKeyValue = `${encrypted}:${iv}:${salt}`;
+  }
+  
+  // Update the record
+  const now = new Date().toISOString();
+  db.prepare(`
+    UPDATE custom_secrets 
+    SET name = ?, base_url = ?, api_key = ?, auth_type = ?, auth_header = ?
+    WHERE id = ? AND user_id = ?
+  `).run(
+    updates.name || existing.name,
+    updates.base_url || existing.base_url,
+    apiKeyValue,
+    updates.auth_type || existing.auth_type,
+    updates.auth_header !== undefined ? updates.auth_header : existing.auth_header,
+    id,
+    userId
+  );
+  
+  return {
+    id,
+    user_id: userId,
+    name: updates.name || existing.name,
+    base_url: updates.base_url || existing.base_url,
+    auth_type: updates.auth_type || existing.auth_type,
+    auth_header: updates.auth_header !== undefined ? updates.auth_header : existing.auth_header,
+    created_at: existing.created_at,
+  };
+}

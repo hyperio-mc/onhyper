@@ -96,6 +96,8 @@ const routes = {
   '/': 'pages/home.html',
   '/login': 'pages/login.html',
   '/signup': 'pages/signup.html',
+  '/forgot-password': 'pages/forgot-password.html',
+  '/reset-password': 'pages/reset-password.html',
   '/dashboard': 'pages/dashboard.html',
   '/apps': 'pages/dashboard.html', // Redirect handled in initPageHandlers
   '/keys': 'pages/dashboard.html', // Redirect handled in initPageHandlers
@@ -270,6 +272,12 @@ function initPageHandlers(path, routeParams = {}) {
     case '/signup':
       setupSignupForm();
       break;
+    case '/forgot-password':
+      setupForgotPasswordForm();
+      break;
+    case '/reset-password':
+      setupResetPasswordForm();
+      break;
     case '/dashboard':
       loadDashboard();
       // Initialize tab switching
@@ -359,6 +367,135 @@ function setupSignupForm() {
       navigate('/dashboard');
     } catch (err) {
       showError(err.message);
+    }
+  });
+}
+
+// Forgot password form
+function setupForgotPasswordForm() {
+  const form = document.getElementById('forgot-password-form');
+  if (!form) return;
+  
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Disable button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Sending...';
+    
+    try {
+      await api('/auth/forgot-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          email: formData.get('email')
+        })
+      });
+      
+      // Show success message
+      const container = document.querySelector('.hero').parentElement || document.getElementById('app');
+      container.innerHTML = `
+        <div class="hero">
+          <h1>Check Your Email</h1>
+          <p>If an account with that email exists, you'll receive a password reset link shortly.</p>
+        </div>
+        <p style="text-align: center; margin-top: 1rem;">
+          <a href="#/login">Back to Login</a>
+        </p>
+      `;
+    } catch (err) {
+      // Still show success for security (don't reveal if email exists)
+      const container = document.querySelector('.hero').parentElement || document.getElementById('app');
+      container.innerHTML = `
+        <div class="hero">
+          <h1>Check Your Email</h1>
+          <p>If an account with that email exists, you'll receive a password reset link shortly.</p>
+        </div>
+        <p style="text-align: center; margin-top: 1rem;">
+          <a href="#/login">Back to Login</a>
+        </p>
+      `;
+    }
+  });
+}
+
+// Reset password form
+function setupResetPasswordForm() {
+  const form = document.getElementById('reset-password-form');
+  if (!form) return;
+  
+  // Get token from URL query parameter
+  const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  const token = urlParams.get('token');
+  
+  if (!token) {
+    // No token, show error
+    const container = document.querySelector('.hero');
+    if (container) {
+      container.innerHTML = `
+        <h1>Invalid Link</h1>
+        <p>This password reset link is invalid. Please request a new one.</p>
+      `;
+    }
+    return;
+  }
+  
+  // Store token in hidden field
+  const tokenInput = document.getElementById('token');
+  if (tokenInput) {
+    tokenInput.value = token;
+  }
+  
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const password = formData.get('password');
+    const confirmPassword = formData.get('confirm-password');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    // Validate passwords match
+    if (password !== confirmPassword) {
+      showToast('Passwords do not match', 'error');
+      return;
+    }
+    
+    // Validate password length
+    if (password.length < 8) {
+      showToast('Password must be at least 8 characters', 'error');
+      return;
+    }
+    
+    // Disable button and show loading state
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Resetting...';
+    
+    try {
+      await api('/auth/reset-password', {
+        method: 'POST',
+        body: JSON.stringify({
+          token: formData.get('token'),
+          password: password
+        })
+      });
+      
+      // Show success message
+      const container = document.querySelector('.hero').parentElement || document.getElementById('app');
+      container.innerHTML = `
+        <div class="hero">
+          <h1>Password Reset</h1>
+          <p>Your password has been reset successfully. You can now log in with your new password.</p>
+        </div>
+        <p style="text-align: center; margin-top: 1rem;">
+          <a href="#/login" class="btn-primary">Login</a>
+        </p>
+      `;
+      
+      showToast('Password reset successfully!', 'success');
+    } catch (err) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Reset Password';
+      showToast(err.message || 'Failed to reset password', 'error');
     }
   });
 }
@@ -1210,6 +1347,158 @@ async function addKey(e) {
   }
 }
 
+// Custom API Keys
+async function loadCustomKeys() {
+  if (!currentUser) {
+    navigate('/login');
+    return;
+  }
+  
+  try {
+    const response = await api('/secrets/custom');
+    const secrets = response.secrets || [];
+    const list = document.getElementById('custom-key-list');
+    
+    if (secrets.length === 0) {
+      list.innerHTML = `
+        <p class="text-muted">No custom APIs configured. Add one to connect to any backend.</p>
+      `;
+      return;
+    }
+    
+    list.innerHTML = secrets.map(secret => `
+      <div class="key-card custom-key-card">
+        <div class="key-icon">🔗</div>
+        <div class="key-info">
+          <span class="key-name">${escapeHtml(secret.name)}</span>
+          <span class="key-url">${escapeHtml(secret.base_url)}</span>
+          <span class="key-auth">${secret.auth_type === 'bearer' ? 'Bearer Token' : escapeHtml(secret.auth_header || 'Custom Header')}</span>
+        </div>
+        <div class="custom-key-actions">
+          <code class="endpoint-hint">/proxy/custom/${secret.id}/</code>
+          <button onclick="deleteCustomKey('${secret.id}', '${escapeHtml(secret.name)}')" class="btn-danger btn-small">Delete</button>
+        </div>
+      </div>
+    `).join('');
+    
+    // Update stats if on dashboard
+    const statKeys = document.getElementById('stat-secrets');
+    if (statKeys) {
+      const regularKeysCount = await getRegularKeysCount();
+      statKeys.textContent = regularKeysCount + secrets.length;
+    }
+  } catch (err) {
+    const list = document.getElementById('custom-key-list');
+    if (list) {
+      list.innerHTML = `<p class="error">Failed to load custom APIs: ${err.message}</p>`;
+    }
+  }
+}
+
+async function getRegularKeysCount() {
+  try {
+    const response = await api('/secrets');
+    return (response.secrets || []).length;
+  } catch {
+    return 0;
+  }
+}
+
+function showAddCustomKeyModal() {
+  const modalContent = `
+    <form id="custom-key-form" onsubmit="createCustomKey(event)">
+      <div class="form-group">
+        <label for="custom-name">Name</label>
+        <input type="text" id="custom-name" name="name" required placeholder="My API Backend" maxlength="64">
+        <p class="form-hint">A friendly name for this API connection</p>
+      </div>
+      <div class="form-group">
+        <label for="custom-base-url">Base URL</label>
+        <input type="url" id="custom-base-url" name="base_url" required placeholder="https://api.example.com/v1">
+        <p class="form-hint">The base URL of the API (e.g., https://api.example.com/v1)</p>
+      </div>
+      <div class="form-group">
+        <label for="custom-api-key">API Key</label>
+        <input type="password" id="custom-api-key" name="api_key" required placeholder="Your API key">
+      </div>
+      <div class="form-group">
+        <label for="custom-auth-type">Authentication Type</label>
+        <select id="custom-auth-type" name="auth_type" required onchange="toggleCustomAuthHeader()">
+          <option value="bearer">Bearer Token (Authorization: Bearer &lt;key&gt;)</option>
+          <option value="custom">Custom Header</option>
+        </select>
+      </div>
+      <div class="form-group" id="custom-auth-header-group" style="display: none;">
+        <label for="custom-auth-header">Header Name</label>
+        <input type="text" id="custom-auth-header" name="auth_header" placeholder="X-API-Key">
+        <p class="form-hint">The header name to use (e.g., X-API-Key, X-Auth-Token)</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Add Custom API</button>
+      </div>
+    </form>
+    <style>
+      .form-hint {
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 4px;
+      }
+    </style>
+  `;
+  showModal('Add Custom API Backend', modalContent);
+}
+
+function toggleCustomAuthHeader() {
+  const authType = document.getElementById('custom-auth-type').value;
+  const headerGroup = document.getElementById('custom-auth-header-group');
+  headerGroup.style.display = authType === 'custom' ? 'block' : 'none';
+}
+
+async function createCustomKey(e) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  
+  const authType = formData.get('auth_type');
+  const authHeader = formData.get('auth_header');
+  
+  if (authType === 'custom' && !authHeader) {
+    showToast('Header name is required for custom auth type', 'error');
+    return;
+  }
+  
+  try {
+    const result = await api('/secrets/custom', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: formData.get('name'),
+        base_url: formData.get('base_url'),
+        api_key: formData.get('api_key'),
+        auth_type: authType,
+        auth_header: authType === 'custom' ? authHeader : null
+      })
+    });
+    
+    closeModal();
+    loadCustomKeys();
+    showToast(`Custom API "${formData.get('name')}" created! Use /proxy/custom/${result.id}/...`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function deleteCustomKey(id, name) {
+  if (!confirm(`Delete custom API "${name}"?`)) return;
+  
+  try {
+    await api(`/secrets/custom/${id}`, { method: 'DELETE' });
+    loadCustomKeys();
+    showToast('Custom API deleted', 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
 // Blog
 async function loadBlog() {
   try {
@@ -1753,6 +2042,50 @@ async function copyAgentPrompt() {
   }
 }
 
+// Change password
+async function changePassword(e) {
+  e.preventDefault();
+  
+  const form = e.target;
+  const formData = new FormData(form);
+  const currentPassword = formData.get('currentPassword');
+  const newPassword = formData.get('newPassword');
+  const confirmPassword = formData.get('confirmPassword');
+  
+  // Validate passwords match
+  if (newPassword !== confirmPassword) {
+    showToast('New passwords do not match', 'error');
+    return;
+  }
+  
+  // Validate password length
+  if (newPassword.length < 8) {
+    showToast('New password must be at least 8 characters', 'error');
+    return;
+  }
+  
+  // Disable form during submission
+  const submitBtn = form.querySelector('button[type="submit"]');
+  const originalText = submitBtn.textContent;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Updating...';
+  
+  try {
+    await api('/auth/password', {
+      method: 'PUT',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+    
+    showToast('Password updated successfully', 'success');
+    form.reset();
+  } catch (err) {
+    showToast(err.message || 'Failed to update password', 'error');
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
+  }
+}
+
 function showToast(message, type) {
   // Remove any existing toast
   const existing = document.querySelector('.toast');
@@ -1802,6 +2135,7 @@ function switchTab(tabName) {
   // Load tab content
   if (tabName === 'keys' && typeof loadKeys === 'function') {
     loadKeys();
+    loadCustomKeys();
   }
 }
 

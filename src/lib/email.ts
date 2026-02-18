@@ -10,6 +10,7 @@ import { render } from '@react-email/render';
 import WelcomeEmail from '../emails/Welcome.js';
 import QuickWinEmail from '../emails/QuickWin.js';
 import FeedbackEmail from '../emails/Feedback.js';
+import PasswordResetEmail from '../emails/PasswordReset.js';
 import { getDatabase } from './db.js';
 import { randomUUID } from 'crypto';
 
@@ -25,6 +26,9 @@ const getResendClient = () => {
 const FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const FROM_NAME = 'OnHyper';
 const FROM = `${FROM_NAME} <${FROM_EMAIL}>`;
+
+// Base URL for reset links
+const BASE_URL = process.env.BASE_URL || 'https://onhyper.io';
 
 // Email sequence configuration
 const EMAIL_SEQUENCE = {
@@ -174,6 +178,55 @@ export async function sendFeedbackRequest(
   } catch (err) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error';
     console.error('Feedback email exception:', errorMessage);
+    return { success: false, error: errorMessage };
+  }
+}
+
+/**
+ * Send password reset email
+ * Includes a link with the reset token that expires in 1 hour
+ */
+export async function sendPasswordResetEmail(
+  email: string,
+  resetToken: string,
+  name?: string
+): Promise<SendEmailResult> {
+  try {
+    const resend = getResendClient();
+    
+    if (!resend) {
+      console.log(`[EMAIL] No Resend API key configured - skipping password reset email for ${email}`);
+      return { success: false, error: 'Resend API key not configured' };
+    }
+
+    const resetUrl = `${BASE_URL}/#/reset-password?token=${resetToken}`;
+    
+    const html = await render(PasswordResetEmail({ 
+      email, 
+      resetUrl,
+      name 
+    }));
+    
+    const { data, error } = await resend.emails.send({
+      from: FROM,
+      to: email,
+      subject: 'Reset Your OnHyper Password',
+      html,
+      headers: {
+        'X-Entity-Ref-ID': `password-reset-${Date.now()}-${randomUUID()}`,
+      },
+    });
+
+    if (error) {
+      console.error('Failed to send password reset email:', error);
+      return { success: false, error: error.message };
+    }
+
+    console.log(`[EMAIL] Password reset email sent to ${email}`);
+    return { success: true, messageId: data?.id };
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+    console.error('Password reset email exception:', errorMessage);
     return { success: false, error: errorMessage };
   }
 }

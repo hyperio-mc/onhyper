@@ -87,12 +87,12 @@
  */
 
 import { Hono } from 'hono';
-import { createUser, authenticateUser, generateToken, verifyToken, getUserById } from '../lib/users.js';
+import { createUser, authenticateUser, generateToken, verifyToken, getUserById, changeUserPassword, resetUserPassword, createPasswordResetToken, validatePasswordResetToken, deletePasswordResetToken } from '../lib/users.js';
 import { strictRateLimit } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { identifyServerUser, trackServerEvent } from '../lib/analytics.js';
-import { sendWelcomeEmail, isEmailConfigured } from '../lib/email.js';
+import { sendWelcomeEmail, sendPasswordResetEmail, isEmailConfigured } from '../lib/email.js';
 
 const auth = new Hono();
 
@@ -291,6 +291,153 @@ auth.get('/me', requireAuth, async (c) => {
     plan: dbUser.plan,
     createdAt: dbUser.created_at,
   });
+});
+
+/**
+ * PUT /api/auth/password
+ * Change the current user's password
+ * 
+ * Headers: Authorization: Bearer <token>
+ * Body: { currentPassword: string, newPassword: string }
+ * Response: { success: true } or { error: string }
+ */
+auth.put('/password', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    
+    if (!user) {
+      return c.json({ error: 'Not authenticated' }, 401);
+    }
+    
+    const body = await c.req.json();
+    const { currentPassword, newPassword } = body;
+    
+    // Validate required fields
+    if (!currentPassword || !newPassword) {
+      return c.json({ error: 'Current password and new password are required' }, 400);
+    }
+    
+    // Update password
+    await changeUserPassword(user.userId, currentPassword, newPassword);
+    
+    return c.json({ success: true });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update password';
+    
+    // Map specific errors to status codes
+    if (message.includes('incorrect')) {
+      return c.json({ error: 'Token validation failed' }, 401);
+    }
+  }
+});
+
+/**
+ * POST /api/auth/forgot-password
+ * Request a password reset email
+ */
+auth.post('/forgot-password', strictRateLimit, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { email } = body;
+    
+    if (!email) {
+      return c.json({ error: 'Email is required' }, 400);
+    }
+    
+    // Create reset token (returns null if user doesn't exist)
+    const result = createPasswordResetToken(email);
+    
+    // Always return success to avoid revealing if email exists
+    if (!result) {
+      // User doesn't exist, but return success anyway for security
+      return c.json({ 
+        success: true, 
+        message: 'If an account with that email exists, a reset link has been sent.' 
+      });
+    }
+    
+    // Send password reset email
+    if (isEmailConfigured()) {
+      // Get user for name
+      const user = getUserById(result.userId);
+      const userName = user?.email?.split('@')[0];
+      
+      const emailResult = await sendPasswordResetEmail(email, result.token, userName);
+      if (!emailResult.success) {
+        console.error('[AUTH] Failed to send password reset email:', emailResult.error);
+      }
+    } else {
+      console.log(`[AUTH] Email not configured - password reset token for ${email}: ${result.token}`);
+    }
+    
+    // Track password reset request
+    trackServerEvent(result.userId, 'password_reset_requested', {
+      email: email,
+    });
+    
+    return c.json({ 
+      success: true, 
+      message: 'If an account with that email exists, a reset link has been sent.' 
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to process request';
+    // Don't reveal internal errors
+    return c.json({ 
+      success: true, 
+      message: 'If an account with that email exists, a reset link has been sent.' 
+    });
+  }
+});
+
+/**
+ * POST /api/auth/reset-password
+ * Reset password using token from email
+ */
+auth.post('/reset-password', strictRateLimit, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { token, password } = body;
+    
+    if (!token || !password) {
+      return c.json({ error: 'Token and new password are required' }, 400);
+    }
+    
+    // Validate password complexity
+    if (password.length < config.auth.minPasswordLength) {
+      return c.json({ 
+        error: `Password must be at least ${config.auth.minPasswordLength} characters` 
+      }, 400);
+    }
+    
+    // Validate the reset token
+    const tokenInfo = validatePasswordResetToken(token);
+    
+    if (!tokenInfo) {
+      return c.json({ error: 'Invalid or expired reset token' }, 400);
+    }
+    
+    // Update the password
+    await resetUserPassword(tokenInfo.userId, password);
+    
+    // Delete the used token
+    deletePasswordResetToken(token);
+    
+    // Track password reset completion
+    trackServerEvent(tokenInfo.userId, 'password_reset_completed', {
+      email: tokenInfo.email,
+    });
+    
+    return c.json({ 
+      success: true, 
+      message: 'Password has been reset successfully' 
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to reset password';
+    return c.json({ error: message }, 500);
+  }
 });
 
 export { auth };

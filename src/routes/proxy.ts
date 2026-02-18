@@ -111,7 +111,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { PROXY_ENDPOINTS, config } from '../config.js';
-import { getSecretValue } from '../lib/secrets.js';
+import { getSecretValue, getCustomSecretValue } from '../lib/secrets.js';
 import { getAppBySlug, getAppById } from '../lib/apps.js';
 import { getApiKeyByKey, verifyToken, getUserApiKeyByUserId } from '../lib/users.js';
 import { getUserSettings } from '../lib/db.js';
@@ -500,6 +500,257 @@ proxy.get('/', (c) => {
       description: config.description,
       usage: `POST /proxy/${name}/...`,
     })),
+  });
+});
+
+/**
+ * ALL /proxy/custom/:id/*
+ * Forward requests to a user-defined custom API backend
+ */
+proxy.all('/custom/:id/*', async (c) => {
+  const startTime = Date.now();
+  const customId = c.req.param('id');
+  
+  // Identify user/app
+  const identity = await identifyUser(c);
+  
+  if (!identity) {
+    return c.json({
+      error: 'Authentication required. Provide Bearer token, X-API-Key, or X-App-Slug header.',
+    }, 401);
+  }
+  
+  // Get the custom secret configuration
+  const secretConfig = getCustomSecretValue(identity.userId, customId);
+  
+  if (!secretConfig) {
+    return c.json({
+      error: 'Custom API not found. Check the ID or create it in your dashboard.',
+    }, 404);
+  }
+  
+  // Build target URL
+  const path = c.req.path.replace(`/proxy/custom/${customId}`, '');
+  const targetUrl = secretConfig.baseUrl + path + (c.req.query() ? '?' + new URLSearchParams(c.req.query()) : '');
+  
+  // Build auth headers based on auth type
+  const headers: Record<string, string> = {
+    'User-Agent': 'OnHyper-Proxy/1.0',
+  };
+  
+  if (secretConfig.authType === 'bearer') {
+    headers['Authorization'] = `Bearer ${secretConfig.apiKey}`;
+  } else {
+    // Custom header auth
+    const headerName = secretConfig.authHeader || 'X-API-Key';
+    headers[headerName] = secretConfig.apiKey;
+  }
+  
+  // Forward relevant headers (excluding authentication)
+  const forwardHeaders = ['content-type', 'accept', 'accept-language'];
+  for (const header of forwardHeaders) {
+    const value = c.req.header(header);
+    if (value) {
+      headers[header] = value;
+    }
+  }
+  
+  // Request uncompressed content
+  headers['accept-encoding'] = 'identity';
+  
+  try {
+    // Get request body for non-GET requests
+    let body: string | undefined;
+    if (!['GET', 'HEAD'].includes(c.req.method)) {
+      const contentLength = c.req.header('content-length');
+      if (contentLength && parseInt(contentLength) > config.proxy.maxRequestSize) {
+        return c.json({ error: 'Request body too large' }, 413);
+      }
+      body = await c.req.text();
+    }
+    
+    // Make the request with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), config.proxy.timeoutMs);
+    
+    const response = await fetch(targetUrl, {
+      method: c.req.method,
+      headers,
+      body,
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    // Check response size
+    const contentLength = response.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > config.proxy.maxResponseSize) {
+      return c.json({ error: 'Response too large' }, 502);
+    }
+    
+    const contentType = response.headers.get('content-type') || '';
+    
+    // Handle SSE streaming responses
+    if (contentType.includes('text/event-stream')) {
+      const duration = Date.now() - startTime;
+      recordUsage({
+        appId: identity.appId,
+        endpoint: `custom:${customId}`,
+        status: response.status,
+        duration,
+      });
+      
+      trackProxyRequest({
+        userId: identity.userId,
+        appId: identity.appId,
+        endpoint: `custom:${customId}`,
+        status: response.status,
+        durationMs: duration,
+        success: response.status >= 200 && response.status < 400,
+      });
+      
+      if (identity.appId) {
+        setImmediate(() => {
+          try {
+            trackAppApiCall(identity.appId!, { endpoint: `custom:${customId}`, status: response.status, duration });
+          } catch (e) {
+            console.error('[AppAnalytics] Failed to track SSE call:', e);
+          }
+        });
+      }
+      
+      return streamSSE(c, async (stream) => {
+        const reader = response.body?.getReader();
+        if (!reader) return;
+        
+        const decoder = new TextDecoder();
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            await stream.write(decoder.decode(value));
+          }
+        } catch (error) {
+          console.error('SSE stream error:', error);
+        }
+      });
+    }
+    
+    // Non-streaming: read response body
+    const responseText = await response.text();
+    
+    // Record usage
+    const duration = Date.now() - startTime;
+    recordUsage({
+      appId: identity.appId,
+      endpoint: `custom:${customId}`,
+      status: response.status,
+      duration,
+    });
+    
+    trackProxyRequest({
+      userId: identity.userId,
+      appId: identity.appId,
+      endpoint: `custom:${customId}`,
+      status: response.status,
+      durationMs: duration,
+      success: response.status >= 200 && response.status < 400,
+    });
+    
+    if (identity.appId) {
+      setImmediate(() => {
+        try {
+          trackAppApiCall(identity.appId!, { endpoint: `custom:${customId}`, status: response.status, duration });
+        } catch (e) {
+          console.error('[AppAnalytics] Failed to track API call:', e);
+        }
+      });
+    }
+    
+    // Build response headers
+    const responseHeaders: Record<string, string> = {};
+    const allowedResponseHeaders = [
+      'content-type', 'content-encoding', 'cache-control',
+      'etag', 'last-modified', 'x-request-id',
+    ];
+    
+    for (const header of allowedResponseHeaders) {
+      const value = response.headers.get(header);
+      if (value) {
+        responseHeaders[header] = value;
+      }
+    }
+    
+    // Add CORS headers
+    responseHeaders['Access-Control-Allow-Origin'] = '*';
+    responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+    responseHeaders['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-API-Key, X-App-Slug, X-App-ID';
+    
+    // Try to parse as JSON
+    let responseBody: unknown = responseText;
+    if (contentType.includes('application/json')) {
+      try {
+        responseBody = JSON.parse(responseText);
+        return c.json(responseBody, response.status as any, responseHeaders);
+      } catch {
+        // Not valid JSON, return as text
+      }
+    }
+    
+    return new Response(responseText, {
+      status: response.status,
+      headers: responseHeaders,
+    });
+    
+  } catch (error) {
+    const duration = Date.now() - startTime;
+    
+    recordUsage({
+      appId: identity.appId,
+      endpoint: `custom:${customId}`,
+      status: 0,
+      duration,
+    });
+    
+    trackProxyRequest({
+      userId: identity.userId,
+      appId: identity.appId,
+      endpoint: `custom:${customId}`,
+      status: 0,
+      durationMs: duration,
+      success: false,
+    });
+    
+    if (identity.appId) {
+      setImmediate(() => {
+        try {
+          trackAppApiCall(identity.appId!, { endpoint: `custom:${customId}`, status: 0, duration });
+        } catch (e) {
+          console.error('[AppAnalytics] Failed to track failed API call:', e);
+        }
+      });
+    }
+    
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        return c.json({ error: 'Request timed out' }, 504);
+      }
+      return c.json({ error: error.message }, 502);
+    }
+    
+    return c.json({ error: 'Proxy request failed' }, 502);
+  }
+});
+
+/**
+ * OPTIONS /proxy/custom/:id/*
+ * Handle CORS preflight for custom endpoints
+ */
+proxy.options('/custom/:id/*', (c) => {
+  return c.body(null, 204, {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-App-Slug, X-App-ID',
   });
 });
 

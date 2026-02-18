@@ -110,7 +110,7 @@
  */
 
 import { Hono } from 'hono';
-import { storeSecret, listSecrets, deleteSecret, hasSecret, getSecretCount } from '../lib/secrets.js';
+import { storeSecret, listSecrets, deleteSecret, hasSecret, getSecretCount, createCustomSecret, listCustomSecrets, getCustomSecret, deleteCustomSecret, updateCustomSecret } from '../lib/secrets.js';
 import { getAuthUser } from '../middleware/auth.js';
 import { config } from '../config.js';
 
@@ -242,6 +242,203 @@ secrets.get('/check/:name', async (c) => {
   return c.json({
     name: name.toUpperCase(),
     exists,
+  });
+});
+
+// ============================================================================
+// CUSTOM SECRETS (User-defined API backends)
+// ============================================================================
+
+/**
+ * GET /api/secrets/custom
+ * List all custom secrets for the authenticated user
+ */
+secrets.get('/custom', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const customSecrets = listCustomSecrets(user.userId);
+  
+  return c.json({
+    secrets: customSecrets,
+    count: customSecrets.length,
+  });
+});
+
+/**
+ * POST /api/secrets/custom
+ * Create a new custom secret
+ */
+secrets.post('/custom', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  try {
+    const body = await c.req.json();
+    const { name, base_url, api_key, auth_type, auth_header } = body;
+    
+    if (!name || !base_url || !api_key || !auth_type) {
+      return c.json({ error: 'Name, base_url, api_key, and auth_type are required' }, 400);
+    }
+    
+    if (auth_type !== 'bearer' && auth_type !== 'custom') {
+      return c.json({ error: 'auth_type must be "bearer" or "custom"' }, 400);
+    }
+    
+    if (auth_type === 'custom' && !auth_header) {
+      return c.json({ error: 'auth_header is required for custom auth type' }, 400);
+    }
+    
+    // Check total secrets limit (regular + custom)
+    const plan = user.plan as keyof typeof config.plans;
+    const planConfig = config.plans[plan] || config.plans.FREE;
+    const currentCount = getSecretCount(user.userId) + listCustomSecrets(user.userId).length;
+    
+    if (planConfig.maxSecrets > 0 && currentCount >= planConfig.maxSecrets) {
+      return c.json({
+        error: 'Secret limit reached for your plan',
+        current: currentCount,
+        limit: planConfig.maxSecrets,
+        plan: user.plan,
+      }, 403);
+    }
+    
+    const secret = await createCustomSecret(
+      user.userId,
+      name,
+      base_url,
+      api_key,
+      auth_type,
+      auth_header
+    );
+    
+    return c.json({
+      id: secret.id,
+      name: secret.name,
+      base_url: secret.base_url,
+      auth_type: secret.auth_type,
+      auth_header: secret.auth_header,
+      created: true,
+      message: 'Custom API created successfully. Use /proxy/custom/' + secret.id + '/... to make requests.',
+    }, 201);
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create custom secret';
+    
+    if (message.includes('already exists')) {
+      return c.json({ error: message }, 409);
+    }
+    
+    return c.json({ error: message }, 400);
+  }
+});
+
+/**
+ * GET /api/secrets/custom/:id
+ * Get a custom secret by ID (metadata only, no API key)
+ */
+secrets.get('/custom/:id', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const id = c.req.param('id');
+  const secret = getCustomSecret(user.userId, id);
+  
+  if (!secret) {
+    return c.json({ error: 'Custom secret not found' }, 404);
+  }
+  
+  return c.json(secret);
+});
+
+/**
+ * PUT /api/secrets/custom/:id
+ * Update a custom secret
+ */
+secrets.put('/custom/:id', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const id = c.req.param('id');
+  
+  try {
+    const body = await c.req.json();
+    const { name, base_url, api_key, auth_type, auth_header } = body;
+    
+    // Validate auth_type if provided
+    if (auth_type && auth_type !== 'bearer' && auth_type !== 'custom') {
+      return c.json({ error: 'auth_type must be "bearer" or "custom"' }, 400);
+    }
+    
+    if (auth_type === 'custom' && !auth_header) {
+      return c.json({ error: 'auth_header is required for custom auth type' }, 400);
+    }
+    
+    const secret = await updateCustomSecret(user.userId, id, {
+      name,
+      base_url,
+      api_key,
+      auth_type,
+      auth_header: auth_header !== undefined ? auth_header : undefined,
+    });
+    
+    return c.json({
+      id: secret.id,
+      name: secret.name,
+      base_url: secret.base_url,
+      auth_type: secret.auth_type,
+      auth_header: secret.auth_header,
+      updated: true,
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update custom secret';
+    
+    if (message.includes('not found')) {
+      return c.json({ error: message }, 404);
+    }
+    
+    if (message.includes('already exists')) {
+      return c.json({ error: message }, 409);
+    }
+    
+    return c.json({ error: message }, 400);
+  }
+});
+
+/**
+ * DELETE /api/secrets/custom/:id
+ * Delete a custom secret
+ */
+secrets.delete('/custom/:id', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const id = c.req.param('id');
+  const deleted = deleteCustomSecret(user.userId, id);
+  
+  if (!deleted) {
+    return c.json({ error: 'Custom secret not found' }, 404);
+  }
+  
+  return c.json({
+    deleted: true,
+    id,
   });
 });
 

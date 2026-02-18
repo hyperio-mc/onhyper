@@ -378,6 +378,24 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_app_analytics_daily_app ON app_analytics_daily(app_id);
     CREATE INDEX IF NOT EXISTS idx_app_analytics_daily_date ON app_analytics_daily(date);
   `);
+
+  // Custom secrets (user-defined API backends with configurable auth)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS custom_secrets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      base_url TEXT NOT NULL,
+      api_key TEXT NOT NULL,
+      auth_type TEXT NOT NULL,
+      auth_header TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_custom_secrets_user ON custom_secrets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_custom_secrets_name ON custom_secrets(user_id, name);
+  `);
 }
 
 /**
@@ -410,6 +428,22 @@ function migrateAppsTable(db: Database.Database): void {
   // Create unique index on subdomain if not exists
   // This ensures subdomains are unique across all apps
   db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_apps_subdomain ON apps(subdomain) WHERE subdomain IS NOT NULL`);
+
+  // Password reset tokens table
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+    CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
+    CREATE INDEX IF NOT EXISTS idx_password_resets_expires ON password_resets(expires_at);
+  `);
 }
 
 // Type exports
@@ -553,6 +587,17 @@ export interface AppAnalyticsDaily {
   updated_at: string;
 }
 
+export interface CustomSecret {
+  id: string;
+  user_id: string;
+  name: string;
+  base_url: string;
+  api_key: string;  // Encrypted in storage, decrypted on retrieval
+  auth_type: 'bearer' | 'custom';
+  auth_header: string | null;  // For custom auth, e.g., 'X-API-Key'
+  created_at: string;
+}
+
 // User settings helper functions
 export function getUserSettings(userId: string): UserSettings | null {
   const stmt = db!.prepare('SELECT * FROM user_settings WHERE user_id = ?');
@@ -569,4 +614,12 @@ export function setUserSettings(userId: string, settings: Partial<UserSettings>)
       updated_at = CURRENT_TIMESTAMP
   `);
   stmt.run(userId, settings.onhyper_api_enabled ? 1 : 0);
+}
+
+export interface PasswordReset {
+  id: string;
+  user_id: string;
+  token: string;
+  expires_at: string;
+  created_at: string;
 }
