@@ -42,15 +42,163 @@
 <!-- Tab Content -->
 <div class="tab-content">
   <div id="tab-apps" class="tab-panel active" role="tabpanel">
-    <!-- Apps content will be migrated here in next task -->
+    <h2>My Apps</h2>
+    <p class="text-muted">Publish web apps with secure API access</p>
+
+    <div id="app-list">
+      <p>Loading...</p>
+    </div>
+
+    <hr style="margin: 2rem 0; border-color: var(--border);">
+
+    <h3>Create New App</h3>
+    <form id="app-form" onsubmit="createApp(event)">
+      <div class="form-group">
+        <label for="app-name">App Name</label>
+        <input type="text" id="app-name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="app-slug">Slug (URL path)</label>
+        <input type="text" id="app-slug" name="slug" required pattern="[a-z0-9-]+">
+      </div>
+
+      <!-- Subdomain Section -->
+      <div class="subdomain-section">
+        <label>Custom Subdomain (optional)</label>
+        <div class="subdomain-input-row">
+          <input type="text" id="subdomain-input" placeholder="my-app" pattern="[a-z0-9-]+" maxlength="63">
+          <button type="button" id="check-subdomain" class="btn-secondary">Check</button>
+        </div>
+        <span id="subdomain-status" class="subdomain-status"></span>
+        <small class="subdomain-preview">Your app will be at: <strong id="subdomain-preview-url">__.onhyper.io</strong></small>
+      </div>
+      <div class="form-group">
+        <label for="app-description">Description</label>
+        <textarea id="app-description" name="description" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="app-html">HTML</label>
+        <textarea id="app-html" name="html" rows="5" placeholder="<div>Your app HTML...</div>"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="app-css">CSS</label>
+        <textarea id="app-css" name="css" rows="3" placeholder="/* Your styles */"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="app-js">JavaScript</label>
+        <textarea id="app-js" name="js" rows="5" placeholder="// Use /proxy/endpoint to call APIs"></textarea>
+      </div>
+      <button type="submit" class="btn-primary">Create App</button>
+    </form>
+
+    <script>
+    async function createApp(e) {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData(form);
+      const subdomainInput = document.getElementById('subdomain-input');
+      const subdomain = subdomainInput ? subdomainInput.value.trim().toLowerCase() : '';
+
+      try {
+        // Claim subdomain if provided and not already owned
+        if (subdomain && subdomain !== currentSubdomain) {
+          const claimResult = await claimSubdomain(subdomain);
+          if (!claimResult.success) {
+            showError(claimResult.error || 'Failed to claim subdomain');
+            return;
+          }
+        }
+
+        const app = await api('/apps', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: formData.get('name'),
+            slug: formData.get('slug'),
+            description: formData.get('description'),
+            html: formData.get('html'),
+            css: formData.get('css'),
+            js: formData.get('js'),
+            subdomain: subdomain || null
+          })
+        });
+
+        form.reset();
+        // Reset subdomain section
+        const statusSpan = document.getElementById('subdomain-status');
+        const previewUrl = document.getElementById('subdomain-preview-url');
+        if (statusSpan) {
+          statusSpan.className = 'subdomain-status';
+          statusSpan.textContent = '';
+        }
+        if (previewUrl) {
+          previewUrl.textContent = '__.onhyper.io';
+        }
+        currentSubdomain = null;
+
+        loadApps();
+
+        const message = subdomain
+          ? `App created! View at ${subdomain}.onhyper.io`
+          : `App created! View at /a/${app.slug}`;
+        alert(message);
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+    </script>
   </div>
 
   <div id="tab-keys" class="tab-panel" role="tabpanel">
-    <!-- Keys content will be migrated here in next task -->
+    <h2>API Keys</h2>
+    <p class="text-muted">Store your API keys securely. They're encrypted and never exposed to browsers.</p>
+
+    <div id="key-list">
+      <p>Loading...</p>
+    </div>
+
+    <hr>
+
+    <h3>Add New Key</h3>
+    <form id="key-form" onsubmit="addKey(event)">
+      <div class="form-group">
+        <label for="key-name">API Provider</label>
+        <select id="key-name" name="name" required>
+          <option value="">Select...</option>
+          <option value="OPENAI_API_KEY">OpenAI</option>
+          <option value="ANTHROPIC_API_KEY">Anthropic</option>
+          <option value="OPENROUTER_API_KEY">OpenRouter</option>
+          <option value="SCOUT_API_KEY">Scout Atoms</option>
+          <option value="OLLAMA_API_KEY">Ollama</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="key-value">API Key</label>
+        <input type="password" id="key-value" name="value" required placeholder="sk-...">
+      </div>
+      <button type="submit" class="btn-primary">Add Key</button>
+    </form>
+
+    <div class="info-box">
+      <h4>Using Your Keys in Apps</h4>
+      <p>Your apps call APIs through the proxy endpoints. Keys are injected server-side.</p>
+      <code>fetch('/proxy/openai/chat/completions', { method: 'POST', body: ... })</code>
+    </div>
   </div>
 
   <div id="tab-settings" class="tab-panel" role="tabpanel">
-    <!-- Settings content will be migrated here in next task -->
+    <div class="settings-section">
+      <h3>API Access</h3>
+      <div class="setting-item">
+        <label class="setting-label">
+          <input type="checkbox" id="onhyper-api-enabled">
+          <span class="setting-title">Enable OnHyper API access</span>
+        </label>
+        <p class="setting-description">
+          Allow builder apps to access your configured APIs through OnHyper's secure proxy.
+          This enables no-code tools and AI agents to use your API keys safely.
+        </p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -136,6 +284,56 @@
   display: block;
 }
 
+/* Settings Section */
+.settings-section {
+  background: var(--bg-alt);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.settings-section h3 {
+  margin: 0 0 20px 0;
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.setting-item {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--border-color, #e1e4e8);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.setting-label input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: var(--accent-color, #0066ff);
+}
+
+.setting-title {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.setting-description {
+  margin: 8px 0 0 32px;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* Mobile Responsive */
 @media (max-width: 600px) {
   .tabs {
@@ -147,6 +345,14 @@
     font-size: 0.9rem;
     flex: 1;
     text-align: center;
+  }
+
+  .settings-section {
+    padding: 16px;
+  }
+
+  .setting-description {
+    margin-left: 0;
   }
 }
 </style>
@@ -170,6 +376,11 @@ function switchTab(tabName) {
   document.querySelectorAll('.tab-panel').forEach(panel => {
     panel.classList.toggle('active', panel.id === `tab-${tabName}`);
   });
+
+  // Load tab content
+  if (tabName === 'keys' && typeof loadKeys === 'function') {
+    loadKeys();
+  }
 }
 
 // Initialize tab from URL on page load
@@ -201,6 +412,11 @@ window.addEventListener('popstate', () => {
   document.querySelectorAll('.tab-panel').forEach(panel => {
     panel.classList.toggle('active', panel.id === `tab-${activeTab}`);
   });
+
+  // Load tab content
+  if (activeTab === 'keys' && typeof loadKeys === 'function') {
+    loadKeys();
+  }
 });
 
 // Initialize tabs when DOM is ready
