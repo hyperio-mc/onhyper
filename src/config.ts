@@ -218,8 +218,8 @@ export const config = {
 
   // Plans
   plans: {
-    FREE: { requestsPerDay: 100, maxApps: 3, maxSecrets: 5 },
-    HOBBY: { requestsPerDay: 1000, maxApps: 10, maxSecrets: 20 },
+    FREE: { requestsPerDay: 1000, maxApps: 3, maxSecrets: 5 },
+    HOBBY: { requestsPerDay: 3000, maxApps: 10, maxSecrets: 20 },
     PRO: { requestsPerDay: 10000, maxApps: 50, maxSecrets: 50 },
     BUSINESS: { requestsPerDay: 100000, maxApps: -1, maxSecrets: -1 }, // -1 = unlimited
   },
