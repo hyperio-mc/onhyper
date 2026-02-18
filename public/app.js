@@ -819,27 +819,32 @@ async function loadKeys() {
         <div class="empty-state">
           <div class="empty-state-icon">🔐</div>
           <h3>Add Your First API Key</h3>
-          <p>Store your API keys securely. They're encrypted and never exposed to browsers. Your apps can use them through the proxy.</p>
+          <p>Store your API keys securely. They're encrypted and never exposed to browsers.</p>
           <div class="empty-state-providers">
-            <span class="provider-badge">OpenAI</span>
-            <span class="provider-badge">Anthropic</span>
-            <span class="provider-badge">OpenRouter</span>
-            <span class="provider-badge">Scout</span>
-            <span class="provider-badge">Ollama</span>
+            <span class="provider-badge" style="--provider-color: #10a37f;">🤖 OpenAI</span>
+            <span class="provider-badge" style="--provider-color: #d97706;">🧠 Anthropic</span>
+            <span class="provider-badge" style="--provider-color: #6366f1;">🔀 OpenRouter</span>
+            <span class="provider-badge" style="--provider-color: #8b5cf6;">🔭 Scout</span>
+            <span class="provider-badge" style="--provider-color: #64748b;">🦙 Ollama</span>
           </div>
-          <p class="empty-state-hint">Keys are injected server-side, so they never appear in your app's code.</p>
         </div>
       `;
       return;
     }
     
-    list.innerHTML = secrets.map(secret => `
-      <div class="key-card">
-        <span class="key-name">${secret.name}</span>
-        <span class="key-value">${secret.preview}</span>
-        <button onclick="deleteKey('${secret.name}')" class="btn-danger">Delete</button>
-      </div>
-    `).join('');
+    list.innerHTML = secrets.map(secret => {
+      const provider = getProviderInfo(secret.name);
+      return `
+        <div class="key-card" style="--provider-color: ${provider.color};">
+          <div class="key-icon">${provider.icon}</div>
+          <div class="key-info">
+            <span class="key-name">${provider.name}</span>
+            <span class="key-value">${secret.preview}</span>
+          </div>
+          <button onclick="deleteKey('${secret.name}')" class="btn-danger btn-small">Delete</button>
+        </div>
+      `;
+    }).join('');
   } catch (err) {
     showError(err.message);
   }
