@@ -302,4 +302,8 @@ if (document.readyState === 'loading') {
 } else {
   initTabs();
 }
+
+// Expose to global scope for onclick handlers
+window.switchTab = switchTab;
+window.initTabs = initTabs;
 </script>
