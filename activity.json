@@ -15,7 +15,17 @@
       ],
       "notes": "Integrated with feature flag system. Free users blocked from subdomains, PRO required for regular subdomains, BUSINESS required for short subdomains (<6 chars)."
     },
-    "task-062": {
+    "task-063": {
+      "title": "Fix waitlist/signup form validation bug",
+      "status": "in_progress",
+      "priority": "high",
+      "description": "Users trying to sign up are seeing email and description as required errors even though they filled them in. Need to investigate frontend validation, API payload, and form handling.",
+      "successCriteria": [
+        "Form submits successfully when all fields are filled",
+        "Required field validation works correctly",
+        "Error messages are clear and accurate"
+      ]
+    },
       "title": "Implement feature flag system",
       "status": "completed",
       "priority": "medium",

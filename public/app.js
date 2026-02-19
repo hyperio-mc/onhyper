@@ -592,10 +592,10 @@ function setupWaitlistForm() {
         body: JSON.stringify({
           email: formData.get('email'),
           name: formData.get('name'),
-          projectDescription: formData.get('project'),
+          whatBuilding: formData.get('project'),
           projectLink: formData.get('link'),
           apisUsed: formData.get('apis'),
-          referralCode: formData.get('referral')
+          referredBy: formData.get('referral')
         })
       });
       
