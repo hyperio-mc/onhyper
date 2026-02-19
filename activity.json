@@ -191,6 +191,18 @@
       "status": "completed",
       "priority": "high",
       "description": "Update skill.html with slug resolution, X-App-Slug matching, response envelope handling, plan limits, and troubleshooting section."
+    },
+    "task-066": {
+      "title": "Research: Leverage Hyper API with Railway adapters",
+      "status": "in_progress",
+      "priority": "medium",
+      "description": "Research hyper63/hyper repo to understand their API, then create a proposal to build adapters for data, cache, and other backend services on Railway if supported.",
+      "successCriteria": [
+        "Research hyper63/hyper API and architecture",
+        "Identify what adapters are available",
+        "Assess Railway hosting capabilities",
+        "Propose product design"
+      ]
     }
   }
 }
