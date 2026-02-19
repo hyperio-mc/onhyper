@@ -313,6 +313,17 @@
   }
 }
 
+/* Hide Activity tab on mobile/tablet */
+@media (max-width: 768px) {
+  .dashboard-tabs .tab[data-tab="activity"] {
+    display: none;
+  }
+  
+  #tab-activity {
+    display: none !important;
+  }
+}
+
 /* App Card Stats */
 .app-card-stats {
   display: flex;
