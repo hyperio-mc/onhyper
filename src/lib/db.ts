@@ -396,6 +396,25 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_custom_secrets_user ON custom_secrets(user_id);
     CREATE INDEX IF NOT EXISTS idx_custom_secrets_name ON custom_secrets(user_id, name);
   `);
+
+  // Audit logs for tracking user actions and security events
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS audit_logs (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      action TEXT NOT NULL,
+      resource_type TEXT,
+      resource_id TEXT,
+      details TEXT,
+      ip_address TEXT,
+      user_agent TEXT,
+      created_at INTEGER NOT NULL DEFAULT (strftime('%s', 'now') * 1000)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_user_created ON audit_logs(user_id, created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
+    CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
+  `);
 }
 
 /**
@@ -622,4 +641,93 @@ export interface PasswordReset {
   token: string;
   expires_at: string;
   created_at: string;
+}
+
+export interface AuditLog {
+  id: number;
+  user_id: string;
+  action: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  details: string | null;  // JSON string
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: number;  // milliseconds since epoch
+}
+
+export interface AuditEventParams {
+  userId: string;
+  action: string;
+  resourceType?: string;
+  resourceId?: string;
+  details?: Record<string, any>;
+  ipAddress?: string;
+  userAgent?: string;
+}
+
+/**
+ * Log an audit event to the audit_logs table
+ * 
+ * @param params - Audit event parameters
+ * @param params.userId - ID of the user performing the action
+ * @param params.action - Action type (e.g., 'login', 'app_create', 'secret_delete')
+ * @param params.resourceType - Type of resource affected (e.g., 'app', 'secret', 'session')
+ * @param params.resourceId - ID of the affected resource
+ * @param params.details - Additional metadata (stored as JSON)
+ * @param params.ipAddress - Client IP address
+ * @param params.userAgent - Client user agent string
+ */
+export function logAuditEvent(params: AuditEventParams): void {
+  const stmt = db!.prepare(`
+    INSERT INTO audit_logs (user_id, action, resource_type, resource_id, details, ip_address, user_agent, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  const created_at = Date.now();
+  const detailsJson = params.details ? JSON.stringify(params.details) : null;
+  
+  stmt.run(
+    params.userId,
+    params.action,
+    params.resourceType || null,
+    params.resourceId || null,
+    detailsJson,
+    params.ipAddress || null,
+    params.userAgent || null,
+    created_at
+  );
+}
+
+/**
+ * Get audit logs for a user, ordered by most recent first
+ * 
+ * @param userId - User ID to fetch logs for
+ * @param limit - Maximum number of logs to return (default 100)
+ * @param offset - Number of logs to skip (for pagination)
+ */
+export function getAuditLogs(userId: string, limit: number = 100, offset: number = 0): AuditLog[] {
+  const stmt = db!.prepare(`
+    SELECT * FROM audit_logs 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT ? OFFSET ?
+  `);
+  return stmt.all(userId, limit, offset) as AuditLog[];
+}
+
+/**
+ * Get audit logs for a specific resource
+ * 
+ * @param resourceType - Type of resource (e.g., 'app', 'secret')
+ * @param resourceId - ID of the resource
+ * @param limit - Maximum number of logs to return
+ */
+export function getResourceAuditLogs(resourceType: string, resourceId: string, limit: number = 100): AuditLog[] {
+  const stmt = db!.prepare(`
+    SELECT * FROM audit_logs 
+    WHERE resource_type = ? AND resource_id = ? 
+    ORDER BY created_at DESC 
+    LIMIT ?
+  `);
+  return stmt.all(resourceType, resourceId, limit) as AuditLog[];
 }
