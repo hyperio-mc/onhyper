@@ -113,8 +113,20 @@ import { Hono } from 'hono';
 import { storeSecret, listSecrets, deleteSecret, hasSecret, getSecretCount, createCustomSecret, listCustomSecrets, getCustomSecret, deleteCustomSecret, updateCustomSecret } from '../lib/secrets.js';
 import { getAuthUser } from '../middleware/auth.js';
 import { config } from '../config.js';
+import { logAuditEvent } from '../lib/db.js';
 
 const secrets = new Hono();
+
+/**
+ * Extract client IP and user agent from request
+ */
+function getRequestMetadata(c: Parameters<typeof getAuthUser>[0]): { ipAddress: string | undefined; userAgent: string | undefined } {
+  const forwardedFor = c.req.header('x-forwarded-for');
+  const realIp = c.req.header('x-real-ip');
+  const ip = forwardedFor?.split(',')[0].trim() || realIp || undefined;
+  const userAgent = c.req.header('user-agent') || undefined;
+  return { ipAddress: ip, userAgent };
+}
 
 /**
  * GET /api/secrets
@@ -177,6 +189,17 @@ secrets.post('/', async (c) => {
     // Store the secret
     const secret = await storeSecret(user.userId, name, value);
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'secret_create',
+      resourceType: 'secret',
+      resourceId: secret.id,
+      details: { secret_name: secret.name },
+      ...metadata,
+    });
+    
     return c.json({
       id: secret.id,
       name: secret.name,
@@ -218,6 +241,16 @@ secrets.delete('/:name', async (c) => {
   if (!deleted) {
     return c.json({ error: `Secret "${name}" not found` }, 404);
   }
+  
+  // Audit log
+  const metadata = getRequestMetadata(c);
+  logAuditEvent({
+    userId: user.userId,
+    action: 'secret_delete',
+    resourceType: 'secret',
+    details: { secret_name: name.toUpperCase() },
+    ...metadata,
+  });
   
   return c.json({
     deleted: true,
@@ -318,6 +351,17 @@ secrets.post('/custom', async (c) => {
       auth_header
     );
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'secret_create',
+      resourceType: 'custom_secret',
+      resourceId: secret.id,
+      details: { secret_name: secret.name, base_url: secret.base_url },
+      ...metadata,
+    });
+    
     return c.json({
       id: secret.id,
       name: secret.name,
@@ -394,6 +438,17 @@ secrets.put('/custom/:id', async (c) => {
       auth_header: auth_header !== undefined ? auth_header : undefined,
     });
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'secret_update',
+      resourceType: 'custom_secret',
+      resourceId: id,
+      details: { secret_name: secret.name },
+      ...metadata,
+    });
+    
     return c.json({
       id: secret.id,
       name: secret.name,
@@ -435,6 +490,17 @@ secrets.delete('/custom/:id', async (c) => {
   if (!deleted) {
     return c.json({ error: 'Custom secret not found' }, 404);
   }
+  
+  // Audit log
+  const metadata = getRequestMetadata(c);
+  logAuditEvent({
+    userId: user.userId,
+    action: 'secret_delete',
+    resourceType: 'custom_secret',
+    resourceId: id,
+    details: { secret_id: id },
+    ...metadata,
+  });
   
   return c.json({
     deleted: true,

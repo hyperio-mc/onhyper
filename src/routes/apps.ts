@@ -168,6 +168,18 @@ import {
   releaseSubdomain,
 } from '../lib/subdomains.js';
 import { getAppAnalytics, getUserAppsWithAnalytics } from '../lib/appAnalytics.js';
+import { logAuditEvent } from '../lib/db.js';
+
+/**
+ * Extract client IP and user agent from request
+ */
+function getRequestMetadata(c: Parameters<typeof getAuthUser>[0]): { ipAddress: string | undefined; userAgent: string | undefined } {
+  const forwardedFor = c.req.header('x-forwarded-for');
+  const realIp = c.req.header('x-real-ip');
+  const ip = forwardedFor?.split(',')[0].trim() || realIp || undefined;
+  const userAgent = c.req.header('user-agent') || undefined;
+  return { ipAddress: ip, userAgent };
+}
 
 const apps = new Hono();
 
@@ -231,6 +243,17 @@ apps.post('/', async (c) => {
     
     // Create the app
     const app = await createApp(user.userId, name, { html, css, js });
+    
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'app_create',
+      resourceType: 'app',
+      resourceId: app.id,
+      details: { app_name: app.name, app_slug: app.slug },
+      ...metadata,
+    });
     
     const baseUrl = config.baseUrl;
     
@@ -309,6 +332,17 @@ apps.put('/:id', async (c) => {
       return c.json({ error: 'App not found or access denied' }, 404);
     }
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'app_update',
+      resourceType: 'app',
+      resourceId: app.id,
+      details: { app_name: app.name, app_slug: app.slug },
+      ...metadata,
+    });
+    
     const baseUrl = config.baseUrl;
     
     return c.json({
@@ -343,6 +377,17 @@ apps.delete('/:id', async (c) => {
   if (!deleted) {
     return c.json({ error: 'App not found or access denied' }, 404);
   }
+  
+  // Audit log
+  const metadata = getRequestMetadata(c);
+  logAuditEvent({
+    userId: user.userId,
+    action: 'app_delete',
+    resourceType: 'app',
+    resourceId: id,
+    details: { app_id: id },
+    ...metadata,
+  });
   
   return c.json({ deleted: true });
 });
@@ -447,6 +492,17 @@ apps.post('/:id/publish', async (c) => {
     
     // Update app's subdomain field
     await updateAppSubdomain(appId, user.userId, normalizedSubdomain);
+    
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'app_publish',
+      resourceType: 'app',
+      resourceId: appId,
+      details: { app_name: app.name, app_slug: app.slug, subdomain: normalizedSubdomain },
+      ...metadata,
+    });
     
     return c.json({
       success: true,

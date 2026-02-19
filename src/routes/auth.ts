@@ -93,6 +93,18 @@ import { requireAuth } from '../middleware/auth.js';
 import { config } from '../config.js';
 import { identifyServerUser, trackServerEvent } from '../lib/analytics.js';
 import { sendWelcomeEmail, sendPasswordResetEmail, isEmailConfigured } from '../lib/email.js';
+import { logAuditEvent } from '../lib/db.js';
+
+/**
+ * Extract client IP and user agent from request
+ */
+function getRequestMetadata(c: Parameters<typeof requireAuth>[0]): { ipAddress: string | undefined; userAgent: string | undefined } {
+  const forwardedFor = c.req.header('x-forwarded-for');
+  const realIp = c.req.header('x-real-ip');
+  const ip = forwardedFor?.split(',')[0].trim() || realIp || undefined;
+  const userAgent = c.req.header('user-agent') || undefined;
+  return { ipAddress: ip, userAgent };
+}
 
 const auth = new Hono();
 
@@ -209,6 +221,14 @@ auth.post('/login', strictRateLimit, async (c) => {
       email: user.email,
     });
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.id,
+      action: 'login',
+      ...metadata,
+    });
+    
     // Generate JWT
     const token = generateToken(user);
     
@@ -320,6 +340,14 @@ auth.put('/password', requireAuth, async (c) => {
     // Update password
     await changeUserPassword(user.userId, currentPassword, newPassword);
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'password_change',
+      ...metadata,
+    });
+    
     return c.json({ success: true });
     
   } catch (error) {
@@ -366,6 +394,14 @@ auth.post('/forgot-password', strictRateLimit, async (c) => {
         message: 'If an account with that email exists, a reset link has been sent.' 
       });
     }
+    
+    // Audit log (only if user exists)
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: result.userId,
+      action: 'password_reset_request',
+      ...metadata,
+    });
     
     // Send password reset email
     if (isEmailConfigured()) {
@@ -445,6 +481,14 @@ auth.post('/reset-password', strictRateLimit, async (c) => {
     // Delete the used token
     deletePasswordResetToken(token);
     
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: tokenInfo.userId,
+      action: 'password_reset_complete',
+      ...metadata,
+    });
+    
     // Track password reset completion
     trackServerEvent(tokenInfo.userId, 'password_reset_completed', {
       email: tokenInfo.email,
@@ -506,6 +550,15 @@ auth.delete('/account', requireAuth, async (c) => {
     
     // Delete the account (validates password internally)
     await deleteUserAccount(user.userId, password);
+    
+    // Audit log (before tracking since user will be deleted)
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'account_delete',
+      details: { email: user.email, plan: user.plan },
+      ...metadata,
+    });
     
     // Track account deletion event
     trackServerEvent(user.userId, 'account_deleted', {
