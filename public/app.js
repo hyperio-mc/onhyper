@@ -706,6 +706,22 @@ function renderActivityLogs(logs) {
     'secret_delete': 'Deleted API key',
   };
   
+  const actionIcons = {
+    'login': '🔑',
+    'logout': '🚪',
+    'password_change': '🔐',
+    'password_reset_request': '📧',
+    'password_reset_complete': '🔓',
+    'account_delete': '🗑️',
+    'app_create': '✨',
+    'app_update': '✏️',
+    'app_delete': '❌',
+    'app_published': '🚀',
+    'secret_create': '🔐',
+    'secret_update': '🔐',
+    'secret_delete': '🔓',
+  };
+  
   function formatRelativeTime(dateStr) {
     const date = new Date(dateStr);
     const now = new Date();
@@ -724,11 +740,153 @@ function renderActivityLogs(logs) {
   return '<table class="activity-table">' +
     logs.map(log => `
       <tr>
+        <td class="activity-icon">${actionIcons[log.action] || '📋'}</td>
         <td class="activity-action">${actionLabels[log.action] || log.action}</td>
         <td class="activity-time">${formatRelativeTime(log.created_at)}</td>
       </tr>
     `).join('') +
     '</table>';
+}
+
+// Activity Timeline (dedicated tab)
+let activityTimelineOffset = 0;
+let activityTimelineHasMore = false;
+let activityTimelineFilter = { action: '', since: '' };
+
+async function loadActivityTimeline() {
+  const container = document.getElementById('activity-timeline');
+  if (!container) return;
+  
+  activityTimelineOffset = 0;
+  activityTimelineFilter.action = document.getElementById('activity-action-filter')?.value || '';
+  activityTimelineFilter.since = document.getElementById('activity-date-filter')?.value || '';
+  
+  const params = new URLSearchParams();
+  params.set('limit', '20');
+  params.set('offset', '0');
+  if (activityTimelineFilter.action) params.set('action', activityTimelineFilter.action);
+  if (activityTimelineFilter.since) params.set('since', activityTimelineFilter.since);
+  
+  try {
+    const result = await api(`/audit-logs?${params}`);
+    
+    if (!result.logs || result.logs.length === 0) {
+      container.innerHTML = '<p class="text-muted">No activity found</p>';
+      document.getElementById('load-more-activity-timeline').style.display = 'none';
+      return;
+    }
+    
+    activityTimelineOffset = result.logs.length;
+    activityTimelineHasMore = result.logs.length >= 20;
+    
+    container.innerHTML = renderActivityTimeline(result.logs);
+    document.getElementById('load-more-activity-timeline').style.display = activityTimelineHasMore ? 'inline-block' : 'none';
+  } catch (err) {
+    console.error('Failed to load activity timeline:', err);
+    container.innerHTML = '<p class="text-muted">Failed to load activity</p>';
+  }
+}
+
+async function loadMoreActivityTimeline() {
+  const container = document.getElementById('activity-timeline');
+  const btn = document.getElementById('load-more-activity-timeline');
+  if (!container || !btn) return;
+  
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  
+  const params = new URLSearchParams();
+  params.set('limit', '20');
+  params.set('offset', activityTimelineOffset.toString());
+  if (activityTimelineFilter.action) params.set('action', activityTimelineFilter.action);
+  if (activityTimelineFilter.since) params.set('since', activityTimelineFilter.since);
+  
+  try {
+    const result = await api(`/audit-logs?${params}`);
+    
+    if (result.logs && result.logs.length > 0) {
+      activityTimelineOffset += result.logs.length;
+      activityTimelineHasMore = result.logs.length >= 20;
+      
+      container.insertAdjacentHTML('beforeend', renderActivityTimeline(result.logs));
+    } else {
+      activityTimelineHasMore = false;
+    }
+    
+    btn.style.display = activityTimelineHasMore ? 'inline-block' : 'none';
+    btn.textContent = 'Load More';
+    btn.disabled = false;
+  } catch (err) {
+    console.error('Failed to load more activity:', err);
+    btn.textContent = 'Load More';
+    btn.disabled = false;
+  }
+}
+
+function filterActivity() {
+  loadActivityTimeline();
+}
+
+function renderActivityTimeline(logs) {
+  const actionLabels = {
+    'login': 'Logged in',
+    'logout': 'Logged out',
+    'password_change': 'Changed password',
+    'password_reset_request': 'Requested password reset',
+    'password_reset_complete': 'Reset password',
+    'account_delete': 'Deleted account',
+    'app_create': 'Created app',
+    'app_update': 'Updated app',
+    'app_delete': 'Deleted app',
+    'app_published': 'Published app',
+    'secret_create': 'Added API key',
+    'secret_update': 'Updated API key',
+    'secret_delete': 'Deleted API key',
+  };
+  
+  const actionIcons = {
+    'login': '🔑',
+    'logout': '🚪',
+    'password_change': '🔐',
+    'password_reset_request': '📧',
+    'password_reset_complete': '🔓',
+    'account_delete': '🗑️',
+    'app_create': '✨',
+    'app_update': '✏️',
+    'app_delete': '❌',
+    'app_published': '🚀',
+    'secret_create': '🔐',
+    'secret_update': '🔐',
+    'secret_delete': '🔓',
+  };
+  
+  function formatRelativeTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  }
+  
+  return '<div class="timeline">' +
+    logs.map(log => `
+      <div class="timeline-item">
+        <div class="timeline-icon">${actionIcons[log.action] || '📋'}</div>
+        <div class="timeline-content">
+          <div class="timeline-action">${actionLabels[log.action] || log.action}</div>
+          <div class="timeline-time">${formatRelativeTime(log.created_at)}</div>
+          ${log.details ? `<div class="timeline-details">${JSON.stringify(log.details)}</div>` : ''}
+        </div>
+      </div>
+    `).join('') +
+    '</div>';
 }
 
 async function toggleOnhyperApi(event) {
@@ -2289,6 +2447,11 @@ function switchTab(tabName) {
     loadKeys();
     loadCustomKeys();
   }
+  
+  // Load activity tab content
+  if (tabName === 'activity' && typeof loadActivityTimeline === 'function') {
+    loadActivityTimeline();
+  }
 }
 
 function initDashboardTabs() {
@@ -2296,7 +2459,7 @@ function initDashboardTabs() {
   const tab = url.searchParams.get('tab');
 
   // Validate tab name, default to 'apps'
-  const validTabs = ['apps', 'keys', 'settings'];
+  const validTabs = ['apps', 'keys', 'activity', 'settings'];
   const activeTab = validTabs.includes(tab) ? tab : 'apps';
 
   switchTab(activeTab);

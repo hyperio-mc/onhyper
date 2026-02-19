@@ -33,6 +33,9 @@
     <button class="tab" role="tab" aria-selected="false" data-tab="keys">
       Keys
     </button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="activity">
+      Activity
+    </button>
     <button class="tab" role="tab" aria-selected="false" data-tab="settings">
       Settings
     </button>
@@ -99,6 +102,38 @@
     </div>
 
     <button onclick="showAddCustomKeyModal()" class="btn-secondary">Add Custom API</button>
+  </div>
+
+  <div id="tab-activity" class="tab-panel" role="tabpanel">
+    <div class="activity-header">
+      <h2>Activity</h2>
+      <div class="activity-filters">
+        <select id="activity-action-filter" onchange="filterActivity()">
+          <option value="">All Actions</option>
+          <option value="login">Logins</option>
+          <option value="app_create">App Created</option>
+          <option value="app_update">App Updated</option>
+          <option value="app_delete">App Deleted</option>
+          <option value="secret_create">Key Added</option>
+          <option value="secret_delete">Key Deleted</option>
+          <option value="password_change">Password Changed</option>
+        </select>
+        <select id="activity-date-filter" onchange="filterActivity()">
+          <option value="">All Time</option>
+          <option value="1d">Last 24 Hours</option>
+          <option value="7d">Last 7 Days</option>
+          <option value="30d">Last 30 Days</option>
+        </select>
+      </div>
+    </div>
+    
+    <div id="activity-timeline">
+      <p>Loading...</p>
+    </div>
+    
+    <button id="load-more-activity-timeline" onclick="loadMoreActivityTimeline()" class="btn-secondary" style="display: none;">
+      Load More
+    </button>
   </div>
 
   <div id="tab-settings" class="tab-panel" role="tabpanel">
@@ -353,5 +388,108 @@
   text-align: right;
   color: var(--text-muted);
   font-size: 0.875rem;
+}
+
+/* Activity Timeline */
+.activity-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.activity-filters {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.activity-filters select {
+  padding: 0.5rem;
+  border: 1px solid var(--border-color, #e1e4e8);
+  border-radius: 4px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+}
+
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0.75rem;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--border-color, #e1e4e8);
+}
+
+.timeline-item {
+  position: relative;
+  padding-bottom: 1.5rem;
+}
+
+.timeline-item:last-child {
+  padding-bottom: 0;
+}
+
+.timeline-icon {
+  position: absolute;
+  left: -2rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  background: var(--bg-primary, #fff);
+  border: 2px solid var(--accent-color, #0066ff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  z-index: 1;
+}
+
+.timeline-content {
+  padding-left: 0.5rem;
+}
+
+.timeline-action {
+  font-weight: 500;
+}
+
+.timeline-time {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.timeline-details {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+  font-family: monospace;
+  background: var(--bg-alt);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+@media (max-width: 768px) {
+  .activity-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .activity-filters {
+    width: 100%;
+  }
+  
+  .activity-filters select {
+    flex: 1;
+  }
 }
 </style>

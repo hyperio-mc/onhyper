@@ -6,6 +6,32 @@
       "completedAt": "2026-02-19T10:17:00Z",
       "summary": "Added audit_logs table with all required columns (id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, created_at), created index on (user_id, created_at DESC) for fast queries, implemented logAuditEvent() helper function with TypeScript types, and tested with successful record insertion.",
       "commit": "761bdc8"
+    },
+    "task-057": {
+      "title": "Audit Log: Hook into Auth/Apps/Secrets actions",
+      "status": "completed",
+      "completedAt": "2026-02-19T10:30:00Z",
+      "summary": "Added logAuditEvent() calls to auth (login, password_change, password_reset_request, password_reset_complete, account_delete), apps (app_create, app_update, app_delete, app_publish), and secrets (secret_create, secret_update, secret_delete) handlers. Captures IP address and user-agent for all events.",
+      "commit": "5f7eef0"
+    },
+    "task-058": {
+      "title": "Audit Log: API Endpoint",
+      "status": "completed",
+      "completedAt": "2026-02-19T11:00:00Z",
+      "summary": "Added GET /api/audit-logs endpoint with pagination (?limit=50&offset=0), filters (?action=login&since=7d), returns logs sorted by created_at DESC.",
+      "commit": "f87741d"
+    },
+    "task-059": {
+      "title": "Audit Log: UI (MVP) - Settings Activity Section",
+      "status": "completed",
+      "completedAt": "2026-02-19T11:10:00Z",
+      "summary": "Added Activity section to Settings tab in dashboard showing last 20 events in table format with human-readable action labels and relative timestamps. Load More button for pagination.",
+      "commit": "f87741d"
+    },
+    "task-060": {
+      "title": "Audit Log: UI (Enhanced) - Activity Tab",
+      "status": "pending",
+      "summary": "Dedicated Activity tab in Dashboard with timeline view, filter by action type, date range filter, mobile-friendly responsive layout."
     }
   }
 }
