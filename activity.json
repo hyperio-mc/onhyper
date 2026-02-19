@@ -184,8 +184,13 @@
       "priority": "high",
       "description": "Use agent-browser to test full user flows: waitlist submission, signup, and login.",
       "completedAt": "2025-02-19",
-      "notes": "Fixed field name mismatches: projectDescription -> whatBuilding, referralCode -> referredBy"
       "notes": "All flows work: waitlist submits, signup creates account, login works. Minor: waitlist shows #undefined position."
+    },
+    "task-065": {
+      "title": "Update OnHyper skill docs with advanced patterns",
+      "status": "completed",
+      "priority": "high",
+      "description": "Update skill.html with slug resolution, X-App-Slug matching, response envelope handling, plan limits, and troubleshooting section."
     }
   }
 }

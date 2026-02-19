@@ -77,6 +77,14 @@ curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
       <li><code>https://{subdomain}.onhyper.io</code> (if subdomain claimed)</li>
     </ul>
 
+    <h3>Slug Resolution Behavior</h3>
+    <p class="note"><strong>Important:</strong> Requested slugs may be auto-suffixed if already taken (e.g., <code>my-app</code> → <code>my-app-a1b2c3d4</code>).</p>
+    <p>After creating or updating an app, call <code>GET /api/apps</code> to resolve the actual persisted slug. Use that exact slug for:</p>
+    <ul>
+      <li>Live URL: <code>/a/{slug}</code></li>
+      <li><code>X-App-Slug</code> header in proxy calls</li>
+    </ul>
+
     <h3>5. Custom Subdomains</h3>
     <p>Each user can claim <strong>one unique subdomain</strong> for their apps.</p>
     <p class="note"><strong>Note:</strong> Subdomains require a PRO plan or higher. Free users can only use path-based URLs (<code>/a/{slug}</code>).</p>
@@ -130,6 +138,10 @@ curl https://onhyper.io/api/subdomains/mine \
 
     <h3>Proxy Usage</h3>
     <p>Always include <code>X-App-Slug</code> header to identify your app:</p>
+    
+    <h4>X-App-Slug Must Match Actual Published Slug</h4>
+    <p class="note"><strong>Critical:</strong> Proxy auth/routing uses the app slug value. If an app was auto-suffixed at publish time and your frontend sends the original (unsuffixed) slug, proxy calls will fail with 401/404 errors.</p>
+    <p><strong>Recommendation:</strong> Derive the slug at runtime from the URL path when possible, rather than hardcoding it.</p>
     
     <h4>OpenAI</h4>
     <pre><code>fetch('https://onhyper.io/proxy/openai/v1/chat/completions', {
@@ -290,6 +302,16 @@ curl https://onhyper.io/api/subdomains/mine \
           <td>DELETE</td>
           <td>Release a subdomain</td>
         </tr>
+      </tbody>
+    </table>
+
+    <h3>Response Envelope Note</h3>
+    <p class="note">Some endpoints return object-wrapped arrays (e.g., <code>{ "apps": [...] }</code>) rather than raw arrays. Normalize your response handling to support all formats:</p>
+    <ul>
+      <li>Raw array: <code>[...]</code></li>
+      <li>Data wrapper: <code>{ "data": [...] }</code></li>
+      <li>Named wrapper: <code>{ "apps": [...] }</code></li>
+    </ul>
   </section>
 
   <section class="skill-section">
@@ -302,6 +324,9 @@ curl https://onhyper.io/api/subdomains/mine \
       </li>
       <li><strong>Handle rate limits</strong> — Free tier: 100 requests/day. Upgrade for higher limits.</li>
       <li><strong>Unique slugs</strong> — App slugs must be unique across the platform. Consider adding random suffix.</li>
+      <li><strong>Handle plan limits gracefully</strong> — Free tier may reject app creation with 403 (App limit reached). Fallback: update an existing app instead of creating new.</li>
+      <li><strong>Prefer snippet-style HTML upload</strong> — Use a single HTML snippet containing <code>&lt;style&gt;</code>, app root element, and <code>&lt;script&gt;</code> for maximum compatibility.</li>
+      <li><strong>Post-publish verification</strong> — Always verify: (1) URL returns 200, (2) proxy call returns 200, (3) one backend read + one AI call succeeds.</li>
     </ol>
   </section>
 
@@ -371,6 +396,41 @@ curl https://onhyper.io/api/subdomains/mine \
 &lt;/body&gt;
 &lt;/html&gt;</code></pre>
     <p>Upload this as your app's HTML content, set a unique slug, and publish. Your app is live with secure API access.</p>
+  </section>
+
+  <section class="skill-section">
+    <h2>Troubleshooting</h2>
+    <table class="api-table">
+      <thead>
+        <tr>
+          <th>Issue</th>
+          <th>Cause</th>
+          <th>Solution</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>404 on published URL</td>
+          <td>Slug mismatch</td>
+          <td>Verify actual slug from <code>GET /api/apps</code> — may be auto-suffixed</td>
+        </tr>
+        <tr>
+          <td>401 from proxy</td>
+          <td>Slug header mismatch</td>
+          <td>Confirm <code>X-App-Slug</code> exactly matches published slug</td>
+        </tr>
+        <tr>
+          <td>403 app creation</td>
+          <td>App limit reached</td>
+          <td>Update existing app or upgrade plan</td>
+        </tr>
+        <tr>
+          <td>App renders oddly</td>
+          <td>HTML structure issue</td>
+          <td>Switch to single-snippet HTML payload</td>
+        </tr>
+      </tbody>
+    </table>
   </section>
 </div>
 
