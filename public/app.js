@@ -145,7 +145,8 @@ function navigate(path) {
 
 function getCurrentPath() {
   const hash = window.location.hash.slice(1) || '/';
-  return hash;
+  // Strip query string for routing (query params are parsed separately in page handlers)
+  return hash.split('?')[0];
 }
 
 // API Helpers
