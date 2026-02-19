@@ -13,6 +13,19 @@
         "Existing subdomain reservations from free users should be released on next publish attempt"
       ]
     },
+    "task-062": {
+      "title": "Implement feature flag system",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Add a feature flag system to enable/disable features without deploying code. Useful for gradual rollouts, A/B testing, and beta features.",
+      "successCriteria": [
+        "Database table for feature flags (name, enabled, rollout_percentage, user_tiers)",
+        "API endpoint to check feature status for current user",
+        "Frontend helper to check if feature is enabled",
+        "Support per-plan restrictions (free vs pro features)",
+        "Support gradual rollout percentage"
+      ]
+    },
     "task-056": {
       "title": "Audit Log: Schema + Write Layer",
       "status": "completed",
