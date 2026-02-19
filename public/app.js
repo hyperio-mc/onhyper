@@ -262,6 +262,27 @@ function initMobileNav() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeMobileNav();
   });
+  
+  // Event delegation for data-action buttons
+  document.addEventListener('click', (e) => {
+    const target = e.target.closest('[data-action]');
+    if (!target) return;
+    
+    const action = target.dataset.action;
+    const appId = target.dataset.appId;
+    
+    switch (action) {
+      case 'delete-app':
+        if (appId) deleteApp(appId);
+        break;
+      case 'edit-app':
+        if (appId) editApp(appId);
+        break;
+      case 'show-app-analytics':
+        if (appId) showAppAnalytics(appId);
+        break;
+    }
+  });
 }
 
 // Page-specific handlers
@@ -426,9 +447,18 @@ function setupResetPasswordForm() {
   const form = document.getElementById('reset-password-form');
   if (!form) return;
   
-  // Get token from URL query parameter
-  const urlParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
-  const token = urlParams.get('token');
+  // Get token from URL - check both hash (SPA routing) and search (direct URL access)
+  let token = null;
+  
+  // First check hash (for SPA navigation: #/reset-password?token=xyz)
+  const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+  token = hashParams.get('token');
+  
+  // If not in hash, check search query (for direct access: /reset-password?token=xyz)
+  if (!token) {
+    const searchParams = new URLSearchParams(window.location.search);
+    token = searchParams.get('token');
+  }
   
   if (!token) {
     // No token, show error
@@ -1048,9 +1078,9 @@ async function loadApps() {
                 ` : ''}
               </div>
               <div class="app-card-actions">
-                <button onclick="editApp('${app.id}')" class="btn-secondary">Edit</button>
-                <button onclick="showAppAnalytics('${app.id}')" class="btn-secondary">Stats</button>
-                <button onclick="deleteApp('${app.id}')" class="btn-danger">Delete</button>
+                <button data-action="edit-app" data-app-id="${app.id}" class="btn-secondary">Edit</button>
+                <button data-action="show-app-analytics" data-app-id="${app.id}" class="btn-secondary">Stats</button>
+                <button data-action="delete-app" data-app-id="${app.id}" class="btn-danger">Delete</button>
               </div>
             </div>
           `}).join('')}
