@@ -46,73 +46,73 @@
           "id": "062-01",
           "title": "Create feature_flags table in database",
           "description": "Add SQLite table with columns: id, name, display_name, description, enabled, rollout_percentage, min_plan_tier, custom_rules (JSON), created_at, updated_at. Add unique index on name.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-02",
           "title": "Create user_feature_overrides table",
           "description": "Add table for per-user overrides: id, user_id, feature_name, enabled, reason, expires_at, created_at. Add FK and unique index.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-03",
           "title": "Define PLAN_TIERS constant and helper functions",
           "description": "Create PLAN_TIERS constant (FREE=0, HOBBY=1, PRO=2, BUSINESS=3) and isPlanAtLeast() helper for comparing plan tiers.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-04",
           "title": "Create lib/features.ts module",
           "description": "Build core module with: getFeatureFlag(), isFeatureEnabled(), checkCustomRules(). Decision logic: global enabled → rollout % → plan tier → custom rules → user overrides.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-05",
           "title": "Implement rollout percentage logic",
           "description": "Add deterministic rollout based on user ID hash (userId hash mod 100). Same user always gets same result.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-06",
           "title": "Implement custom rules engine",
           "description": "Support JSON rules with conditions: subdomain_length, account_age_days, has_apps. Operators: <, <=, >, >=, ==, !=.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-07",
           "title": "Create feature flag CRUD functions",
           "description": "Implement: createFeatureFlag, updateFeatureFlag, deleteFeatureFlag, listFeatureFlags, setUserOverride, removeUserOverride.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-08",
           "title": "Create GET /api/features endpoint",
           "description": "Public endpoint returning all flags with enabled status for current user. Response time < 50ms with caching.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-09",
           "title": "Create GET /api/features/:name endpoint",
           "description": "Detailed flag status with reason field (plan_tier_met, rollout, user_override, etc.).",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-10",
           "title": "Create admin feature management API",
           "description": "Protected endpoints: POST/PUT/DELETE /api/admin/features, override management. Add audit logging.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-11",
           "title": "Define subdomains feature flag",
           "description": "Seed feature flag: name='subdomains', min_plan_tier='PRO', enabled=true. Also seed 'short_subdomains' with custom_rules for <6 chars requiring PRO+.",
-          "status": "pending"
+          "status": "completed"
         },
         {
           "id": "062-12",
           "title": "Update subdomain claiming to use feature flags",
           "description": "Modify src/routes/apps.ts POST /:id/publish to check isFeatureEnabled('subdomains') before allowing subdomain claim. Check custom_rules for short subdomain length.",
-          "status": "pending"
+          "status": "completed"
         }
       ]
     },
