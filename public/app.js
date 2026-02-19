@@ -2359,7 +2359,7 @@ function showShortcutsHelp() {
 
 // Copy agent prompt to clipboard
 async function copyAgentPrompt() {
-  const prompt = 'Read the OnHyper skill at https://onhyper.io/#/skill and help me build an app that securely calls AI APIs.';
+  const prompt = 'Read the OnHyper skill at https://onhyper.io/pages/skill.html and ask me what kind of app I would like to build, then interview me to create a product plan';
   
   try {
     await navigator.clipboard.writeText(prompt);
