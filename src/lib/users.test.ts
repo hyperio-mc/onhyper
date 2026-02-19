@@ -16,8 +16,10 @@ import {
   getApiKeyByKey,
   listApiKeysByUser,
   deleteApiKey,
+  deleteUserAccount,
 } from './users.js';
 import { initDatabase, closeDatabase, getDatabase, enableTestMode, resetDatabase } from './db.js';
+import { initLMDB, closeLMDB } from './lmdb.js';
 
 describe('users', () => {
   beforeEach(() => {
@@ -25,10 +27,14 @@ describe('users', () => {
     enableTestMode();
     resetDatabase();
     initDatabase();
+    
+    // Initialize LMDB for tests that need it (deleteUserAccount)
+    initLMDB();
   });
 
-  afterEach(() => {
+  afterEach(async () => {
     closeDatabase();
+    await closeLMDB();
   });
 
   describe('createUser', () => {
@@ -278,6 +284,137 @@ describe('users', () => {
       // Key should still exist
       const keys2After = listApiKeysByUser(user2.id);
       expect(keys2After).toHaveLength(1);
+    });
+  });
+
+  describe('deleteUserAccount', () => {
+    it('should delete user with correct password', async () => {
+      const user = await createUser('delete-test@example.com', 'password123');
+      
+      // User should exist
+      expect(getUserById(user.id)).not.toBeNull();
+      
+      // Delete account
+      const result = await deleteUserAccount(user.id, 'password123');
+      
+      expect(result).toBe(true);
+      
+      // User should no longer exist
+      expect(getUserById(user.id)).toBeNull();
+    });
+
+    it('should reject deletion with wrong password', async () => {
+      const user = await createUser('delete-wrong@example.com', 'password123');
+      
+      await expect(deleteUserAccount(user.id, 'wrongpassword'))
+        .rejects.toThrow('Current password is incorrect');
+      
+      // User should still exist
+      expect(getUserById(user.id)).not.toBeNull();
+    });
+
+    it('should throw error for non-existent user', async () => {
+      await expect(deleteUserAccount('non-existent-id', 'password123'))
+        .rejects.toThrow('User not found');
+    });
+
+    it('should cascade delete API keys', async () => {
+      const user = await createUser('delete-apikeys@example.com', 'password123');
+      
+      // Create multiple API keys
+      await createApiKey(user.id, user.plan);
+      await createApiKey(user.id, user.plan);
+      
+      expect(listApiKeysByUser(user.id)).toHaveLength(2);
+      
+      // Delete account
+      await deleteUserAccount(user.id, 'password123');
+      
+      // API keys should be deleted (returns empty array)
+      expect(listApiKeysByUser(user.id)).toHaveLength(0);
+    });
+
+    it('should cascade delete user settings', async () => {
+      const user = await createUser('delete-settings@example.com', 'password123');
+      const db = getDatabase();
+      
+      // Create user settings
+      db.prepare('INSERT INTO user_settings (user_id, onhyper_api_enabled) VALUES (?, 1)').run(user.id);
+      
+      // Settings should exist
+      const settingsBefore = db.prepare('SELECT * FROM user_settings WHERE user_id = ?').get(user.id);
+      expect(settingsBefore).toBeDefined();
+      
+      // Delete account
+      await deleteUserAccount(user.id, 'password123');
+      
+      // Settings should be deleted
+      const settingsAfter = db.prepare('SELECT * FROM user_settings WHERE user_id = ?').get(user.id);
+      expect(settingsAfter).toBeUndefined();
+    });
+
+    it('should cascade delete apps', async () => {
+      const user = await createUser('delete-apps@example.com', 'password123');
+      const db = getDatabase();
+      
+      // Create an app
+      const appId = 'test-app-id';
+      db.prepare(`
+        INSERT INTO apps (id, user_id, name, slug, created_at, updated_at)
+        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+      `).run(appId, user.id, 'Test App', 'test-app-slug');
+      
+      // App should exist
+      const appBefore = db.prepare('SELECT * FROM apps WHERE id = ?').get(appId);
+      expect(appBefore).toBeDefined();
+      
+      // Delete account
+      await deleteUserAccount(user.id, 'password123');
+      
+      // App should be deleted
+      const appAfter = db.prepare('SELECT * FROM apps WHERE id = ?').get(appId);
+      expect(appAfter).toBeUndefined();
+    });
+
+    it('should cascade delete secrets', async () => {
+      const user = await createUser('delete-secrets@example.com', 'password123');
+      const db = getDatabase();
+      
+      // Create a secret
+      db.prepare(`
+        INSERT INTO secrets (id, user_id, name, value_encrypted, iv, salt, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+      `).run('secret-id', user.id, 'test-secret', 'encrypted-value', 'iv', 'salt');
+      
+      // Secret should exist
+      const secretBefore = db.prepare('SELECT * FROM secrets WHERE user_id = ?').get(user.id);
+      expect(secretBefore).toBeDefined();
+      
+      // Delete account
+      await deleteUserAccount(user.id, 'password123');
+      
+      // Secret should be deleted
+      const secretAfter = db.prepare('SELECT * FROM secrets WHERE user_id = ?').get(user.id);
+      expect(secretAfter).toBeUndefined();
+    });
+
+    it('should not affect other users\' data', async () => {
+      const user1 = await createUser('keep-user@example.com', 'password123');
+      const user2 = await createUser('delete-user@example.com', 'password123');
+      
+      // Create API key for user1
+      await createApiKey(user1.id, user1.plan);
+      
+      // Delete user2's account
+      await deleteUserAccount(user2.id, 'password123');
+      
+      // user1's API key should still exist
+      expect(listApiKeysByUser(user1.id)).toHaveLength(1);
+      expect(getUserById(user1.id)).not.toBeNull();
+      
+      // user2 should be deleted
+      expect(getUserById(user2.id)).toBeNull();
+      expect(listApiKeysByUser(user2.id)).toHaveLength(0);
     });
   });
 });

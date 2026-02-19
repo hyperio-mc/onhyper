@@ -461,4 +461,73 @@ auth.post('/reset-password', strictRateLimit, async (c) => {
   }
 });
 
+/**
+ * DELETE /api/auth/account
+ * Delete the current user's account and all associated data.
+ * 
+ * Requires password confirmation for security.
+ * Cascades to delete: apps, secrets, api_keys, sessions, user_settings, etc.
+ * 
+ * **Headers:** `Authorization: Bearer <token>`
+ * 
+ * **Request Body:**
+ * ```json
+ * { "password": "currentpassword" }
+ * ```
+ * 
+ * **Response (200):**
+ * ```json
+ * { "success": true, "message": "Account deleted successfully" }
+ * ```
+ * 
+ * **Errors:**
+ * - 400: Missing password
+ * - 401: Not authenticated or incorrect password
+ * - 500: Failed to delete account
+ */
+auth.delete('/account', requireAuth, async (c) => {
+  try {
+    const user = c.get('user');
+    
+    if (!user) {
+      return c.json({ error: 'Not authenticated' }, 401);
+    }
+    
+    const body = await c.req.json();
+    const { password } = body;
+    
+    // Validate password is provided
+    if (!password) {
+      return c.json({ error: 'Password is required to delete account' }, 400);
+    }
+    
+    // Import deleteUserAccount dynamically to avoid circular dependency
+    const { deleteUserAccount } = await import('../lib/users.js');
+    
+    // Delete the account (validates password internally)
+    await deleteUserAccount(user.userId, password);
+    
+    // Track account deletion event
+    trackServerEvent(user.userId, 'account_deleted', {
+      email: user.email,
+      plan: user.plan,
+    });
+    
+    return c.json({ 
+      success: true, 
+      message: 'Account deleted successfully' 
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to delete account';
+    
+    // Map specific errors to status codes
+    if (message.includes('incorrect') || message.includes('not found')) {
+      return c.json({ error: 'Incorrect password' }, 401);
+    }
+    
+    return c.json({ error: message }, 500);
+  }
+});
+
 export { auth };

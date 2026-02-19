@@ -414,3 +414,59 @@ export async function changeUserPassword(userId: string, currentPassword: string
   
   return true;
 }
+
+/**
+ * Delete a user's account and all associated data
+ * Validates the current password before deletion
+ * Cascades to delete: apps, secrets, api_keys, password_resets, user_settings, LMDB data
+ * @param userId The user's ID
+ * @param currentPassword The user's current password for verification
+ * @returns true if successful, throws error if validation fails
+ */
+export async function deleteUserAccount(userId: string, currentPassword: string): Promise<boolean> {
+  const db = getDatabase();
+  
+  // Get the user
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId) as User | undefined;
+  if (!user) {
+    throw new Error('User not found');
+  }
+  
+  // Validate current password
+  const validPassword = await bcrypt.compare(currentPassword, user.password_hash);
+  if (!validPassword) {
+    throw new Error('Current password is incorrect');
+  }
+  
+  // Get user's apps before deleting (for LMDB cleanup)
+  const apps = db.prepare('SELECT id FROM apps WHERE user_id = ?').all(userId) as { id: string }[];
+  
+  // Delete user_settings (doesn't have CASCADE)
+  db.prepare('DELETE FROM user_settings WHERE user_id = ?').run(userId);
+  
+  // Delete subdomain_reservations (has CASCADE but explicit is cleaner)
+  db.prepare('DELETE FROM subdomain_reservations WHERE owner_id = ?').run(userId);
+  
+  // Delete the user (CASCADE will handle: apps, secrets, api_keys, custom_secrets, password_resets)
+  // Apps CASCADE will handle: app_analytics, app_analytics_daily
+  const result = db.prepare('DELETE FROM users WHERE id = ?').run(userId);
+  
+  // Clean up LMDB - import dynamically to avoid circular dependency
+  const { AppContentStore, AppMetaStore, getLMDB, LMDB_KEYS } = await import('./lmdb.js');
+  
+  // Delete app content and metadata from LMDB
+  for (const app of apps) {
+    await AppContentStore.delete(app.id);
+    await AppMetaStore.delete(app.id);
+  }
+  
+  // Delete user's app list from LMDB
+  const lmdb = getLMDB();
+  try {
+    await lmdb.remove(LMDB_KEYS.userApps(userId));
+  } catch {
+    // Key might not exist, ignore error
+  }
+  
+  return result.changes > 0;
+}
