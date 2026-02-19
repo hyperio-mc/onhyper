@@ -624,6 +624,111 @@ async function loadSettings() {
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
+  
+  // Load activity
+  loadActivity();
+}
+
+// Activity state
+let activityOffset = 0;
+let activityHasMore = false;
+
+async function loadActivity() {
+  const container = document.getElementById('activity-list');
+  if (!container) return;
+  
+  activityOffset = 0;
+  
+  try {
+    const result = await api('/audit-logs?limit=20&offset=0');
+    
+    if (!result.logs || result.logs.length === 0) {
+      container.innerHTML = '<p class="text-muted">No recent activity</p>';
+      document.getElementById('load-more-activity').style.display = 'none';
+      return;
+    }
+    
+    activityOffset = result.logs.length;
+    activityHasMore = result.logs.length >= 20;
+    
+    container.innerHTML = renderActivityLogs(result.logs);
+    document.getElementById('load-more-activity').style.display = activityHasMore ? 'inline-block' : 'none';
+  } catch (err) {
+    console.error('Failed to load activity:', err);
+    container.innerHTML = '<p class="text-muted">Failed to load activity</p>';
+  }
+}
+
+async function loadMoreActivity() {
+  const container = document.getElementById('activity-list');
+  const btn = document.getElementById('load-more-activity');
+  if (!container || !btn) return;
+  
+  btn.textContent = 'Loading...';
+  btn.disabled = true;
+  
+  try {
+    const result = await api(`/audit-logs?limit=20&offset=${activityOffset}`);
+    
+    if (result.logs && result.logs.length > 0) {
+      activityOffset += result.logs.length;
+      activityHasMore = result.logs.length >= 20;
+      
+      container.insertAdjacentHTML('beforeend', renderActivityLogs(result.logs));
+    } else {
+      activityHasMore = false;
+    }
+    
+    btn.style.display = activityHasMore ? 'inline-block' : 'none';
+    btn.textContent = 'Load More';
+    btn.disabled = false;
+  } catch (err) {
+    console.error('Failed to load more activity:', err);
+    btn.textContent = 'Load More';
+    btn.disabled = false;
+  }
+}
+
+function renderActivityLogs(logs) {
+  const actionLabels = {
+    'login': 'Logged in',
+    'logout': 'Logged out',
+    'password_change': 'Changed password',
+    'password_reset_request': 'Requested password reset',
+    'password_reset_complete': 'Reset password',
+    'account_delete': 'Deleted account',
+    'app_create': 'Created app',
+    'app_update': 'Updated app',
+    'app_delete': 'Deleted app',
+    'app_published': 'Published app',
+    'secret_create': 'Added API key',
+    'secret_update': 'Updated API key',
+    'secret_delete': 'Deleted API key',
+  };
+  
+  function formatRelativeTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return date.toLocaleDateString();
+  }
+  
+  return '<table class="activity-table">' +
+    logs.map(log => `
+      <tr>
+        <td class="activity-action">${actionLabels[log.action] || log.action}</td>
+        <td class="activity-time">${formatRelativeTime(log.created_at)}</td>
+      </tr>
+    `).join('') +
+    '</table>';
 }
 
 async function toggleOnhyperApi(event) {

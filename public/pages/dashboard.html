@@ -138,6 +138,17 @@
         <button type="submit" class="btn-primary">Update Password</button>
       </form>
     </div>
+
+    <div class="settings-section">
+      <h3>Activity</h3>
+      <p class="text-muted">Recent account activity and actions.</p>
+      <div id="activity-list">
+        <p>Loading...</p>
+      </div>
+      <button id="load-more-activity" onclick="loadMoreActivity()" class="btn-secondary" style="display: none;">
+        Load More
+      </button>
+    </div>
   </div>
 </div>
 
@@ -313,5 +324,34 @@
   flex: 1;
   min-width: 60px;
   text-align: center;
+}
+
+/* Activity Table */
+.activity-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.activity-table tr {
+  border-bottom: 1px solid var(--border-color, #e1e4e8);
+}
+
+.activity-table tr:last-child {
+  border-bottom: none;
+}
+
+.activity-table td {
+  padding: 0.75rem 0;
+}
+
+.activity-action {
+  font-weight: 500;
+}
+
+.activity-time {
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 </style>

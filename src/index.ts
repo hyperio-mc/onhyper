@@ -25,6 +25,7 @@ import { blog } from './routes/blog.js';
 import { chat } from './routes/chat.js';
 import { subdomains } from './routes/subdomains.js';
 import { settings } from './routes/settings.js';
+import { audit } from './routes/audit.js';
 import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { subdomainRouter } from './middleware/subdomain.js';
@@ -148,6 +149,7 @@ protectedApi.use('*', requireAuth);
 protectedApi.route('/secrets', secrets);
 protectedApi.route('/apps', apps);
 protectedApi.route('/dashboard', dashboard);
+protectedApi.route('/audit-logs', audit);
 app.route('/api', protectedApi);
 
 // Proxy routes (uses own auth mechanism)
