@@ -194,7 +194,7 @@
     },
     "task-066": {
       "title": "Research: Leverage Hyper API with Railway adapters",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "medium",
       "description": "Research hyper63/hyper repo to understand their API, then create a proposal to build adapters for data, cache, and other backend services on Railway if supported.",
       "successCriteria": [
