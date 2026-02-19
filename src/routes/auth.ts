@@ -345,6 +345,16 @@ auth.post('/forgot-password', strictRateLimit, async (c) => {
       return c.json({ error: 'Email is required' }, 400);
     }
     
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      // Return success to prevent email enumeration, but don't process invalid emails
+      return c.json({ 
+        success: true, 
+        message: 'If an account with that email exists, a reset link has been sent.' 
+      });
+    }
+    
     // Create reset token (returns null if user doesn't exist)
     const result = createPasswordResetToken(email);
     
@@ -394,21 +404,17 @@ auth.post('/forgot-password', strictRateLimit, async (c) => {
 /**
  * POST /api/auth/reset-password
  * Reset password using token from email
+ * 
+ * If only token is provided (no password), validates the token and returns its status.
+ * This allows the frontend to check token validity before showing the password form.
  */
 auth.post('/reset-password', strictRateLimit, async (c) => {
   try {
     const body = await c.req.json();
     const { token, password } = body;
     
-    if (!token || !password) {
-      return c.json({ error: 'Token and new password are required' }, 400);
-    }
-    
-    // Validate password complexity
-    if (password.length < config.auth.minPasswordLength) {
-      return c.json({ 
-        error: `Password must be at least ${config.auth.minPasswordLength} characters` 
-      }, 400);
+    if (!token) {
+      return c.json({ error: 'Token is required' }, 400);
     }
     
     // Validate the reset token
@@ -416,6 +422,21 @@ auth.post('/reset-password', strictRateLimit, async (c) => {
     
     if (!tokenInfo) {
       return c.json({ error: 'Invalid or expired reset token' }, 400);
+    }
+    
+    // If no password provided, just validate the token
+    if (!password) {
+      return c.json({ 
+        valid: true, 
+        message: 'Token is valid' 
+      });
+    }
+    
+    // Validate password complexity
+    if (password.length < config.auth.minPasswordLength) {
+      return c.json({ 
+        error: `Password must be at least ${config.auth.minPasswordLength} characters` 
+      }, 400);
     }
     
     // Update the password

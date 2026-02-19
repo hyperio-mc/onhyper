@@ -438,14 +438,60 @@ function setupResetPasswordForm() {
         <p>This password reset link is invalid. Please request a new one.</p>
       `;
     }
+    // Hide the form
+    form.style.display = 'none';
     return;
   }
   
-  // Store token in hidden field
-  const tokenInput = document.getElementById('token');
-  if (tokenInput) {
-    tokenInput.value = token;
+  // Hide form until we validate the token
+  form.style.display = 'none';
+  
+  // Show loading state
+  const heroSection = document.querySelector('.hero');
+  const loadingIndicator = document.createElement('p');
+  loadingIndicator.id = 'token-validation-loading';
+  loadingIndicator.textContent = 'Validating reset link...';
+  loadingIndicator.style.textAlign = 'center';
+  if (heroSection && heroSection.nextSibling) {
+    heroSection.parentNode.insertBefore(loadingIndicator, heroSection.nextSibling);
+  } else if (heroSection) {
+    heroSection.appendChild(loadingIndicator);
   }
+  
+  // Validate token with backend
+  api('/auth/reset-password', {
+    method: 'POST',
+    body: JSON.stringify({ token })
+  })
+    .then(result => {
+      // Remove loading indicator
+      const loading = document.getElementById('token-validation-loading');
+      if (loading) loading.remove();
+      
+      if (result.valid) {
+        // Token is valid, show the form
+        form.style.display = 'block';
+        const tokenInput = document.getElementById('token');
+        if (tokenInput) {
+          tokenInput.value = token;
+        }
+      }
+    })
+    .catch(err => {
+      // Remove loading indicator
+      const loading = document.getElementById('token-validation-loading');
+      if (loading) loading.remove();
+      
+      // Token is invalid, show error
+      const container = document.querySelector('.hero');
+      if (container) {
+        container.innerHTML = `
+          <h1>Invalid or Expired Link</h1>
+          <p>This password reset link is invalid or has expired. Please request a new one.</p>
+        `;
+      }
+      // Keep form hidden
+    });
   
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
