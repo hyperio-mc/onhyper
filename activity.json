@@ -1,5 +1,18 @@
 {
   "tasks": {
+    "task-061": {
+      "title": "Restrict subdomains to paid plans only",
+      "status": "pending",
+      "priority": "high",
+      "description": "Subdomains should require a paid (PRO) account. Free users can only use path-based URLs. Also restrict subdomains shorter than 6 characters to PRO+ only.",
+      "successCriteria": [
+        "Free tier users cannot claim subdomains - only get path-based URLs (/a/{slug})",
+        "PRO tier and above can claim subdomains",
+        "Subdomains with < 6 characters require PRO+ (e.g., 'app' blocked, 'myapp' allowed)",
+        "Update pricing page to reflect subdomain restriction",
+        "Existing subdomain reservations from free users should be released on next publish attempt"
+      ]
+    },
     "task-056": {
       "title": "Audit Log: Schema + Write Layer",
       "status": "completed",
@@ -30,8 +43,10 @@
     },
     "task-060": {
       "title": "Audit Log: UI (Enhanced) - Activity Tab",
-      "status": "pending",
-      "summary": "Dedicated Activity tab in Dashboard with timeline view, filter by action type, date range filter, mobile-friendly responsive layout."
+      "status": "completed",
+      "completedAt": "2026-02-19T11:15:00Z",
+      "summary": "Dedicated Activity tab in Dashboard with timeline view, icons per action type, filter by action type (dropdown), date range filter (1d/7d/30d), mobile-friendly responsive layout.",
+      "commit": "34f7689"
     }
   }
 }
