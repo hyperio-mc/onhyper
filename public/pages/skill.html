@@ -46,11 +46,11 @@
     <p>Store API keys securely via dashboard or API:</p>
     <pre><code># List stored secrets
 curl https://onhyper.io/api/secrets \
-  -H "Authorization: Bearer &lt;session_token&gt;"
+  -H "X-API-Key: oh_live_&lt;session_token&gt;"
 
 # Store a new secret
 curl -X POST https://onhyper.io/api/secrets \
-  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "X-API-Key: oh_live_&lt;session_token&gt;" \
   -H "Content-Type: application/json" \
   -d '{"provider": "openai", "key": "sk-..."}'</code></pre>
     <p>Supported providers: <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>scoutos</code>, <code>ollama</code></p>
@@ -62,13 +62,13 @@ curl -X POST https://onhyper.io/api/secrets \
     <p>Via API:</p>
     <pre><code># Create app
 curl -X POST https://onhyper.io/api/apps \
-  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "X-API-Key: oh_live_&lt;session_token&gt;" \
   -H "Content-Type: application/json" \
   -d '{"name": "My App", "slug": "my-app", "html": "&lt;html&gt;...&lt;/html&gt;"}'
 
 # Publish app (optionally with a subdomain)
 curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
-  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "X-API-Key: oh_live_&lt;session_token&gt;" \
   -H "Content-Type: application/json" \
   -d '{"subdomain": "my-app"}'</code></pre>
     <p>App becomes available at:</p>
@@ -79,19 +79,20 @@ curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
 
     <h3>5. Custom Subdomains</h3>
     <p>Each user can claim <strong>one unique subdomain</strong> for their apps.</p>
+    <p class="note"><strong>Note:</strong> Subdomains require a PRO plan or higher. Free users can only use path-based URLs (<code>/a/{slug}</code>).</p>
     <pre><code># Check availability
 curl "https://onhyper.io/api/subdomains/check?name=my-app"
 
 # Claim a subdomain
 curl -X POST https://onhyper.io/api/subdomains/claim \
-  -H "Authorization: Bearer &lt;session_token&gt;" \
+  -H "X-API-Key: oh_live_&lt;session_token&gt;" \
   -H "Content-Type: application/json" \
   -d '{"subdomain": "my-app"}'
 
 # List your subdomains
 curl https://onhyper.io/api/subdomains/mine \
-  -H "Authorization: Bearer &lt;session_token&gt;"</code></pre>
-    <p class="note"><strong>Rules:</strong> 3-63 chars, lowercase letters/numbers/hyphens only. Reserved names (api, www, admin, blog) are blocked.</p>
+  -H "X-API-Key: oh_live_&lt;session_token&gt;"</code></pre>
+    <p class="note"><strong>Rules:</strong> PRO plan required for subdomains. Short subdomains (&lt;6 chars) require BUSINESS plan. 3-63 chars, lowercase letters/numbers/hyphens only. Reserved names (api, www, admin, blog) are blocked.</p>
   </section>
 
   <section class="skill-section">
