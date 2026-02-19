@@ -13,6 +13,7 @@ import { config, validateProductionSecrets } from './config.js';
 import { initDatabase, closeDatabase } from './lib/db.js';
 import { initLMDB, closeLMDB } from './lib/lmdb.js';
 import { shutdownAnalytics } from './lib/analytics.js';
+import { seedDefaultFeatureFlags } from './lib/features.js';
 import { auth } from './routes/auth.js';
 import { secrets } from './routes/secrets.js';
 import { apps } from './routes/apps.js';
@@ -26,7 +27,8 @@ import { chat } from './routes/chat.js';
 import { subdomains } from './routes/subdomains.js';
 import { settings } from './routes/settings.js';
 import { audit } from './routes/audit.js';
-import { requireAuth } from './middleware/auth.js';
+import { featuresRouter, adminFeaturesRouter } from './routes/features.js';
+import { requireAuth, requireAdminAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { subdomainRouter } from './middleware/subdomain.js';
 
@@ -140,6 +142,9 @@ app.route('/api/waitlist', waitlist);
 // Subdomain routes (mixed public/protected - handled in-module)
 app.route('/api/subdomains', subdomains);
 
+// Feature flag routes (public, requires auth)
+app.route('/api/features', featuresRouter);
+
 // Settings routes (uses own auth - supports JWT and API key)
 app.route('/api/settings', settings);
 
@@ -151,6 +156,11 @@ protectedApi.route('/apps', apps);
 protectedApi.route('/dashboard', dashboard);
 protectedApi.route('/audit-logs', audit);
 app.route('/api', protectedApi);
+
+// Admin API routes (require admin key - uses requireAdminAuth in routes)
+
+// Admin API routes (require admin key - uses requireAdminAuth in routes)
+app.route('/api/admin/features', adminFeaturesRouter);
 
 // Proxy routes (uses own auth mechanism)
 app.route('/proxy', proxy);
@@ -228,6 +238,9 @@ async function main() {
     initLMDB();
     console.log(`SQLite database: ${config.sqlitePath}`);
     console.log(`LMDB database: ${config.lmdbPath}`);
+    
+    // Seed default feature flags
+    seedDefaultFeatureFlags();
 
     const port = config.port;
     const host = config.host;

@@ -169,6 +169,7 @@ import {
 } from '../lib/subdomains.js';
 import { getAppAnalytics, getUserAppsWithAnalytics } from '../lib/appAnalytics.js';
 import { logAuditEvent } from '../lib/db.js';
+import { isFeatureEnabled } from '../lib/features.js';
 
 /**
  * Extract client IP and user agent from request
@@ -455,6 +456,29 @@ apps.post('/:id/publish', async (c) => {
         success: false, 
         error: 'This subdomain is reserved and cannot be claimed' 
       }, 400);
+    }
+    
+    // Check feature flag for subdomains
+    const subdomainFeature = await isFeatureEnabled('subdomains', user.userId, { subdomain: normalizedSubdomain });
+    if (!subdomainFeature.enabled) {
+      return c.json({
+        success: false,
+        error: subdomainFeature.reason,
+        hint: `Upgrade to PRO or higher to use custom subdomains.`,
+      }, 403);
+    }
+    
+    // Check feature flag for short subdomains (< 6 chars)
+    if (normalizedSubdomain.length < 6) {
+      const shortSubdomainFeature = await isFeatureEnabled('short_subdomains', user.userId, { subdomain: normalizedSubdomain });
+      if (!shortSubdomainFeature.enabled) {
+        return c.json({
+          success: false,
+          error: 'Short subdomains (fewer than 6 characters) require a BUSINESS plan',
+          hint: `Subdomain "${normalizedSubdomain}" has ${normalizedSubdomain.length} characters. Upgrade to BUSINESS for short subdomains.`,
+          subdomain_length: normalizedSubdomain.length,
+        }, 403);
+      }
     }
     
     // Check who owns this subdomain

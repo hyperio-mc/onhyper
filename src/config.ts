@@ -269,3 +269,38 @@ export const PROXY_ENDPOINTS = {
 } as const;
 
 export type ProxyEndpointName = keyof typeof PROXY_ENDPOINTS;
+
+/**
+ * Plan tier hierarchy for feature access control
+ * Higher number = higher tier with more access
+ */
+export const PLAN_TIERS = {
+  FREE: 0,
+  HOBBY: 1,
+  PRO: 2,
+  BUSINESS: 3,
+} as const;
+
+export type PlanTier = keyof typeof PLAN_TIERS;
+
+/**
+ * Array of plan tier names in order
+ */
+export const PLAN_TIER_NAMES: PlanTier[] = ['FREE', 'HOBBY', 'PRO', 'BUSINESS'];
+
+/**
+ * Get the numeric tier value for a plan name
+ */
+export function getPlanTier(planName: string): number {
+  const tier = PLAN_TIERS[planName.toUpperCase() as keyof typeof PLAN_TIERS];
+  return tier !== undefined ? tier : 0;
+}
+
+/**
+ * Check if a user's plan meets or exceeds a required plan tier
+ */
+export function isPlanAtLeast(userPlan: string, requiredPlan: string): boolean {
+  const userTier = getPlanTier(userPlan);
+  const requiredTier = getPlanTier(requiredPlan);
+  return userTier >= requiredTier;
+}

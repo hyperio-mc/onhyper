@@ -2,22 +2,26 @@
   "tasks": {
     "task-061": {
       "title": "Restrict subdomains to paid plans only",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "description": "Subdomains should require a paid (PRO) account. Free users can only use path-based URLs. Also restrict subdomains shorter than 6 characters to PRO+ only.",
+      "completedAt": "2025-02-19",
       "successCriteria": [
         "Free tier users cannot claim subdomains - only get path-based URLs (/a/{slug})",
         "PRO tier and above can claim subdomains",
         "Subdomains with < 6 characters require PRO+ (e.g., 'app' blocked, 'myapp' allowed)",
         "Update pricing page to reflect subdomain restriction",
         "Existing subdomain reservations from free users should be released on next publish attempt"
-      ]
+      ],
+      "notes": "Integrated with feature flag system. Free users blocked from subdomains, PRO required for regular subdomains, BUSINESS required for short subdomains (<6 chars)."
     },
     "task-062": {
       "title": "Implement feature flag system",
-      "status": "pending",
+      "status": "completed",
       "priority": "medium",
       "description": "Add a feature flag system to enable/disable features without deploying code. Useful for gradual rollouts, A/B testing, and beta features.",
+      "completedAt": "2025-02-19",
+      "notes": "Created: db tables (feature_flags, user_feature_overrides), lib/features.ts with isFeatureEnabled(), rollout %, custom rules, API routes, seed data. All 163 tests pass.",
       "successCriteria": [
         "Database table for feature flags (name, enabled, rollout_percentage, user_tiers)",
         "API endpoint to check feature status for current user",

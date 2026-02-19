@@ -415,6 +415,44 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action);
     CREATE INDEX IF NOT EXISTS idx_audit_logs_resource ON audit_logs(resource_type, resource_id);
   `);
+
+  // Feature flags for controlling feature availability
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS feature_flags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT UNIQUE NOT NULL,
+      display_name TEXT NOT NULL,
+      description TEXT,
+      enabled INTEGER DEFAULT 1,
+      rollout_percentage INTEGER DEFAULT 100,
+      min_plan_tier TEXT DEFAULT 'FREE',
+      custom_rules TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_feature_flags_name ON feature_flags(name);
+  `);
+
+  // Per-user feature flag overrides
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS user_feature_overrides (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id TEXT NOT NULL,
+      feature_name TEXT NOT NULL,
+      enabled INTEGER NOT NULL,
+      reason TEXT,
+      expires_at TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (feature_name) REFERENCES feature_flags(name) ON DELETE CASCADE,
+      UNIQUE(user_id, feature_name)
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_feature_overrides_user_feature ON user_feature_overrides(user_id, feature_name);
+    CREATE INDEX IF NOT EXISTS idx_user_feature_overrides_user ON user_feature_overrides(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_feature_overrides_feature ON user_feature_overrides(feature_name);
+  `);
 }
 
 /**
@@ -730,4 +768,28 @@ export function getResourceAuditLogs(resourceType: string, resourceId: string, l
     LIMIT ?
   `);
   return stmt.all(resourceType, resourceId, limit) as AuditLog[];
+}
+
+// Feature flag types
+export interface FeatureFlag {
+  id: number;
+  name: string;
+  display_name: string;
+  description: string | null;
+  enabled: number;  // 0 or 1 (SQLite boolean)
+  rollout_percentage: number;
+  min_plan_tier: string;
+  custom_rules: string | null;  // JSON string
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserFeatureOverride {
+  id: number;
+  user_id: string;
+  feature_name: string;
+  enabled: number;  // 0 or 1 (SQLite boolean)
+  reason: string | null;
+  expires_at: string | null;
+  created_at: string;
 }
