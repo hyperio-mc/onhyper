@@ -681,10 +681,12 @@ apps.post('/:id/zip', async (c) => {
       return c.json({ error: 'Content-Type must be multipart/form-data' }, 400);
     }
     
-    const formData = await c.req.parseBody({ all: true });
-    const file = formData.file as File | null;
+    const formData = await c.req.parseBody();
+    console.log('[ZIP] FormData type:', typeof formData, 'keys:', Object.keys(formData || {}));
+    const file = (formData as any).file as File | null;
     
     if (!file) {
+      console.log('[ZIP] No file found, formData:', formData);
       return c.json({ error: 'No file provided' }, 400);
     }
     
