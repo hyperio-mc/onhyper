@@ -23,6 +23,7 @@
     "@react-email/components": "^1.0.7",
     "@react-email/render": "^2.0.4",
     "@types/react": "^19.2.14",
+    "adm-zip": "^0.5.16",
     "bcrypt": "^5.1.1",
     "better-sqlite3": "^11.7.0",
     "gray-matter": "^4.0.3",
@@ -36,6 +37,7 @@
     "unzipper": "^0.12.3"
   },
   "devDependencies": {
+    "@types/adm-zip": "^0.5.7",
     "@types/bcrypt": "^5.0.2",
     "@types/better-sqlite3": "^7.6.12",
     "@types/jsonwebtoken": "^9.0.5",

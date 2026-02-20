@@ -707,25 +707,21 @@ apps.post('/:id/zip', async (c) => {
     // Extract and store files
     const files: string[] = [];
     
-    // Use unzipper to parse the buffer
-    // @ts-ignore - unzipper types are incomplete
-    const directory = unzipper.default.Parse(buffer);
+    // Use adm-zip for ZIP extraction
+    const AdmZip = (await import('adm-zip')).default;
+    const zip = new AdmZip(buffer);
+    const entries = zip.getEntries();
     
-    for await (const entry of directory) {
-      const filePath = entry.path;
+    for (const entry of entries) {
+      const filePath = entry.entryName;
       
-      // Skip directories, hidden files, and __MACOSX
-      if (entry.type === 'Directory' || filePath.includes('__MACOSX') || filePath.startsWith('.')) {
-        entry.autodrain();
+      // Skip directories and hidden files
+      if (entry.isDirectory || filePath.includes('__MACOSX') || filePath.startsWith('.')) {
         continue;
       }
       
       // Read file content
-      const chunks: Buffer[] = [];
-      for await (const chunk of entry) {
-        chunks.push(Buffer.from(chunk));
-      }
-      const text = Buffer.concat(chunks).toString('utf-8');
+      const text = entry.getData().toString('utf-8');
       
       // Store in LMDB
       AppFilesStore.save(appId, filePath, text);
