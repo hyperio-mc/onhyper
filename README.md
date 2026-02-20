@@ -26,9 +26,89 @@ The server will start at `http://localhost:3000`.
 - **Secure Secret Storage**: API keys encrypted at rest with AES-256-GCM
 - **Proxy Service**: Forward requests to external APIs with automatic auth injection
 - **App Publishing**: Deploy static apps that can call APIs securely
+- **ZIP Upload**: Deploy entire static sites with a single API call
+- **Pushstate Routing**: SPAs work natively with client-side routing
+- **Next.js Support**: Static exports work out of the box
+- **Static File Serving**: CSS, JS, images, fonts served automatically
 - **User Authentication**: JWT-based auth with email/password
 - **Usage Tracking**: Monitor API calls per app and endpoint
 - **Waitlist System**: Managed access with referral bonuses
+
+## Static Site Hosting
+
+### ZIP Upload
+
+Upload your entire static site with a single API call:
+
+```bash
+# Build your app
+npm run build
+
+# Create a ZIP of the output directory
+cd dist && zip -r ../site.zip . && cd ..
+
+# Upload to OnHyper
+curl -X POST https://onhyper.io/api/apps/{app_id}/zip \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@site.zip"
+```
+
+**Supported file types:**
+- HTML, CSS, JavaScript
+- Images: PNG, JPG, GIF, SVG, WebP, ICO
+- Fonts: WOFF, WOFF2, TTF, OTF, EOT
+- Other: JSON, XML, TXT, PDF, manifests
+
+**Endpoint:** `POST /api/apps/:id/zip`
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| file | File | ZIP file containing static assets |
+
+### Pushstate Routing (SPA Support)
+
+Published apps on subdomains (`yourapp.onhyper.io`) support client-side routing automatically:
+
+```
+yourapp.onhyper.io/           → serves index.html
+yourapp.onhyper.io/dashboard  → serves index.html (SPA handles route)
+yourapp.onhyper.io/settings   → serves index.html (SPA handles route)
+yourapp.onhyper.io/_next/...  → serves actual static files
+```
+
+**How it works:**
+1. Static files (CSS, JS, images, fonts) are served directly
+2. Internal framework paths (`/_next/`, etc.) route to actual files
+3. All other paths serve `index.html` for client-side routing
+
+**Supported frameworks:**
+- Next.js (static export)
+- Vite
+- Create React App
+- Vue CLI
+- Any SPA with client-side routing
+
+### Next.js Static Export
+
+```javascript
+// next.config.js
+module.exports = {
+  output: 'export',
+  trailingSlash: true,
+}
+```
+
+```bash
+npm run build  # Creates 'out/' directory
+cd out && zip -r ../app.zip . && cd ..
+# Upload via /api/apps/:id/zip
+```
+
+Your Next.js app will work with:
+- Client-side routing on refresh
+- `/_next/static/` assets
+- Image optimization (static images)
+- No Node.js server required
 
 ## Architecture Overview
 
@@ -114,6 +194,7 @@ The server will start at `http://localhost:3000`.
 | `/api/apps/:id` | GET | Get app details |
 | `/api/apps/:id` | PUT | Update app |
 | `/api/apps/:id` | DELETE | Delete app |
+| `/api/apps/:id/zip` | POST | Upload static site as ZIP |
 
 ### Proxy
 
