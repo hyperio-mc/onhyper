@@ -682,11 +682,9 @@ apps.post('/:id/zip', async (c) => {
     }
     
     const formData = await c.req.parseBody();
-    console.log('[ZIP] FormData type:', typeof formData, 'keys:', Object.keys(formData || {}));
     const file = (formData as any).file as File | null;
     
     if (!file) {
-      console.log('[ZIP] No file found, formData:', formData);
       return c.json({ error: 'No file provided' }, 400);
     }
     
