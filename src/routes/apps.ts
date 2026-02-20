@@ -714,13 +714,31 @@ apps.post('/:id/zip', async (c) => {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries();
     
+    // Find root folder (common prefix)
+    let rootFolder: string | null = null;
     for (const entry of entries) {
-      const filePath = entry.entryName;
+      if (!entry.isDirectory && !entry.entryName.includes('__MACOSX') && !entry.entryName.startsWith('.')) {
+        const parts = entry.entryName.split('/');
+        if (parts.length > 1 && !rootFolder) {
+          rootFolder = parts[0];
+        }
+      }
+    }
+    
+    for (const entry of entries) {
+      let filePath = entry.entryName;
       
       // Skip directories and hidden files
       if (entry.isDirectory || filePath.includes('__MACOSX') || filePath.startsWith('.')) {
         continue;
       }
+      
+      // Strip root folder if present
+      if (rootFolder && filePath.startsWith(rootFolder + '/')) {
+        filePath = filePath.slice(rootFolder.length + 1);
+      }
+      
+      if (!filePath) continue;
       
       // Read file content
       const text = entry.getData().toString('utf-8');
