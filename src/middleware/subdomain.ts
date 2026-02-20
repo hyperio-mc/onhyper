@@ -333,19 +333,37 @@ export async function subdomainRouter(c: Context, next: Next) {
   }
   
   // Try to serve static file from ZIP upload
-  // Check if path has a file extension
+  // Check if path has a file extension OR is a Next.js special path
+  const isNextStatic = path.startsWith('/_next/');
   const fileMatch = path.match(/\.([^/]+)$/);
-  if (fileMatch) {
+  
+  if (fileMatch || isNextStatic) {
     // Try to get file from app files store
     const { AppFilesStore } = await import('../lib/lmdb.js');
-    const filePath = path.slice(1); // Remove leading slash
-    const file = AppFilesStore.get(app.id, filePath);
+    let filePath = path.slice(1); // Remove leading slash
+    
+    // For Next.js _next paths, try as-is first
+    let file = AppFilesStore.get(app.id, filePath);
+    
+    // If not found and has no extension, try adding .html (Next.js static pages)
+    if (!file && !fileMatch && !isNextStatic) {
+      file = AppFilesStore.get(app.id, filePath + '.html');
+      if (file) filePath = filePath + '.html';
+    }
+    
+    // If still not found, try /index.html (nested routes)
+    if (!file && !fileMatch && !isNextStatic && !filePath.endsWith('/index.html')) {
+      file = AppFilesStore.get(app.id, filePath + '/index.html');
+      if (file) filePath = filePath + '/index.html';
+    }
+    
     if (file) {
-      const ext = fileMatch[1].toLowerCase();
+      const ext = fileMatch ? fileMatch[1].toLowerCase() : path.split('.').pop() || '';
       const contentTypes: Record<string, string> = {
         'html': 'text/html',
         'css': 'text/css',
         'js': 'application/javascript',
+        'mjs': 'application/javascript',
         'json': 'application/json',
         'png': 'image/png',
         'jpg': 'image/jpeg',
@@ -357,6 +375,7 @@ export async function subdomainRouter(c: Context, next: Next) {
         'ttf': 'font/ttf',
         'ico': 'image/x-icon',
         'webp': 'image/webp',
+        'avif': 'image/avif',
       };
       const contentType = contentTypes[ext] || 'application/octet-stream';
       
