@@ -236,3 +236,63 @@ export const UserAppsStore = {
     }
   },
 };
+
+/**
+ * App file storage (for ZIP uploads)
+ * Key format: app_files:{appId}:{path}
+ */
+export const AppFilesStore = {
+  save(appId: string, path: string, content: string): void {
+    const db = getLMDB();
+    const key = `app_files:${appId}:${path}`;
+    db.put(key, content);
+    // Add to index
+    const indexKey = `app_files_index:${appId}`;
+    const files: string[] = db.get(indexKey) || [];
+    if (!files.includes(path)) {
+      files.push(path);
+      db.put(indexKey, files);
+    }
+  },
+
+  get(appId: string, path: string): string | undefined {
+    const db = getLMDB();
+    const key = `app_files:${appId}:${path}`;
+    return db.get(key);
+  },
+
+  delete(appId: string, path: string): void {
+    const db = getLMDB();
+    const key = `app_files:${appId}:${path}`;
+    db.remove(key);
+  },
+
+  list(appId: string): string[] {
+    const db = getLMDB();
+    const indexKey = `app_files_index:${appId}`;
+    const files: string[] = db.get(indexKey) || [];
+    return files;
+  },
+
+  async deleteAll(appId: string): Promise<void> {
+    const files = this.list(appId);
+    const db = getLMDB();
+    for (const path of files) {
+      const key = `app_files:${appId}:${path}`;
+      db.remove(key);
+    }
+    // Remove the index
+    const indexKey = `app_files_index:${appId}`;
+    db.remove(indexKey);
+  },
+
+  _addToIndex(appId: string, path: string): void {
+    const db = getLMDB();
+    const indexKey = `app_files_index:${appId}`;
+    const files: string[] = db.get(indexKey) || [];
+    if (!files.includes(path)) {
+      files.push(path);
+      db.put(indexKey, files);
+    }
+  },
+};

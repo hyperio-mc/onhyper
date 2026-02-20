@@ -292,6 +292,7 @@ function renderAppHtml(app: App): string {
  */
 export async function subdomainRouter(c: Context, next: Next) {
   const host = c.req.header('host') || '';
+  const path = c.req.path;
   const subdomain = extractSubdomain(host);
   
   // No subdomain or main domain - continue to next handler
@@ -301,8 +302,6 @@ export async function subdomainRouter(c: Context, next: Next) {
   
   // Check if reserved - redirect to main domain
   if (RESERVED_SUBDOMAINS.has(subdomain)) {
-    // Keep the path but redirect to main domain
-    const path = c.req.path;
     const redirectUrl = path === '/' 
       ? 'https://onhyper.io' 
       : `https://onhyper.io${path}`;
@@ -317,7 +316,61 @@ export async function subdomainRouter(c: Context, next: Next) {
     return c.html(render404(subdomain), 404);
   }
   
-  // Render the app
+  // Handle special endpoints first
+  if (path === '/css') {
+    const css = app.css || '';
+    return c.text(css, 200, { 'Content-Type': 'text/css' });
+  }
+  
+  if (path === '/js') {
+    const js = app.js || '';
+    return c.text(js, 200, { 'Content-Type': 'application/javascript' });
+  }
+  
+  if (path === '/raw' || path === '/raw/') {
+    const html = app.html || '';
+    return c.text(html, 200, { 'Content-Type': 'text/html' });
+  }
+  
+  // Try to serve static file from ZIP upload
+  // Check if path has a file extension
+  const fileMatch = path.match(/\.([^/]+)$/);
+  if (fileMatch) {
+    // Try to get file from app files store
+    const { AppFilesStore } = await import('../lib/lmdb.js');
+    const filePath = path.slice(1); // Remove leading slash
+    const file = AppFilesStore.get(app.id, filePath);
+    if (file) {
+      const ext = fileMatch[1].toLowerCase();
+      const contentTypes: Record<string, string> = {
+        'html': 'text/html',
+        'css': 'text/css',
+        'js': 'application/javascript',
+        'json': 'application/json',
+        'png': 'image/png',
+        'jpg': 'image/jpeg',
+        'jpeg': 'image/jpeg',
+        'gif': 'image/gif',
+        'svg': 'image/svg+xml',
+        'woff': 'font/woff',
+        'woff2': 'font/woff2',
+        'ttf': 'font/ttf',
+        'ico': 'image/x-icon',
+        'webp': 'image/webp',
+      };
+      const contentType = contentTypes[ext] || 'application/octet-stream';
+      
+      // Handle SVG specially - it's XML but should be image
+      if ((ext === 'svg') && (file.startsWith('<?xml') || file.includes('<svg'))) {
+        return c.text(file, 200, { 'Content-Type': 'image/svg+xml' });
+      }
+      
+      return c.text(file, 200, { 'Content-Type': contentType });
+    }
+  }
+  
+  // For all other paths - serve app HTML (pushstate/SPA support)
+  // This lets the client-side router handle the route
   const html = renderAppHtml(app);
   return c.html(html);
 }

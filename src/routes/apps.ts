@@ -647,4 +647,178 @@ async function claimSubdomainForApp(
   }
 }
 
+/**
+ * POST /api/apps/:id/zip
+ * Upload a ZIP file containing static site assets
+ * 
+ * Extracts and stores all files from the ZIP.
+ * Supports: index.html, assets/, CSS, JS, images, fonts, etc.
+ */
+apps.post('/:id/zip', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('id');
+  const app = getAppById(appId);
+  
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  // Verify ownership
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  try {
+    // Get the ZIP file from the request
+    const contentType = c.req.header('content-type') || '';
+    
+    if (!contentType.includes('multipart/form-data')) {
+      return c.json({ error: 'Content-Type must be multipart/form-data' }, 400);
+    }
+    
+    const formData = await c.req.parseBody({ all: true });
+    const file = formData.file as File | null;
+    
+    if (!file) {
+      return c.json({ error: 'No file provided' }, 400);
+    }
+    
+    // Validate it's a ZIP file
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+      return c.json({ error: 'File must be a .zip file' }, 400);
+    }
+    
+    // Read the file as ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Import unzipper dynamically
+    const unzipper = await import('unzipper');
+    const { AppFilesStore } = await import('../lib/lmdb.js');
+    
+    // Delete existing files first
+    await AppFilesStore.deleteAll(appId);
+    
+    // Extract and store files
+    const files: string[] = [];
+    
+    // Use unzipper to parse the buffer
+    // @ts-ignore - unzipper types are incomplete
+    const directory = unzipper.default.Parse(buffer);
+    
+    for await (const entry of directory) {
+      const filePath = entry.path;
+      
+      // Skip directories, hidden files, and __MACOSX
+      if (entry.type === 'Directory' || filePath.includes('__MACOSX') || filePath.startsWith('.')) {
+        entry.autodrain();
+        continue;
+      }
+      
+      // Read file content
+      const chunks: Buffer[] = [];
+      for await (const chunk of entry) {
+        chunks.push(Buffer.from(chunk));
+      }
+      const text = Buffer.concat(chunks).toString('utf-8');
+      
+      // Store in LMDB
+      AppFilesStore.save(appId, filePath, text);
+      files.push(filePath);
+    }
+    
+    // If index.html exists, use it as the main HTML
+    const indexHtml = AppFilesStore.get(appId, 'index.html');
+    if (indexHtml) {
+      // Update the app's html field
+      const { updateApp } = await import('../lib/apps.js');
+      await updateApp(appId, user.userId, { html: indexHtml });
+    }
+    
+    // Audit log
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'app_zip_upload',
+      resourceType: 'app',
+      resourceId: appId,
+      details: { files_count: files.length, file_names: files.slice(0, 10) },
+      ...metadata,
+    });
+    
+    return c.json({
+      success: true,
+      files_count: files.length,
+      files: files.slice(0, 50), // Return first 50 files
+    });
+  } catch (error) {
+    console.error('[ZIP upload] Error:', error);
+    return c.json({ error: 'Failed to process ZIP file' }, 500);
+  }
+});
+
+/**
+ * GET /api/apps/:id/files
+ * List all uploaded files for an app
+ */
+apps.get('/:id/files', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('id');
+  const app = getAppById(appId);
+  
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  // Verify ownership
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const files = AppFilesStore.list(appId);
+  
+  return c.json({ files });
+});
+
+/**
+ * DELETE /api/apps/:id/files/:path
+ * Delete a specific file
+ */
+apps.delete('/:id/files/*', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('id');
+  const filePath = c.req.param('*') || '';
+  const app = getAppById(appId);
+  
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  // Verify ownership
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  AppFilesStore.delete(appId, filePath);
+  
+  return c.json({ deleted: true, path: filePath });
+});
+
 export { apps };
