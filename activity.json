@@ -203,8 +203,108 @@
         "Assess Railway hosting capabilities",
         "Propose product design"
       ]
+    },
+    "task-073": {
+      "title": "[Security] Fix XSS vulnerability in app rendering",
+      "status": "pending",
+      "priority": "high",
+      "category": "Security",
+      "reference": "CODE_REVIEW.md SECH-001",
+      "description": "User-controlled HTML/CSS/JS is rendered directly into pages without sanitization. Malicious users could inject script tags, CSS keyloggers, or iframe attacks.",
+      "file": "src/routes/render.ts",
+      "line": "87-106",
+      "successCriteria": [
+        "Implement Content Security Policy (CSP) headers for rendered apps",
+        "Consider sandboxed iframe approach for user content",
+        "Add DOMPurify or similar for HTML sanitization option",
+        "Add clear warnings in UI that apps run with user privileges"
+      ]
+    },
+    "task-074": {
+      "title": "[Security] Implement Redis-backed rate limiting",
+      "status": "pending",
+      "priority": "high",
+      "category": "Performance",
+      "reference": "CODE_REVIEW.md SECM-001",
+      "description": "Current in-memory rate limiting doesn't scale horizontally and loses state on restart. Need Redis-backed solution for production.",
+      "file": "src/middleware/rateLimit.ts",
+      "line": "13-25",
+      "successCriteria": [
+        "Replace Map-based storage with Redis",
+        "Add Redis connection configuration",
+        "Add maximum size limit to prevent memory exhaustion",
+        "Maintain backward compatibility for single-server deployment"
+      ]
+    },
+    "task-075": {
+      "title": "[Security] Add CSRF protection for browser-based requests",
+      "status": "pending",
+      "priority": "high",
+      "category": "Security",
+      "reference": "CODE_REVIEW.md SECM-002",
+      "description": "CORS is enabled globally without CSRF token protection. Browser-based sessions could be vulnerable to cross-site request forgery.",
+      "file": "src/index.ts",
+      "line": "25",
+      "successCriteria": [
+        "Implement CSRF tokens for browser-based form submissions",
+        "Configure SameSite cookie attribute if cookies are used",
+        "Consider using origin whitelist for CORS instead of open"
+      ]
+    },
+    "task-076": {
+      "title": "[Security] Fix timing attack in admin key comparison",
+      "status": "pending",
+      "priority": "high",
+      "category": "Security",
+      "reference": "CODE_REVIEW.md SECM-003",
+      "description": "Admin key comparison has early length check that could leak timing information. Should use crypto.timingSafeEqual().",
+      "file": "src/middleware/auth.ts",
+      "line": "147-166",
+      "successCriteria": [
+        "Replace manual comparison with crypto.timingSafeEqual()",
+        "Always compare full-length buffers to prevent timing leakage",
+        "Add tests for timing attack prevention"
+      ]
+    },
+    "task-077": {
+      "title": "[Architecture] Add schema validation library (Zod)",
+      "status": "pending",
+      "priority": "medium",
+      "category": "Architecture",
+      "reference": "CODE_REVIEW.md ARCH-001",
+      "description": "Input validation is done manually with inconsistent patterns. Adopt Zod for schema validation across all endpoints.",
+      "file": "Multiple",
+      "successCriteria": [
+        "Add Zod dependency",
+        "Create reusable validation middleware for Hono",
+        "Standardize error response format for validation errors",
+        "Migrate auth routes to use Zod schemas"
+      ]
+    },
+    "task-078": {
+      "title": "[Performance] Add missing database indexes",
+      "status": "pending",
+      "priority": "medium",
+      "category": "Performance",
+      "reference": "CODE_REVIEW.md PERF-001",
+      "description": "Several frequently queried columns lack indexes: audit_logs.action, audit_logs.resource_type, custom_secrets.user_id",
+      "file": "src/lib/db.ts",
+      "successCriteria": [
+        "Add index on audit_logs.action",
+        "Add index on audit_logs.resource_type",
+        "Add index on custom_secrets.user_id",
+        "Verify query performance improvement"
+      ]
+    },
+    "task-079": {
+      "title": "[Code Review] Complete code review documentation",
+      "status": "completed",
+      "priority": "high",
+      "category": "Architecture",
+      "completedAt": "2026-02-20T23:00:00Z",
+      "description": "Formal code review of OnHyper codebase covering security, performance, and architecture issues.",
+      "file": "docs/CODE_REVIEW.md",
+      "summary": "Analyzed 47 TypeScript files. Build passes, 163 tests pass. Found 2 high, 3 medium, 2 low security issues. Found 3 medium, 2 low performance issues. Found 3 medium, 4 low architecture issues. Created follow-up tasks for all high-priority items."
     }
   }
 }
-
-<!-- Tasks 068-072 added manually -->
