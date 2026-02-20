@@ -1,55 +1,96 @@
-<div class="hero">
-  <h1>Where Agents Ship Code</h1>
-  <p>Publish web apps that securely call AI APIs. Your keys stay server-side. Your apps go live instantly.</p>
-  <div class="cta">
-    <button onclick="navigate('/waitlist')" class="btn-primary">Join Waitlist</button>
-    <button onclick="navigate('/login')" class="btn-secondary">Login</button>
-  </div>
-  <div class="cta-secondary" style="margin-top: 24px;">
-    <button onclick="copyAgentPrompt()" class="btn-tertiary" style="background: transparent; border: 2px solid #6366f1; color: #6366f1; padding: 12px 24px; border-radius: 8px; cursor: pointer;">
-      🤖 Tell Your Agent to Build an App
-    </button>
-  </div>
-</div>
+<div class="home-page">
+  <section class="home-hero">
+    <div class="home-hero-copy">
+      <span class="home-pill">New: Agent-native deploy in one command</span>
+      <h1>Ship Apps with Agents</h1>
+      <p>
+        OnHyper is the safest path for AI-generated apps to go live. Your agents ship fast,
+        while secrets stay server-side and fully managed.
+      </p>
+      <div class="home-actions">
+        <button onclick="navigate('/waitlist')" class="btn-primary">Join Waitlist</button>
+        <button onclick="navigate('/login')" class="btn-secondary">See architecture</button>
+      </div>
+      <button onclick="copyAgentPrompt()" class="home-agent-btn">
+        🤖 Tell Your Agent to Build an App
+      </button>
+      <p class="home-trust"><strong>Built for</strong> Claude, GPT, Gemini and custom agent pipelines</p>
+    </div>
 
-<div class="features">
-  <div class="feature">
-    <h3>Secure by Default</h3>
-    <p>API keys encrypted server-side. Never exposed to browsers or clients.</p>
-  </div>
-  <div class="feature">
-    <h3>Ship Instantly</h3>
-    <p>Write HTML, CSS, JS. Publish with one click. No infrastructure to manage.</p>
-  </div>
-  <div class="feature">
-    <h3>Agent-Native</h3>
-    <p>Claude, GPT, and other agents can publish apps directly via our skill.</p>
-  </div>
-</div>
+    <div class="home-code-card" aria-label="Tell your agent to build">
+      <h3>Tell your agent to build</h3>
+      <div class="home-editor">
+        <div class="home-editor-head">
+          <span></span><span></span><span></span>
+        </div>
+        <div class="home-editor-body">
+          <p><span class="home-key">prompt</span>: "Read the OnHyper skill at</p>
+          <p>https://onhyper.io/pages/skill.html and ask</p>
+          <p>me what kind of app I would like to build,</p>
+          <p>then interview me to create a product plan."</p>
+          <p>✔ Interview mode ready</p>
+        </div>
+      </div>
+    </div>
+  </section>
 
-<h2>How It Works</h2>
-<div class="features">
-  <div class="feature">
-    <h3>1. Add Your Keys</h3>
-    <p>Store OpenAI, Anthropic, and other API keys securely in your vault.</p>
-  </div>
-  <div class="feature">
-    <h3>2. Build Your App</h3>
-    <p>Use our editor or let your agent generate one. Simple HTML/CSS/JS.</p>
-  </div>
-  <div class="feature">
-    <h3>3. Publish & Share</h3>
-    <p>Get a public URL. Users can use your app without seeing your keys.</p>
-  </div>
-</div>
+  <section class="home-feature-grid">
+    <article class="home-feature">
+      <h3>Secure by default</h3>
+      <p>Keys never leave your vault. Agents call APIs safely through managed server routes.</p>
+    </article>
+    <article class="home-feature">
+      <h3>Ship in minutes</h3>
+      <p>Deploy polished web apps with one command. No infra babysitting or brittle pipelines.</p>
+    </article>
+    <article class="home-feature">
+      <h3>Agent-native workflow</h3>
+      <p>Works with Claude, GPT, and custom tools so your existing build flow stays intact.</p>
+    </article>
+  </section>
 
-<footer class="site-footer">
-  <p>
-    <a href="https://github.com/hyperio-mc/onhyper/blob/main/TERMS.md" target="_blank">Terms</a>
-    <span class="divider">·</span>
-    <a href="https://github.com/hyperio-mc/onhyper/blob/main/PRIVACY.md" target="_blank">Privacy</a>
-    <span class="divider">·</span>
-    <a href="mailto:mc@hyper.io">Contact</a>
-  </p>
-  <p class="copyright">© 2026 OnHyper</p>
-</footer>
+  <section class="home-how">
+    <h2>How teams launch with confidence</h2>
+    <p class="home-how-sub">A clear three-step path from idea to public URL, without hidden infrastructure complexity.</p>
+    <div class="home-steps">
+      <article class="home-step">
+        <span>STEP 01</span>
+        <h3>Connect your providers</h3>
+        <p>Store OpenAI, Anthropic, and other keys in one encrypted vault.</p>
+      </article>
+      <article class="home-step">
+        <span>STEP 02</span>
+        <h3>Build with your agent</h3>
+        <p>Generate and refine app code with Claude, GPT, or your own agent flow.</p>
+      </article>
+      <article class="home-step">
+        <span>STEP 03</span>
+        <h3>Publish and share</h3>
+        <p>Launch to a live URL instantly with secure key proxying and managed runtime.</p>
+      </article>
+    </div>
+  </section>
+
+  <section class="home-final-cta">
+    <h2>Your AI apps should feel fast to build and safe to trust.</h2>
+    <p>
+      OnHyper gives teams the confidence to let agents ship real products. Faster iteration,
+      cleaner ops, and no secret leakage risks.
+    </p>
+    <div class="home-actions">
+      <button onclick="copyAgentPrompt()" class="btn-primary">Tell your agent to build</button>
+      <button onclick="navigate('/skill')" class="btn-secondary">Read docs</button>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <p>
+      <a href="https://github.com/hyperio-mc/onhyper/blob/main/TERMS.md" target="_blank">Terms</a>
+      <span class="divider">·</span>
+      <a href="https://github.com/hyperio-mc/onhyper/blob/main/PRIVACY.md" target="_blank">Privacy</a>
+      <span class="divider">·</span>
+      <a href="mailto:mc@hyper.io">Contact</a>
+    </p>
+    <p class="copyright">© 2026 OnHyper</p>
+  </footer>
+</div>

@@ -1,50 +1,42 @@
-<div class="hero">
-  <h1>Dashboard</h1>
-</div>
+<section class="subpage-hero dashboard-hero">
+  <span class="home-pill">Control Center</span>
+  <h1>Manage apps, secrets, and activity in one secure workspace.</h1>
+  <p>Everything your team needs to ship and operate agent-built apps safely.</p>
+</section>
 
-<!-- Sticky Overview Bar -->
-<div class="overview-bar">
-  <div class="overview-stat">
-    <span class="stat-value" id="stat-apps">0</span>
-    <span class="stat-label">Apps</span>
+<section class="dashboard-shell">
+  <div class="overview-bar">
+    <div class="overview-stat">
+      <span class="stat-value" id="stat-apps">0</span>
+      <span class="stat-label">Apps</span>
+    </div>
+    <div class="overview-stat">
+      <span class="stat-value" id="stat-secrets">0</span>
+      <span class="stat-label">Keys</span>
+    </div>
+    <div class="overview-stat">
+      <span class="stat-value" id="stat-calls">0</span>
+      <span class="stat-label">Calls</span>
+    </div>
+    <div class="overview-token">
+      <span class="token-label">API Token</span>
+      <code id="api-token" class="token-value">Loading...</code>
+      <button onclick="copyApiToken()" class="btn-icon" title="Copy token">📋</button>
+      <button id="generate-token-btn" onclick="generateApiToken()" class="btn-secondary btn-small">Generate</button>
+    </div>
   </div>
-  <div class="overview-stat">
-    <span class="stat-value" id="stat-secrets">0</span>
-    <span class="stat-label">Keys</span>
-  </div>
-  <div class="overview-stat">
-    <span class="stat-value" id="stat-calls">0</span>
-    <span class="stat-label">Calls</span>
-  </div>
-  <div class="overview-token">
-    <span class="token-label">API Token</span>
-    <code id="api-token" class="token-value">Loading...</code>
-    <button onclick="copyApiToken()" class="btn-icon" title="Copy token">📋</button>
-    <button id="generate-token-btn" onclick="generateApiToken()" class="btn-secondary btn-small">Generate</button>
-  </div>
-</div>
 
-<!-- Tab Navigation -->
-<div class="tabs-container">
-  <div class="dashboard-tabs" role="tablist">
-    <button class="tab active" role="tab" aria-selected="true" data-tab="apps">
-      Apps
-    </button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="keys">
-      Keys
-    </button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="activity">
-      Activity
-    </button>
-    <button class="tab" role="tab" aria-selected="false" data-tab="settings">
-      Settings
-    </button>
-    <span class="shortcuts-hint" title="Press ? for keyboard shortcuts">⌨️</span>
+  <div class="tabs-container">
+    <div class="dashboard-tabs" role="tablist">
+      <button type="button" class="tab active" role="tab" aria-selected="true" data-tab="apps">Apps</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="keys">Keys</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="activity">Activity</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="settings">Settings</button>
+      <span class="shortcuts-hint" title="Press ? for keyboard shortcuts">⌨️</span>
+    </div>
   </div>
-</div>
 
-<!-- Tab Content -->
-<div class="tab-content">
+  <div class="tab-content">
   <div id="tab-apps" class="tab-panel active" role="tabpanel">
     <h2>My Apps</h2>
     <p class="text-muted">Publish web apps with secure API access</p>
@@ -185,322 +177,5 @@
       </button>
     </div>
   </div>
-</div>
-
-<style>
-.text-muted {
-  color: var(--text-muted);
-}
-
-/* Tab Navigation */
-.tabs-container {
-  margin-bottom: 1.5rem;
-}
-
-.dashboard-tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 2px solid var(--border-color, #e1e4e8);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.dashboard-tabs .tab {
-  padding: 0.75rem 1.5rem;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
-  cursor: pointer;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--text-muted);
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.dashboard-tabs .tab:hover {
-  color: var(--text-primary);
-  background: var(--bg-alt);
-}
-
-.dashboard-tabs .tab.active {
-  color: var(--accent-color, #0066ff);
-  border-bottom-color: var(--accent-color, #0066ff);
-}
-
-.dashboard-tabs .tab:focus {
-  outline: 2px solid var(--accent-color, #0066ff);
-  outline-offset: 2px;
-  border-radius: 4px 4px 0 0;
-}
-
-/* Tab Content */
-.tab-content {
-  min-height: 200px;
-}
-
-.tab-panel {
-  display: none;
-}
-
-.tab-panel.active {
-  display: block;
-}
-
-/* Settings Section */
-.settings-section {
-  background: var(--bg-alt);
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-}
-
-.settings-section h3 {
-  margin: 0 0 20px 0;
-  font-size: 1.1rem;
-  color: var(--text-primary);
-}
-
-.setting-item {
-  padding: 16px 0;
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
-}
-
-.setting-item:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.setting-label {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-}
-
-.setting-label input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: var(--accent-color, #0066ff);
-}
-
-.setting-title {
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.setting-description {
-  margin: 8px 0 0 32px;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  line-height: 1.5;
-}
-
-/* Mobile Responsive */
-@media (max-width: 600px) {
-  .tabs-container {
-    margin-bottom: 0;
-  }
-
-  .settings-section {
-    padding: 16px;
-  }
-
-  .setting-description {
-    margin-left: 0;
-  }
-}
-
-/* Hide Activity tab on mobile/tablet */
-@media (max-width: 768px) {
-  .dashboard-tabs .tab[data-tab="activity"] {
-    display: none;
-  }
-  
-  #tab-activity {
-    display: none !important;
-  }
-}
-
-/* App Card Stats */
-.app-card-stats {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-top: 1px solid var(--border-color);
-  border-bottom: 1px solid var(--border-color);
-  margin: 12px 0;
-}
-
-.app-stat {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-}
-
-.app-stat .stat-icon {
-  font-size: 1rem;
-}
-
-.app-stat .stat-value {
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.app-stat .stat-label {
-  color: var(--text-muted);
-  font-size: 0.75rem;
-}
-
-.app-stat--error .stat-value {
-  color: #dc2626;
-}
-
-/* Update app-card-actions for more buttons */
-.app-card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.app-card-actions .btn-secondary {
-  flex: 1;
-  min-width: 60px;
-  text-align: center;
-}
-
-/* Activity Table */
-.activity-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 1rem;
-}
-
-.activity-table tr {
-  border-bottom: 1px solid var(--border-color, #e1e4e8);
-}
-
-.activity-table tr:last-child {
-  border-bottom: none;
-}
-
-.activity-table td {
-  padding: 0.75rem 0;
-}
-
-.activity-action {
-  font-weight: 500;
-}
-
-.activity-time {
-  text-align: right;
-  color: var(--text-muted);
-  font-size: 0.875rem;
-}
-
-/* Activity Timeline */
-.activity-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-}
-
-.activity-filters {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.activity-filters select {
-  padding: 0.5rem;
-  border: 1px solid var(--border-color, #e1e4e8);
-  border-radius: 4px;
-  background: var(--bg-primary, #fff);
-  color: var(--text-primary);
-  font-size: 0.875rem;
-}
-
-.timeline {
-  position: relative;
-  padding-left: 2rem;
-}
-
-.timeline::before {
-  content: '';
-  position: absolute;
-  left: 0.75rem;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  background: var(--border-color, #e1e4e8);
-}
-
-.timeline-item {
-  position: relative;
-  padding-bottom: 1.5rem;
-}
-
-.timeline-item:last-child {
-  padding-bottom: 0;
-}
-
-.timeline-icon {
-  position: absolute;
-  left: -2rem;
-  width: 1.5rem;
-  height: 1.5rem;
-  background: var(--bg-primary, #fff);
-  border: 2px solid var(--accent-color, #0066ff);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  z-index: 1;
-}
-
-.timeline-content {
-  padding-left: 0.5rem;
-}
-
-.timeline-action {
-  font-weight: 500;
-}
-
-.timeline-time {
-  font-size: 0.875rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
-}
-
-.timeline-details {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
-  font-family: monospace;
-  background: var(--bg-alt);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
-  display: inline-block;
-}
-
-@media (max-width: 768px) {
-  .activity-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .activity-filters {
-    width: 100%;
-  }
-  
-  .activity-filters select {
-    flex: 1;
-  }
-}
-</style>
+  </div>
+</section>

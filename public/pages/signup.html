@@ -1,24 +1,30 @@
-<div class="hero">
-  <h1>Create Account</h1>
-  <p>Start building secure API-backed apps</p>
-</div>
+<section class="auth-shell">
+  <div class="auth-copy">
+    <span class="home-pill">Create your workspace</span>
+    <h1>Start building secure AI apps in minutes.</h1>
+    <p>Store secrets server-side, ship instantly, and let your agents publish without infra overhead.</p>
+  </div>
 
-<form id="signup-form">
-  <div class="form-group">
-    <label for="name">Name</label>
-    <input type="text" id="name" name="name" required>
-  </div>
-  <div class="form-group">
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" required>
-  </div>
-  <div class="form-group">
-    <label for="password">Password</label>
-    <input type="password" id="password" name="password" required minlength="8">
-  </div>
-  <button type="submit" class="btn-primary">Create Account</button>
-</form>
+  <div class="auth-card">
+    <h2>Create Account</h2>
+    <form id="signup-form">
+      <div class="form-group">
+        <label for="name">Name</label>
+        <input type="text" id="name" name="name" required>
+      </div>
+      <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required minlength="8">
+      </div>
+      <button type="submit" class="btn-primary auth-submit">Create Account</button>
+    </form>
 
-<p style="text-align: center; margin-top: 1rem;">
-  Already have an account? <a href="#/login">Login</a>
-</p>
+    <p class="auth-links">
+      Already have an account? <a href="#/login">Login</a>
+    </p>
+  </div>
+</section>

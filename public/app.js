@@ -109,6 +109,18 @@ const routes = {
   '/skill': 'pages/skill.html'
 };
 
+function setPageClass(path) {
+  const body = document.body;
+  const existing = Array.from(body.classList).filter((name) => name.startsWith('page-'));
+  existing.forEach((name) => body.classList.remove(name));
+
+  const normalized = path === '/'
+    ? 'home'
+    : path.replace(/^\//, '').replace(/[^a-z0-9]+/g, '-') || 'home';
+
+  body.classList.add(`page-${normalized}`);
+}
+
 async function loadPage(path) {
   // Handle dynamic routes (e.g., /blog/:slug)
   let pagePath = routes[path];
@@ -133,9 +145,11 @@ async function loadPage(path) {
     if (!response.ok) throw new Error('Page not found');
     const html = await response.text();
     document.getElementById('app').innerHTML = html;
+    setPageClass(path);
     initPageHandlers(path, routeParams);
   } catch (err) {
     document.getElementById('app').innerHTML = '<p>Page not found</p>';
+    setPageClass('not-found');
   }
 }
 
@@ -218,7 +232,7 @@ function updateNav() {
         <a href="#/skill">For Agents</a>
         <a href="#/chat">Chat</a>
         <a href="#/login">Login</a>
-        <a href="#/signup">Sign Up</a>
+        <a href="#/signup" class="btn-primary nav-cta">Start free</a>
       </div>
     `;
   }
@@ -2455,10 +2469,10 @@ function showToast(message, type) {
 
 // Dashboard tab switching
 function switchTab(tabName) {
-  // Update URL
-  const url = new URL(window.location.href);
-  url.searchParams.set('tab', tabName);
-  window.history.replaceState(null, '', url);
+  // Update hash query (keep SPA routing state in hash)
+  const [hashPath] = window.location.hash.slice(1).split('?');
+  const nextHash = `${hashPath || '/dashboard'}?tab=${encodeURIComponent(tabName)}`;
+  window.history.replaceState(null, '', `#${nextHash}`);
 
   // Update tab buttons
   document.querySelectorAll('.dashboard-tabs .tab').forEach(tab => {
@@ -2485,8 +2499,8 @@ function switchTab(tabName) {
 }
 
 function initDashboardTabs() {
-  const url = new URL(window.location.href);
-  const tab = url.searchParams.get('tab');
+  const hashQuery = window.location.hash.split('?')[1] || '';
+  const tab = new URLSearchParams(hashQuery).get('tab');
 
   // Validate tab name, default to 'apps'
   const validTabs = ['apps', 'keys', 'activity', 'settings'];
