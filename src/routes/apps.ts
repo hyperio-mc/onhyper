@@ -712,12 +712,14 @@ apps.post('/:id/zip', async (c) => {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries();
     
-    // Find root folder (common prefix)
+    // Find root folder (common prefix), but skip underscore-prefixed folders
+    // (like _next, _vercel) as they are framework-specific and should be preserved
     let rootFolder: string | null = null;
     for (const entry of entries) {
       if (!entry.isDirectory && !entry.entryName.includes('__MACOSX') && !entry.entryName.startsWith('.')) {
         const parts = entry.entryName.split('/');
-        if (parts.length > 1 && !rootFolder) {
+        // Only use as root if it doesn't start with underscore
+        if (parts.length > 1 && !rootFolder && !parts[0].startsWith('_')) {
           rootFolder = parts[0];
         }
       }
