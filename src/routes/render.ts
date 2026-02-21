@@ -155,6 +155,111 @@ function setSecurityHeaders(c: any): void {
 }
 
 /**
+ * GET /a/:slug/_next/* or /a/:slug/_vercel/*
+ * Serve app assets (JS, CSS, images) from ZIP upload
+ * This is needed because browser requests go to /_next/... (root-relative)
+ */
+render.get('/:slug/_next/*', async (c) => {
+  const slug = c.req.param('slug');
+  const assetPath = c.req.param('*') || '';
+  
+  const app = getAppBySlug(slug);
+  if (!app) {
+    return c.text('Not found', 404);
+  }
+  
+  // Try to get from AppFilesStore
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const content = AppFilesStore.get(app.id, `_next/${assetPath}`);
+  
+  if (content) {
+    // Determine content type
+    let contentType = 'application/octet-stream';
+    if (assetPath.endsWith('.js')) contentType = 'application/javascript';
+    else if (assetPath.endsWith('.css')) contentType = 'text/css';
+    else if (assetPath.endsWith('.woff2')) contentType = 'font/woff2';
+    else if (assetPath.endsWith('.svg')) contentType = 'image/svg+xml';
+    else if (assetPath.endsWith('.png')) contentType = 'image/png';
+    else if (assetPath.endsWith('.ico')) contentType = 'image/x-icon';
+    
+    return c.body(content, 200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000'
+    });
+  }
+  
+  return c.text('Asset not found', 404);
+});
+
+/**
+ * GET /a/:slug/:file (favicon.ico, next.svg, etc.)
+ * Serve root-level assets from ZIP upload
+ */
+render.get('/:slug/:file(*)', async (c) => {
+  const slug = c.req.param('slug');
+  const assetPath = c.req.param('file') || '';
+  
+  // Only allow known asset patterns (favicon, svg, etc.)
+  if (!assetPath || assetPath.includes('..') || assetPath.includes('/')) {
+    return c.text('Invalid path', 400);
+  }
+  
+  const app = getAppBySlug(slug);
+  if (!app) {
+    return c.text('Not found', 404);
+  }
+  
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const content = AppFilesStore.get(app.id, assetPath);
+  
+  if (content) {
+    let contentType = 'application/octet-stream';
+    if (assetPath.endsWith('.js')) contentType = 'application/javascript';
+    else if (assetPath.endsWith('.css')) contentType = 'text/css';
+    else if (assetPath.endsWith('.svg')) contentType = 'image/svg+xml';
+    else if (assetPath.endsWith('.png')) contentType = 'image/png';
+    else if (assetPath.endsWith('.ico')) contentType = 'image/x-icon';
+    
+    return c.body(content, 200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000'
+    });
+  }
+  
+  return c.text('Asset not found', 404);
+});
+
+/**
+ * GET /a/:slug/_vercel/*
+ * Serve Vercel-style assets from ZIP upload
+ */
+render.get('/:slug/_vercel/*', async (c) => {
+  const slug = c.req.param('slug');
+  const assetPath = c.req.param('*') || '';
+  
+  const app = getAppBySlug(slug);
+  if (!app) {
+    return c.text('Not found', 404);
+  }
+  
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const content = AppFilesStore.get(app.id, `_vercel/${assetPath}`);
+  
+  if (content) {
+    let contentType = 'application/octet-stream';
+    if (assetPath.endsWith('.js')) contentType = 'application/javascript';
+    else if (assetPath.endsWith('.css')) contentType = 'text/css';
+    
+    return c.body(content, 200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000'
+    });
+  }
+  
+  return c.text('Asset not found', 404);
+});
+
+/**
  * GET /a/:slug
  * Render a published app
  */
@@ -238,9 +343,9 @@ render.get('/:slug', async (c) => {
     }
     
     setSecurityHeaders(c);
-    // Add debug marker in actual response
+    // Add debug header
     modifiedHtml = '<!--EARLY_PATH-->' + modifiedHtml;
-    return c.html(modifiedHtml, 200);
+    return c.html(modifiedHtml, 200, { 'X-Debug-Path': 'early-zip' });
   }
   
   // Get content from LMDB
