@@ -192,7 +192,10 @@ render.get('/:slug', async (c) => {
   const { AppFilesStore } = await import('../lib/lmdb.js');
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
-  console.log('[RENDER] app.id:', app.id, 'zipIndexHtml found:', !!zipIndexHtml, 'length:', zipIndexHtml?.length);
+  if (!zipIndexHtml) {
+    console.log('[RENDER] WARNING: No ZIP content, falling back to app.html');
+    console.log('[RENDER] app.id from DB:', app.id);
+  }
   
   if (zipIndexHtml) {
     // Inject ONHYPER config into the ZIP's index.html
