@@ -20,6 +20,7 @@ import { apps } from './routes/apps.js';
 import { dashboard } from './routes/dashboard.js';
 import { proxy } from './routes/proxy.js';
 import { workos } from './routes/auth/workos.js';
+import { clerk } from './routes/auth/clerk.js';
 import { render } from './routes/render.js';
 import { waitlist } from './routes/waitlist.js';
 import { unsubscribe } from './routes/unsubscribe.js';
@@ -94,6 +95,21 @@ app.get('/api', (c) => {
         'POST /proxy/auth/workos/sso/saml/auth': 'Initiate SAML SSO',
         'POST /proxy/auth/workos/directorySync/sync': 'Trigger directory sync',
         'ALL /proxy/auth/workos/*': 'Generic WorkOS API proxy',
+      },
+      clerk: {
+        'GET /proxy/auth/clerk': 'Clerk proxy info and available endpoints',
+        'POST /proxy/auth/clerk/users': 'Create a Clerk user',
+        'GET /proxy/auth/clerk/users': 'List Clerk users',
+        'GET /proxy/auth/clerk/users/:id': 'Get a Clerk user by ID',
+        'PATCH /proxy/auth/clerk/users/:id': 'Update a Clerk user',
+        'DELETE /proxy/auth/clerk/users/:id': 'Delete a Clerk user',
+        'POST /proxy/auth/clerk/sessions': 'Create a Clerk session',
+        'GET /proxy/auth/clerk/sessions/:id': 'Get a Clerk session by ID',
+        'DELETE /proxy/auth/clerk/sessions/:id': 'Revoke a Clerk session',
+        'POST /proxy/auth/clerk/clients/:client_id/verify': 'Verify a session token',
+        'GET /proxy/auth/clerk/clients/:client_id': 'Get a Clerk client by ID',
+        'GET /proxy/auth/clerk/organizations': 'List Clerk organizations',
+        'POST /proxy/auth/clerk/organizations': 'Create a Clerk organization',
       },
       render: {
         'GET /a/:slug': 'Render a published app',
@@ -179,6 +195,9 @@ app.route('/proxy', proxy);
 
 // WorkOS proxy routes (app-scoped WorkOS API proxy)
 app.route('/proxy/auth/workos', workos);
+
+// Clerk proxy routes (app-scoped Clerk API proxy)
+app.route('/proxy/auth/clerk', clerk);
 
 // Render routes (public)
 app.route('/a', render);

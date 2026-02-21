@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WorkOS SSO Demo</title>
+  <link rel="stylesheet" href="styles.css">
+  <!-- WorkOS AuthKit CSS (optional - for styled components) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="container">
+    <!-- Loading State -->
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <!-- Login View -->
+    <div id="login-view" class="view hidden">
+      <div class="card">
+        <div class="logo">
+          <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="48" height="48" rx="12" fill="#6366f1"/>
+            <path d="M24 14L34 20V28L24 34L14 28V20L24 14Z" stroke="white" stroke-width="2" fill="none"/>
+            <circle cx="24" cy="24" r="4" fill="white"/>
+          </svg>
+        </div>
+        <h1>WorkOS SSO Demo</h1>
+        <p class="subtitle">Sign in with your corporate identity</p>
+
+        <!-- SSO Login Form -->
+        <form id="sso-form" class="sso-form">
+          <div class="form-group">
+            <label for="email">Work Email</label>
+            <input 
+              type="email" 
+              id="email" 
+              name="email" 
+              placeholder="you@company.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+
+          <!-- Connection Selection (hidden if only one) -->
+          <div id="connection-selector" class="form-group hidden">
+            <label for="connection">Identity Provider</label>
+            <select id="connection" name="connection">
+              <option value="">Select your IdP...</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2L2 7V13L10 18L18 13V7L10 2Z" stroke="currentColor" stroke-width="1.5"/>
+              <circle cx="10" cy="10" r="2" fill="currentColor"/>
+            </svg>
+            Sign in with SSO
+          </button>
+        </form>
+
+        <!-- Magic Link Alternative -->
+        <div class="divider">
+          <span>or</span>
+        </div>
+
+        <form id="magic-link-form" class="magic-link-form">
+          <div class="form-group">
+            <label for="magic-email">Get a Magic Link</label>
+            <input 
+              type="email" 
+              id="magic-email" 
+              name="magic-email" 
+              placeholder="you@company.com"
+              required
+              autocomplete="email"
+            />
+          </div>
+          <button type="submit" class="btn btn-secondary">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <rect x="2" y="4" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M2 6L10 11L18 6" stroke="currentColor" stroke-width="1.5"/>
+            </svg>
+            Send Magic Link
+          </button>
+        </form>
+
+        <!-- Error Message -->
+        <div id="error" class="error hidden"></div>
+
+        <!-- Setup Warning -->
+        <div id="setup-warning" class="setup-warning hidden">
+          <h3>⚠️ Setup Required</h3>
+          <p>To use this demo, you need to:</p>
+          <ol>
+            <li>Create a <a href="https://workos.com" target="_blank">WorkOS account</a></li>
+            <li>Add your WorkOS API key to HYPR Secrets</li>
+            <li>Configure this app with your Client ID</li>
+          </ol>
+          <a href="README.md" class="btn btn-outline">View Setup Guide</a>
+        </div>
+      </div>
+
+      <!-- Info Section -->
+      <div class="info-section">
+        <h3>How it works</h3>
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-icon">🔐</span>
+            <h4>Secure SSO</h4>
+            <p>Authenticate with your corporate IdP (Okta, Azure AD, Google Workspace)</p>
+          </div>
+          <div class="info-item">
+            <span class="info-icon">🔒</span>
+            <h4>Secure Proxy</h4>
+            <p>API keys are stored securely in HYPR, never exposed to the browser</p>
+          </div>
+          <div class="info-item">
+            <span class="info-icon">⚡</span>
+            <h4>Fast Integration</h4>
+            <p>Get SSO working in minutes with WorkOS AuthKit</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Callback View (shown during OAuth redirect handling) -->
+    <div id="callback-view" class="view hidden">
+      <div class="card">
+        <div class="spinner"></div>
+        <h2>Completing sign in...</h2>
+        <p>Please wait while we verify your identity.</p>
+      </div>
+    </div>
+
+    <!-- User Dashboard View -->
+    <div id="dashboard-view" class="view hidden">
+      <div class="dashboard-header">
+        <h2>Welcome, <span id="user-name">User</span>!</h2>
+        <button id="logout-btn" class="btn btn-outline">Sign Out</button>
+      </div>
+
+      <div class="dashboard-grid">
+        <!-- User Profile Card -->
+        <div class="card">
+          <h3>Profile</h3>
+          <div class="user-info">
+            <div class="avatar" id="user-avatar">
+              <span id="user-initials">?</span>
+            </div>
+            <div class="user-details">
+              <p><strong>Email:</strong> <span id="user-email">-</span></p>
+              <p><strong>Name:</strong> <span id="user-full-name">-</span></p>
+              <p><strong>ID:</strong> <code id="user-id">-</code></p>
+              <p><strong>Created:</strong> <span id="user-created">-</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Organization Card -->
+        <div class="card" id="org-card">
+          <h3>Organization</h3>
+          <div class="org-info">
+            <p><strong>Name:</strong> <span id="org-name">-</span></p>
+            <p><strong>ID:</strong> <code id="org-id">-</code></p>
+          </div>
+        </div>
+
+        <!-- Session Info Card -->
+        <div class="card">
+          <h3>Session</h3>
+          <div class="session-info">
+            <p><strong>Status:</strong> <span class="badge badge-success">Active</span></p>
+            <p><strong>Expires:</strong> <span id="session-expires">-</span></p>
+            <p><strong>Method:</strong> <span id="auth-method">SSO</span></p>
+          </div>
+        </div>
+
+        <!-- API Test Card -->
+        <div class="card">
+          <h3>API Test</h3>
+          <p class="card-desc">Test authenticated API calls through HYPR proxy</p>
+          <button id="test-api-btn" class="btn btn-secondary">
+            Test WorkOS API
+          </button>
+          <div id="api-result" class="api-result hidden">
+            <pre id="api-response"></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- How This Works -->
+      <div class="card code-card">
+        <h3>How This Works</h3>
+        <p>All WorkOS API calls go through the HYPR proxy. Your API key is stored securely and never exposed to the browser.</p>
+        <pre><code>// Example: Get user info via HYPR proxy
+const response = await fetch('/proxy/auth/workos/users/' + userId, {
+  headers: {
+    'X-App-Slug': 'workos-demo'
+  }
+});
+const user = await response.json();</code></pre>
+      </div>
+    </div>
+
+    <!-- Magic Link Sent View -->
+    <div id="magic-sent-view" class="view hidden">
+      <div class="card">
+        <div class="success-icon">✉️</div>
+        <h2>Check your email</h2>
+        <p>We sent a magic link to <strong id="magic-email-sent">your email</strong>.</p>
+        <p class="hint">Click the link in the email to sign in. The link expires in 15 minutes.</p>
+        <button id="back-to-login" class="btn btn-outline mt-4">Back to Sign In</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

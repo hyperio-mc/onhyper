@@ -500,6 +500,16 @@ proxy.get('/', (c) => {
       description: config.description,
       usage: `POST /proxy/${name}/...`,
     })),
+    auth: {
+      workos: {
+        name: 'workos',
+        target: 'https://api.workos.com',
+        secretKey: 'WORKOS_API_KEY',
+        description: 'WorkOS Platform API - SSO, Directory Sync, User Management',
+        usage: 'POST /proxy/auth/workos/...',
+        note: 'Uses X-App-Slug for app-scoped authentication',
+      },
+    },
   });
 });
 

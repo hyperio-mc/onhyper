@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clerk Auth Demo | HYPR</title>
+  <style>
+    /* Reset & Base */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      color: #333;
+    }
+
+    /* Container */
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    .header h1 {
+      color: white;
+      font-size: 2.5rem;
+      margin: 0 0 10px 0;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .header p {
+      color: rgba(255,255,255,0.9);
+      font-size: 1.1rem;
+      margin: 0;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(255,255,255,0.2);
+      color: white;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+      padding: 30px;
+      margin-bottom: 20px;
+    }
+    .card h2 {
+      margin: 0 0 20px 0;
+      font-size: 1.5rem;
+      color: #333;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card h2 .icon {
+      font-size: 1.3rem;
+    }
+
+    /* Setup Form */
+    .setup-form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .setup-form input {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 1rem;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .setup-form input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+    }
+    .setup-form input::placeholder {
+      color: #999;
+    }
+    .setup-form button {
+      padding: 12px 24px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .setup-form button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .setup-form button:active {
+      transform: translateY(0);
+    }
+
+    /* Status Messages */
+    .status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 15px;
+      font-size: 0.95rem;
+    }
+    .status.success {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .status.error {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    .status.info {
+      background: #e7f3ff;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+
+    /* Auth Section */
+    .auth-section {
+      text-align: center;
+      padding: 20px 0;
+    }
+    .auth-section.logged-out {
+      padding: 40px 0;
+    }
+
+    /* Clerk Mount Point */
+    #clerk-auth {
+      display: flex;
+      justify-content: center;
+      margin: 20px 0;
+    }
+
+    /* User Info Card */
+    .user-info {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 15px 20px;
+      align-items: center;
+    }
+    .user-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 2rem;
+      font-weight: bold;
+      grid-row: span 3;
+    }
+    .user-avatar img {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    .user-label {
+      font-size: 0.85rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .user-value {
+      font-size: 1rem;
+      color: #333;
+      word-break: break-all;
+    }
+
+    /* API Demo */
+    .api-demo {
+      margin-top: 20px;
+    }
+    .api-demo pre {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 16px;
+      border-radius: 8px;
+      overflow-x: auto;
+      font-family: 'Fira Code', 'Monaco', 'Consolas', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    .api-demo code {
+      color: #9cdcfe;
+    }
+    .api-demo .key { color: #9cdcfe; }
+    .api-demo .string { color: #ce9178; }
+    .api-demo .comment { color: #6a9955; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    .btn-secondary {
+      background: #f0f0f0;
+      color: #333;
+    }
+    .btn-secondary:hover {
+      background: #e0e0e0;
+    }
+    .btn-danger {
+      background: #dc3545;
+      color: white;
+    }
+    .btn-danger:hover {
+      background: #c82333;
+    }
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    /* Button Group */
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    /* Instructions */
+    .instructions {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-top: 20px;
+    }
+    .instructions h3 {
+      margin: 0 0 15px 0;
+      font-size: 1.1rem;
+      color: #333;
+    }
+    .instructions ol, .instructions ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .instructions li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+    }
+    .instructions code {
+      background: #e9ecef;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      color: #c7254e;
+    }
+    .instructions a {
+      color: #667eea;
+    }
+
+    /* API Response */
+    .api-response {
+      margin-top: 20px;
+    }
+    .api-response h4 {
+      margin: 0 0 10px 0;
+      font-size: 1rem;
+      color: #333;
+    }
+    .response-data {
+      background: #f8f9fa;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 16px;
+      font-family: monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* Hidden */
+    .hidden { display: none !important; }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .header h1 { font-size: 1.8rem; }
+      .card { padding: 20px; }
+      .setup-form { flex-direction: column; }
+      .setup-form input, .setup-form button { width: 100%; }
+      .user-info { grid-template-columns: 1fr; text-align: center; }
+      .user-avatar { margin: 0 auto; grid-row: auto; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🔐 Clerk Auth Demo</h1>
+      <p>Secure authentication for your HYPR apps with Clerk</p>
+      <span class="badge">Powered by HYPR</span>
+    </div>
+
+    <!-- Setup Card -->
+    <div class="card" id="setup-card">
+      <h2><span class="icon">⚙️</span> Configuration</h2>
+      <p>Enter your Clerk Publishable Key to get started. This is safe to share - it's meant to be public!</p>
+      
+      <div class="setup-form">
+        <input 
+          type="text" 
+          id="clerk-key" 
+          placeholder="pk_test_xxx or pk_live_xxx"
+          autocomplete="off"
+        >
+        <button onclick="saveClerkKey()" id="save-btn">
+          Save & Connect
+        </button>
+      </div>
+      
+      <div id="setup-status"></div>
+      
+      <div class="instructions">
+        <h3>📚 How to get your Clerk keys:</h3>
+        <ol>
+          <li>Go to <a href="https://dashboard.clerk.com" target="_blank">Clerk Dashboard</a></li>
+          <li>Create a new application or select an existing one</li>
+          <li>Go to <strong>API Keys</strong> in the sidebar</li>
+          <li>Copy the <strong>Publishable Key</strong> (starts with <code>pk_test_</code> or <code>pk_live_</code>)</li>
+          <li>For backend calls via HYPR proxy, also copy the <strong>Secret Key</strong> (starts with <code>sk_test_</code>)</li>
+        </ol>
+        <p><strong>Tip:</strong> You can use test keys (<code>pk_test_</code>) for development. Switch to live keys (<code>pk_live_</code>) in production.</p>
+      </div>
+    </div>
+
+    <!-- Auth Card -->
+    <div class="card hidden" id="auth-card">
+      <h2><span class="icon">👤</span> Authentication</h2>
+      
+      <!-- Logged Out State -->
+      <div id="logged-out" class="auth-section logged-out">
+        <p>Sign in to test authentication</p>
+        <div id="clerk-auth"></div>
+      </div>
+      
+      <!-- Logged In State -->
+      <div id="logged-in" class="auth-section hidden">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">
+            <span id="user-initials">?</span>
+          </div>
+          <div>
+            <div class="user-label">Name</div>
+            <div class="user-value" id="user-name">-</div>
+          </div>
+          <div>
+            <div class="user-label">Email</div>
+            <div class="user-value" id="user-email">-</div>
+          </div>
+          <div>
+            <div class="user-label">User ID</div>
+            <div class="user-value" id="user-id">-</div>
+          </div>
+        </div>
+        
+        <div class="btn-group">
+          <button class="btn btn-primary" onclick="testApiCall()">
+            🧪 Test API Call
+          </button>
+          <button class="btn btn-danger" onclick="signOut()">
+            Sign Out
+          </button>
+        </div>
+      </div>
+      
+      <!-- API Demo Response -->
+      <div class="api-response hidden" id="api-response">
+        <h4>📡 API Response:</h4>
+        <div class="response-data" id="response-data"></div>
+      </div>
+    </div>
+
+    <!-- HYPR Proxy Demo Card -->
+    <div class="card hidden" id="proxy-card">
+      <h2><span class="icon">🔗</span> HYPR Proxy Integration</h2>
+      <p>Make authenticated API calls through HYPR's secure proxy. Your secret key stays safe on the server!</p>
+      
+      <div class="api-demo">
+        <h4>How it works:</h4>
+        <pre><code><span class="comment">// 1. Add CLERK_SECRET_KEY to your HYPR secrets</span>
+<span class="comment">//    (Settings → Secrets → Add Secret)</span>
+
+<span class="comment">// 2. Make API calls through HYPR proxy</span>
+const response = await fetch(<span class="string">'/proxy/auth/clerk/users'</span>, {
+  method: <span class="string">'POST'</span>,
+  headers: {
+    <span class="key">'Content-Type'</span>: <span class="string">'application/json'</span>,
+    <span class="key">'X-App-Slug'</span>: window.ONHYPER.appSlug,
+  },
+  body: JSON.stringify({
+    email_address: [<span class="string">'user@example.com'</span>],
+  }),
+});
+
+<span class="comment">// 3. HYPR injects your secret key server-side</span>
+<span class="comment">//    and forwards the request to Clerk API</span></code></pre>
+      </div>
+      
+      <div class="instructions">
+        <h3>🔧 Setup HYPR Proxy for Clerk:</h3>
+        <ol>
+          <li>Go to your <a href="#" onclick="openDashboard()">HYPR Dashboard</a></li>
+          <li>Navigate to <strong>Settings → Secrets</strong></li>
+          <li>Add a new secret:
+            <ul>
+              <li><strong>Name:</strong> <code>CLERK_SECRET_KEY</code></li>
+              <li><strong>Value:</strong> Your Clerk Secret Key (from Clerk Dashboard)</li>
+            </ul>
+          </li>
+          <li>Save the secret</li>
+          <li>You can now make authenticated Clerk API calls through the proxy!</li>
+        </ol>
+        <p><strong>Note:</strong> The proxy integration requires the Clerk backend endpoint to be configured on HYPR. Contact support if you need this enabled.</p>
+      </div>
+      
+      <!-- Proxy Test Button -->
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="testProxyCall()" id="proxy-test-btn">
+          🚀 Test Proxy Call
+        </button>
+        <button class="btn btn-secondary" onclick="disconnect()">
+          Disconnect Clerk
+        </button>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div style="text-align: center; margin-top: 40px; color: rgba(255,255,255,0.7);">
+      <p>
+        Built with ❤️ using <a href="https://onhyper.io" style="color: white;">HYPR</a> + 
+        <a href="https://clerk.com" style="color: white;" target="_blank">Clerk</a>
+      </p>
+      <p style="font-size: 0.85rem;">Secure proxy • No secrets exposed • Easy integration</p>
+    </div>
+  </div>
+
+  <!-- Clerk CDN -->
+  <script src="https://js.clerk.com/embed.js" async></script>
+  
+  <script>
+    // ========================================
+    // Clerk Auth Demo App
+    // ========================================
+    
+    // Global state
+    let clerkLoaded = false;
+    let clerkKey = '';
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', init);
+    
+    async function init() {
+      // Check for saved Clerk key
+      clerkKey = localStorage.getItem('clerk_publishable_key') || '';
+      
+      if (clerkKey) {
+        document.getElementById('clerk-key').value = clerkKey;
+        await loadClerk();
+      } else {
+        // Show instructions
+        showStatus('setup-status', 'Enter your Clerk Publishable Key to get started.', 'info');
+      }
+    }
+    
+    // Save Clerk key and initialize
+    async function saveClerkKey() {
+      const input = document.getElementById('clerk-key');
+      const key = input.value.trim();
+      
+      if (!key) {
+        showStatus('setup-status', 'Please enter a Clerk Publishable Key', 'error');
+        return;
+      }
+      
+      if (!key.startsWith('pk_test_') && !key.startsWith('pk_live_')) {
+        showStatus('setup-status', 'Invalid key format. Should start with pk_test_ or pk_live_', 'error');
+        return;
+      }
+      
+      clerkKey = key;
+      localStorage.setItem('clerk_publishable_key', key);
+      
+      showStatus('setup-status', 'Connecting to Clerk...', 'info');
+      
+      try {
+        await loadClerk();
+        showStatus('setup-status', '✅ Connected to Clerk successfully!', 'success');
+      } catch (error) {
+        showStatus('setup-status', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    // Load Clerk SDK and initialize
+    async function loadClerk() {
+      return new Promise((resolve, reject) => {
+        // Check if Clerk is already loaded
+        if (window.Clerk) {
+          initClerk(resolve, reject);
+          return;
+        }
+        
+        // Wait for Clerk script to load
+        const checkClerk = setInterval(() => {
+          if (window.Clerk) {
+            clearInterval(checkClerk);
+            initClerk(resolve, reject);
+          }
+        }, 100);
+        
+        // Timeout after 10 seconds
+        setTimeout(() => {
+          clearInterval(checkClerk);
+          reject(new Error('Clerk SDK failed to load'));
+        }, 10000);
+      });
+    }
+    
+    // Initialize Clerk with the key
+    function initClerk(resolve, reject) {
+      window.Clerk.load({
+        publishableKey: clerkKey,
+      }).then(() => {
+        clerkLoaded = true;
+        showAuthUI();
+        resolve();
+      }).catch((error) => {
+        reject(error);
+      });
+    }
+    
+    // Show authentication UI
+    function showAuthUI() {
+      document.getElementById('auth-card').classList.remove('hidden');
+      document.getElementById('proxy-card').classList.remove('hidden');
+      
+      if (window.Clerk.user) {
+        // Already signed in
+        showUserInfo();
+      } else {
+        // Show sign-in component
+        window.Clerk.mountSignIn(document.getElementById('clerk-auth'), {
+          appearance: {
+            elements: {
+              rootBox: {
+                boxShadow: 'none',
+              },
+            },
+          },
+        });
+        
+        // Listen for sign in
+        window.Clerk.addListener(({ user }) => {
+          if (user) {
+            showUserInfo();
+          } else {
+            showSignIn();
+          }
+        });
+      }
+    }
+    
+    // Show sign-in form
+    function showSignIn() {
+      document.getElementById('logged-out').classList.remove('hidden');
+      document.getElementById('logged-in').classList.add('hidden');
+      document.getElementById('clerk-auth').innerHTML = '';
+      
+      window.Clerk.mountSignIn(document.getElementById('clerk-auth'), {
+        appearance: {
+          elements: {
+            rootBox: {
+              boxShadow: 'none',
+            },
+          },
+        },
+      });
+    }
+    
+    // Show user info after sign in
+    function showUserInfo() {
+      const user = window.Clerk.user;
+      
+      document.getElementById('logged-out').classList.add('hidden');
+      document.getElementById('logged-in').classList.remove('hidden');
+      
+      // Update user info
+      const name = user.fullName || user.username || user.primaryEmailAddress?.emailAddress || 'User';
+      document.getElementById('user-name').textContent = name;
+      document.getElementById('user-email').textContent = user.primaryEmailAddress?.emailAddress || '-';
+      document.getElementById('user-id').textContent = user.id;
+      
+      // Avatar
+      const avatarEl = document.getElementById('user-avatar');
+      if (user.imageUrl) {
+        avatarEl.innerHTML = `<img src="${user.imageUrl}" alt="Avatar">`;
+      } else {
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+        document.getElementById('user-initials').textContent = initials || '?';
+      }
+      
+      // Clear auth mount
+      document.getElementById('clerk-auth').innerHTML = '';
+    }
+    
+    // Sign out
+    async function signOut() {
+      try {
+        await window.Clerk.signOut();
+        showSignIn();
+      } catch (error) {
+        console.error('Sign out error:', error);
+      }
+    }
+    
+    // Test API call (using Clerk session token)
+    async function testApiCall() {
+      const btn = event.target;
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Testing...';
+      
+      try {
+        // Get session token from Clerk
+        const token = await window.Clerk.session.getToken();
+        
+        // Demo: Show what the token looks like
+        const responseDiv = document.getElementById('api-response');
+        const dataDiv = document.getElementById('response-data');
+        
+        responseDiv.classList.remove('hidden');
+        dataDiv.textContent = JSON.stringify({
+          message: '✅ Successfully authenticated!',
+          user: {
+            id: window.Clerk.user.id,
+            email: window.Clerk.user.primaryEmailAddress?.emailAddress,
+            name: window.Clerk.user.fullName,
+          },
+          session: {
+            id: window.Clerk.session.id,
+            status: window.Clerk.session.status,
+          },
+          tokenPreview: token ? `${token.substring(0, 20)}...` : null,
+          note: 'This session token can be sent to your backend for verification.',
+          'HYPR Usage': 'Pass this token to HYPR proxy endpoints to make authenticated API calls.',
+        }, null, 2);
+        
+      } catch (error) {
+        document.getElementById('response-data').textContent = JSON.stringify({
+          error: error.message,
+          tip: 'Make sure you are signed in.',
+        }, null, 2);
+        document.getElementById('api-response').classList.remove('hidden');
+      }
+      
+      btn.disabled = false;
+      btn.textContent = '🧪 Test API Call';
+    }
+    
+    // Test HYPR proxy call
+    async function testProxyCall() {
+      const btn = document.getElementById('proxy-test-btn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span> Testing...';
+      
+      const responseDiv = document.getElementById('api-response');
+      const dataDiv = document.getElementById('response-data');
+      
+      try {
+        // Check if HYPER globals exist
+        if (!window.ONHYPER) {
+          throw new Error('This demo is running outside HYPR. Deploy to HYPR to test the proxy.');
+        }
+        
+        // Get session token for auth
+        const token = await window.Clerk.session.getToken();
+        
+        // Example proxy call - this would need the auth/clerk endpoint configured
+        // For now, we'll demonstrate the pattern with a different endpoint
+        const response = await fetch('/proxy/', {
+          method: 'GET',
+          headers: {
+            'X-App-Slug': window.ONHYPER.appSlug,
+          },
+        });
+        
+        const data = await response.json();
+        
+        responseDiv.classList.remove('hidden');
+        dataDiv.textContent = JSON.stringify({
+          status: response.status,
+          data: data,
+          note: 'This lists available proxy endpoints. To use Clerk through the proxy:',
+          setup: [
+            '1. Add CLERK_SECRET_KEY in HYPR Dashboard > Settings > Secrets',
+            '2. The /proxy/auth/clerk/* endpoint will forward requests to Clerk API',
+            '3. Your secret key is injected server-side and never exposed to clients',
+          ],
+        }, null, 2);
+        
+      } catch (error) {
+        responseDiv.classList.remove('hidden');
+        dataDiv.textContent = JSON.stringify({
+          error: error.message,
+          note: 'Proxy calls require the app to be deployed on HYPR.',
+        }, null, 2);
+      }
+      
+      btn.disabled = false;
+      btn.textContent = '🚀 Test Proxy Call';
+    }
+    
+    // Disconnect Clerk
+    function disconnect() {
+      localStorage.removeItem('clerk_publishable_key');
+      clerkKey = '';
+      clerkLoaded = false;
+      
+      // Reset UI
+      document.getElementById('auth-card').classList.add('hidden');
+      document.getElementById('proxy-card').classList.add('hidden');
+      document.getElementById('setup-status').innerHTML = '';
+      document.getElementById('api-response').classList.add('hidden');
+      
+      // Reload page to clear Clerk
+      window.location.reload();
+    }
+    
+    // Open HYPR dashboard
+    function openDashboard() {
+      window.open('https://onhyper.io', '_blank');
+      return false;
+    }
+    
+    // Show status message
+    function showStatus(elementId, message, type) {
+      const el = document.getElementById(elementId);
+      el.innerHTML = `<div class="status ${type}">${message}</div>`;
+    }
+  </script>
+</body>
+</html>
