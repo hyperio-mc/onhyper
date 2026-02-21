@@ -269,7 +269,8 @@ render.get('/:slug', async (c) => {
                          html.trim().toLowerCase().startsWith('<html');
   
   if (isFullDocument) {
-    console.log('[RENDER] Serving full document from app.html');
+    console.log('[RENDER] Serving full document, html length:', html.length);
+    console.log('[RENDER] HTML starts:', html.trim().substring(0, 30));
     
     // Inject ONHYPER config into the full document
     const onhyperConfig = `
