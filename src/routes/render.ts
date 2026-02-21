@@ -206,21 +206,22 @@ render.get('/:slug', async (c) => {
     
     // Rewrite absolute paths to relative paths for sub-path deployment
     // Vite apps use /assets/... which need to become ./assets/...
-    // But DON'T rewrite framework-specific paths - they should stay absolute:
+    // Next.js uses /_next/... which needs to become ./_next/... 
+    // (so browser resolves to /a/slug/_next/... correctly)
+    // 
+    // But DON'T rewrite framework paths that need to stay absolute:
     // - /a/... (our app paths)
-    // - /_next/... (Next.js)
-    // - /_vercel/... (Vercel)
     // - /api/... (API routes)
     let modifiedHtml = zipIndexHtml
       .replace(/href="\/a\//g, 'href="/a/')
       .replace(/src="\/a\//g, 'src="/a/')
-      .replace(/href="\/_next\//g, 'href="/_next/')
-      .replace(/src="\/_next\//g, 'src="/_next/')
-      .replace(/href="\/_vercel\//g, 'href="/_vercel/')
-      .replace(/src="\/_vercel\//g, 'src="/_vercel/')
       .replace(/href="\/api\//g, 'href="/api/')
       .replace(/src="\/api\//g, 'src="/api/')
-      .replace(/href="\//g, 'href="./')
+      .replace(/href="\/_next\//g, 'href="./_next/')  // Next.js: /_next/ -> ./_next/
+      .replace(/src="\/_next\//g, 'src="./_next/')
+      .replace(/href="\/_vercel\//g, 'href="./_vercel/')
+      .replace(/src="\/_vercel\//g, 'src="./_vercel/')
+      .replace(/href="\//g, 'href="./')  // Other /assets/ -> ./assets/
       .replace(/src="\//g, 'src="./');
     
     if (zipIndexHtml.includes('</body>')) {
