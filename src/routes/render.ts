@@ -283,8 +283,8 @@ render.get('/:slug', async (c) => {
     `;
     
     // Transform absolute paths to relative for sub-path deployment
-    // Same transformation as the ZIP path above
     let transformedHtml = html
+      .replace(/<html/, '<html<!--TRANSFORMED-->')
       .replace(/href="\/a\//g, 'href="/a/')
       .replace(/src="\/a\//g, 'src="/a/')
       .replace(/href="\/api\//g, 'href="/api/')
