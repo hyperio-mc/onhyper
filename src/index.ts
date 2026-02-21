@@ -19,6 +19,7 @@ import { secrets } from './routes/secrets.js';
 import { apps } from './routes/apps.js';
 import { dashboard } from './routes/dashboard.js';
 import { proxy } from './routes/proxy.js';
+import { workos } from './routes/auth/workos.js';
 import { render } from './routes/render.js';
 import { waitlist } from './routes/waitlist.js';
 import { unsubscribe } from './routes/unsubscribe.js';
@@ -84,6 +85,15 @@ app.get('/api', (c) => {
       proxy: {
         'GET /proxy': 'List available proxy endpoints',
         'ALL /proxy/:endpoint/*': 'Proxy requests to external API',
+      },
+      workos: {
+        'GET /proxy/auth/workos': 'WorkOS proxy info and available endpoints',
+        'GET /proxy/auth/workos/users': 'List WorkOS users',
+        'POST /proxy/auth/workos/users': 'Create a WorkOS user',
+        'GET /proxy/auth/workos/users/:id': 'Get a WorkOS user by ID',
+        'POST /proxy/auth/workos/sso/saml/auth': 'Initiate SAML SSO',
+        'POST /proxy/auth/workos/directorySync/sync': 'Trigger directory sync',
+        'ALL /proxy/auth/workos/*': 'Generic WorkOS API proxy',
       },
       render: {
         'GET /a/:slug': 'Render a published app',
@@ -166,6 +176,9 @@ app.route('/api/admin/features', adminFeaturesRouter);
 
 // Proxy routes (uses own auth mechanism)
 app.route('/proxy', proxy);
+
+// WorkOS proxy routes (app-scoped WorkOS API proxy)
+app.route('/proxy/auth/workos', workos);
 
 // Render routes (public)
 app.route('/a', render);
