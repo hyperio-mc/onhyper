@@ -428,6 +428,15 @@ render.get('/:slug/*', async (c) => {
     file = AppFilesStore.get(app.id, filePath + '/index.html');
   }
   
+  // If still not found and has path components, try just the filename
+  // (handles case where ZIP strips root folder like assets/index.js -> index.js)
+  if (!file && filePath.includes('/')) {
+    const filename = filePath.split('/').pop();
+    if (filename) {
+      file = AppFilesStore.get(app.id, filename);
+    }
+  }
+  
   if (file) {
     const ext = fileMatch ? fileMatch[1].toLowerCase() : filePath.split('.').pop() || '';
     const contentTypes: Record<string, string> = {
