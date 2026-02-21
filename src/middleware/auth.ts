@@ -92,6 +92,7 @@
  */
 
 import { Context, Next } from 'hono';
+import { timingSafeEqual } from 'crypto';
 import { verifyToken, getApiKeyByKey, getUserById } from '../lib/users.js';
 
 // Extend Hono's context type
@@ -264,15 +265,21 @@ export async function requireAdminAuth(c: Context, next: Next) {
   }
   
   // Timing-safe comparison to prevent timing attacks
-  // We compare both strings character by character
-  let isValid = adminKey.length === masterKey.length;
-  if (isValid) {
-    for (let i = 0; i < adminKey.length; i++) {
-      // Use bitwise XOR to avoid branching that could leak timing info
-      if (adminKey.charCodeAt(i) !== masterKey.charCodeAt(i)) {
-        isValid = false;
-      }
-    }
+  // Use crypto.timingSafeEqual for constant-time comparison
+  // Always compare buffers of equal length to prevent timing leakage
+  const adminKeyBuffer = Buffer.from(adminKey, 'utf8');
+  const masterKeyBuffer = Buffer.from(masterKey, 'utf8');
+  
+  // If lengths differ, use a dummy comparison to maintain constant time
+  // This prevents attackers from determining key length via timing
+  let isValid: boolean;
+  if (adminKeyBuffer.length !== masterKeyBuffer.length) {
+    // Compare the provided key against itself to maintain constant time
+    timingSafeEqual(adminKeyBuffer, adminKeyBuffer);
+    isValid = false;
+  } else {
+    // Same length - perform the actual comparison
+    isValid = timingSafeEqual(adminKeyBuffer, masterKeyBuffer);
   }
   
   if (!isValid) {
