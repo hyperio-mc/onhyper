@@ -94,6 +94,7 @@ import { config } from '../config.js';
 import { identifyServerUser, trackServerEvent } from '../lib/analytics.js';
 import { sendWelcomeEmail, sendPasswordResetEmail, isEmailConfigured } from '../lib/email.js';
 import { logAuditEvent } from '../lib/db.js';
+import { validateBody, authSchemas, type SignupInput, type LoginInput, type ChangePasswordInput, type ForgotPasswordInput, type ResetPasswordInput, type DeleteAccountInput } from '../lib/validation.js';
 
 /**
  * Extract client IP and user agent from request
@@ -112,30 +113,13 @@ const auth = new Hono();
  * POST /api/auth/signup
  * Create a new user account
  */
-auth.post('/signup', strictRateLimit, async (c) => {
+auth.post('/signup', strictRateLimit, validateBody(authSchemas.signup), async (c) => {
   try {
-    const body = await c.req.json();
+    const body = c.get('validatedBody') as SignupInput;
     const { email, password, plan, source } = body;
     
-    if (!email || !password) {
-      return c.json({ error: 'Email and password are required' }, 400);
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return c.json({ error: 'Invalid email format' }, 400);
-    }
-    
-    // Validate password
-    if (password.length < config.auth.minPasswordLength) {
-      return c.json({ 
-        error: `Password must be at least ${config.auth.minPasswordLength} characters` 
-      }, 400);
-    }
-    
     // Create user
-    const user = await createUser(email, password, plan || 'FREE');
+    const user = await createUser(email, password, plan);
     
     // Track signup event (server-side)
     trackServerEvent(user.id, 'signup', {
@@ -200,14 +184,10 @@ auth.post('/signup', strictRateLimit, async (c) => {
  * POST /api/auth/login
  * Authenticate with email and password
  */
-auth.post('/login', strictRateLimit, async (c) => {
+auth.post('/login', strictRateLimit, validateBody(authSchemas.login), async (c) => {
   try {
-    const body = await c.req.json();
+    const body = c.get('validatedBody') as LoginInput;
     const { email, password } = body;
-    
-    if (!email || !password) {
-      return c.json({ error: 'Email and password are required' }, 400);
-    }
     
     // Authenticate
     const user = await authenticateUser(email, password);
@@ -321,7 +301,7 @@ auth.get('/me', requireAuth, async (c) => {
  * Body: { currentPassword: string, newPassword: string }
  * Response: { success: true } or { error: string }
  */
-auth.put('/password', requireAuth, async (c) => {
+auth.put('/password', requireAuth, validateBody(authSchemas.changePassword), async (c) => {
   try {
     const user = c.get('user');
     
@@ -329,13 +309,8 @@ auth.put('/password', requireAuth, async (c) => {
       return c.json({ error: 'Not authenticated' }, 401);
     }
     
-    const body = await c.req.json();
+    const body = c.get('validatedBody') as ChangePasswordInput;
     const { currentPassword, newPassword } = body;
-    
-    // Validate required fields
-    if (!currentPassword || !newPassword) {
-      return c.json({ error: 'Current password and new password are required' }, 400);
-    }
     
     // Update password
     await changeUserPassword(user.userId, currentPassword, newPassword);
@@ -364,24 +339,10 @@ auth.put('/password', requireAuth, async (c) => {
  * POST /api/auth/forgot-password
  * Request a password reset email
  */
-auth.post('/forgot-password', strictRateLimit, async (c) => {
+auth.post('/forgot-password', strictRateLimit, validateBody(authSchemas.forgotPassword), async (c) => {
   try {
-    const body = await c.req.json();
+    const body = c.get('validatedBody') as ForgotPasswordInput;
     const { email } = body;
-    
-    if (!email) {
-      return c.json({ error: 'Email is required' }, 400);
-    }
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      // Return success to prevent email enumeration, but don't process invalid emails
-      return c.json({ 
-        success: true, 
-        message: 'If an account with that email exists, a reset link has been sent.' 
-      });
-    }
     
     // Create reset token (returns null if user doesn't exist)
     const result = createPasswordResetToken(email);
@@ -444,14 +405,10 @@ auth.post('/forgot-password', strictRateLimit, async (c) => {
  * If only token is provided (no password), validates the token and returns its status.
  * This allows the frontend to check token validity before showing the password form.
  */
-auth.post('/reset-password', strictRateLimit, async (c) => {
+auth.post('/reset-password', strictRateLimit, validateBody(authSchemas.resetPassword), async (c) => {
   try {
-    const body = await c.req.json();
+    const body = c.get('validatedBody') as ResetPasswordInput;
     const { token, password } = body;
-    
-    if (!token) {
-      return c.json({ error: 'Token is required' }, 400);
-    }
     
     // Validate the reset token
     const tokenInfo = validatePasswordResetToken(token);
@@ -466,13 +423,6 @@ auth.post('/reset-password', strictRateLimit, async (c) => {
         valid: true, 
         message: 'Token is valid' 
       });
-    }
-    
-    // Validate password complexity
-    if (password.length < config.auth.minPasswordLength) {
-      return c.json({ 
-        error: `Password must be at least ${config.auth.minPasswordLength} characters` 
-      }, 400);
     }
     
     // Update the password
@@ -529,7 +479,7 @@ auth.post('/reset-password', strictRateLimit, async (c) => {
  * - 401: Not authenticated or incorrect password
  * - 500: Failed to delete account
  */
-auth.delete('/account', requireAuth, async (c) => {
+auth.delete('/account', requireAuth, validateBody(authSchemas.deleteAccount), async (c) => {
   try {
     const user = c.get('user');
     
@@ -537,13 +487,8 @@ auth.delete('/account', requireAuth, async (c) => {
       return c.json({ error: 'Not authenticated' }, 401);
     }
     
-    const body = await c.req.json();
+    const body = c.get('validatedBody') as DeleteAccountInput;
     const { password } = body;
-    
-    // Validate password is provided
-    if (!password) {
-      return c.json({ error: 'Password is required to delete account' }, 400);
-    }
     
     // Import deleteUserAccount dynamically to avoid circular dependency
     const { deleteUserAccount } = await import('../lib/users.js');
