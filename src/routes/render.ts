@@ -205,13 +205,23 @@ render.get('/:slug', async (c) => {
     `;
     
     // Rewrite absolute paths to relative paths for sub-path deployment
-    // Vite/Next.js apps use absolute paths like /assets/... which need to be ./assets/...
-    // But DON'T rewrite paths that start with /a/ (our app paths) - those are already absolute
+    // Vite apps use /assets/... which need to become ./assets/...
+    // But DON'T rewrite framework-specific paths - they should stay absolute:
+    // - /a/... (our app paths)
+    // - /_next/... (Next.js)
+    // - /_vercel/... (Vercel)
+    // - /api/... (API routes)
     let modifiedHtml = zipIndexHtml
-      .replace(/href="\/a\//g, 'href="/a/')  // Keep /a/ paths as-is
-      .replace(/src="\/a\//g, 'src="/a/')    // Keep /a/ paths as-is
-      .replace(/href="\//g, 'href="./')      // Rewrite /assets/ -> ./assets/
-      .replace(/src="\//g, 'src="./');       // Rewrite /assets/ -> ./assets/
+      .replace(/href="\/a\//g, 'href="/a/')
+      .replace(/src="\/a\//g, 'src="/a/')
+      .replace(/href="\/_next\//g, 'href="/_next/')
+      .replace(/src="\/_next\//g, 'src="/_next/')
+      .replace(/href="\/_vercel\//g, 'href="/_vercel/')
+      .replace(/src="\/_vercel\//g, 'src="/_vercel/')
+      .replace(/href="\/api\//g, 'href="/api/')
+      .replace(/src="\/api\//g, 'src="/api/')
+      .replace(/href="\//g, 'href="./')
+      .replace(/src="\//g, 'src="./');
     
     if (zipIndexHtml.includes('</body>')) {
       modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
