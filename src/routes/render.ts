@@ -212,6 +212,36 @@ render.get('/:slug', async (c) => {
   const css = content?.css || app.css || '';
   const js = content?.js || app.js || '';
   
+  // Check if HTML is a full document (has DOCTYPE or html tag)
+  // If so, serve it directly without wrapping (for ZIP uploads)
+  const isFullDocument = html.trim().toLowerCase().startsWith('<!doctype') || 
+                         html.trim().toLowerCase().startsWith('<html');
+  
+  if (isFullDocument) {
+    // Inject ONHYPER config into the full document
+    const onhyperConfig = `
+      <script>
+        window.ONHYPER = {
+          proxyBase: '/proxy',
+          appSlug: '${escapeJs(app.slug)}',
+          appId: '${escapeJs(app.id)}'
+        };
+      </script>
+    `;
+    
+    // Inject before </body> or at end of document
+    let modifiedHtml = html;
+    if (html.includes('</body>')) {
+      modifiedHtml = html.replace('</body>', `${onhyperConfig}</body>`);
+    } else {
+      modifiedHtml = html + onhyperConfig;
+    }
+    
+    // Set security headers
+    setSecurityHeaders(c);
+    return c.html(modifiedHtml, 200);
+  }
+  
   // Escape user-controlled values for safe interpolation
   const escapedAppName = escapeHtml(app.name);
   const escapedAppSlug = escapeJs(app.slug);
