@@ -751,10 +751,13 @@ apps.post('/:id/zip', async (c) => {
     
     // If index.html exists, use it as the main HTML
     const indexHtml = AppFilesStore.get(appId, 'index.html');
+    console.log('[ZIP] indexHtml found:', !!indexHtml, 'len:', indexHtml?.length);
     if (indexHtml) {
+      console.log('[ZIP] Calling updateApp with html of length:', indexHtml.length);
       // Update the app's html field
       const { updateApp } = await import('../lib/apps.js');
       await updateApp(appId, user.userId, { html: indexHtml });
+      console.log('[ZIP] updateApp completed');
     }
     
     // Audit log
