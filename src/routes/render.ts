@@ -280,12 +280,26 @@ render.get('/:slug', async (c) => {
       </script>
     `;
     
+    // Transform absolute paths to relative for sub-path deployment
+    // Same transformation as the ZIP path above
+    let transformedHtml = html
+      .replace(/href="\/a\//g, 'href="/a/')
+      .replace(/src="\/a\//g, 'src="/a/')
+      .replace(/href="\/api\//g, 'href="/api/')
+      .replace(/src="\/api\//g, 'src="/api/')
+      .replace(/href="\/_next\//g, 'href="./_next/')
+      .replace(/src="\/_next\//g, 'src="./_next/')
+      .replace(/href="\/_vercel\//g, 'href="./_vercel/')
+      .replace(/src="\/_vercel\//g, 'src="./_vercel/')
+      .replace(/href="\//g, 'href="./')
+      .replace(/src="\//g, 'src="./');
+    
     // Inject before </body> or at end of document
-    let modifiedHtml = html;
-    if (html.includes('</body>')) {
-      modifiedHtml = html.replace('</body>', `${onhyperConfig}</body>`);
+    let modifiedHtml = transformedHtml;
+    if (transformedHtml.includes('</body>')) {
+      modifiedHtml = transformedHtml.replace('</body>', `${onhyperConfig}</body>`);
     } else {
-      modifiedHtml = html + onhyperConfig;
+      modifiedHtml = transformedHtml + onhyperConfig;
     }
     
     // Set security headers
