@@ -725,11 +725,10 @@ apps.post('/:id/zip', async (c) => {
     
     for (const entry of entries) {
       let filePath = entry.entryName;
-
-      // Skip directories, hidden files, and underscore-prefixed folders
-      // (e.g., _next, _vercel used by Next.js and other frameworks)
-      const hasUnderscoreFolder = filePath.split('/').some(part => part.startsWith('_'));
-      if (entry.isDirectory || filePath.includes('__MACOSX') || filePath.startsWith('.') || hasUnderscoreFolder) {
+      
+      // Skip directories and hidden files only
+      // Note: We keep underscore-prefixed folders (_next, _vercel) for Next.js
+      if (entry.isDirectory || filePath.includes('__MACOSX') || filePath.startsWith('.')) {
         continue;
       }
       
