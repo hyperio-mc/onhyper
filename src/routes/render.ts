@@ -238,6 +238,8 @@ render.get('/:slug', async (c) => {
     }
     
     setSecurityHeaders(c);
+    // Add debug marker in actual response
+    modifiedHtml = '<!--EARLY_PATH-->' + modifiedHtml;
     return c.html(modifiedHtml, 200);
   }
   
@@ -312,7 +314,8 @@ render.get('/:slug', async (c) => {
     
     // Set security headers
     setSecurityHeaders(c);
-    console.log('[RENDER] FALLBACK PATH - full document path');
+    // Add debug marker in actual response
+    modifiedHtml = '<!--FALLBACK_PATH-->' + modifiedHtml;
     return c.html(modifiedHtml, 200);
   }
   
