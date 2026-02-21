@@ -384,6 +384,13 @@ function setupLoginForm() {
       
       updateNav();
       navigate('/dashboard');
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+}
+
+// Signup form
 function setupSignupForm() {
   const form = document.getElementById('signup-form');
   if (!form) return;

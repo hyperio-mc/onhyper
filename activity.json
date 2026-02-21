@@ -290,6 +290,13 @@
       "description": "Formal code review of OnHyper codebase covering security, performance, and architecture issues.",
       "file": "docs/CODE_REVIEW.md",
       "summary": "Analyzed 47 TypeScript files. Build passes, 163 tests pass. Found 2 high, 3 medium, 2 low security issues. Found 3 medium, 2 low performance issues. Found 3 medium, 4 low architecture issues. Created follow-up tasks for all high-priority items."
+    },
+    "task-095": {
+      "title": "Investigate and fix broken web view after latest update",
+      "status": "pending",
+      "priority": "high",
+      "description": "The latest update has broken onhyper web view. Need to investigate the issue and fix it.",
+      "createdAt": "2026-02-21T02:12:00Z"
     }
   }
 }
