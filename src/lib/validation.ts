@@ -202,7 +202,7 @@ export function validateBody<T extends z.ZodTypeAny>(schema: T): MiddlewareHandl
  */
 export function validateQuery<T extends z.ZodTypeAny>(schema: T): MiddlewareHandler {
   return async (c: Context, next) => {
-    const query = Object.fromEntries(c.req.query());
+    const query = c.req.query();
     const result = schema.safeParse(query);
     
     if (!result.success) {
