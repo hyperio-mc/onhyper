@@ -319,6 +319,15 @@
       "priority": "medium",
       "description": "Use agent-browser in mobile viewport size to test the entire OnHyper app flow: landing page, signup, login, dashboard, app creation, editing, publishing, etc. Document any UI issues found.",
       "createdAt": "2026-02-21T06:40:00Z"
+    },
+    "task-104": {
+      "title": "Add analytics documentation for users",
+      "status": "completed",
+      "priority": "medium",
+      "description": "Create documentation explaining how users can send events from their HYPR apps using the analytics API.",
+      "completedAt": "2026-02-21T11:05:00Z",
+      "file": "blog/analytics-guide.md",
+      "summary": "Created comprehensive analytics guide (blog/analytics-guide.md) covering: (1) Analytics capture endpoint POST /api/analytics/capture with auth, (2) JavaScript code examples including helper class, (3) Common event types and properties tables, (4) How to view analytics in dashboard and via API, (5) Best practices for event naming, privacy, and offline handling."
     }
   }
 }
