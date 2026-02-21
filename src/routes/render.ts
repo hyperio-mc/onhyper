@@ -273,6 +273,9 @@ render.get('/:slug', async (c) => {
     console.log('[RENDER] HTML starts:', html.trim().substring(0, 30));
     
     // Inject ONHYPER config into the full document
+    // Add test marker
+    let htmlWithMarker = html.replace(/<html/, '<html<!--FULL_DOCUMENT_PATH-->');
+    
     const onhyperConfig = `
       <script>
         window.ONHYPER = {
