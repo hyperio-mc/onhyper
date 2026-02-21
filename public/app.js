@@ -76,6 +76,71 @@ let currentUser = null;
  */
 const API_BASE = '/api';
 
+/**
+ * Current app context for analytics tracking
+ * Set when viewing/editing a specific app (e.g., on app detail pages)
+ * Used to associate all PostHog events with the relevant app
+ * @type {string|null}
+ */
+let currentAppId = null;
+
+/**
+ * Get the current app_id for analytics tracking
+ * 
+ * App context priority:
+ * 1. Explicitly set currentAppId (when viewing/editing a specific app)
+ * 2. URL query parameter ?app_id=xxx (for direct links to app analytics)
+ * 3. Data attribute on the page element (data-app-id)
+ * 4. null if no app context available
+ * 
+ * @returns {string|null} The current app_id or null if not in app context
+ */
+function getCurrentAppId() {
+  // 1. Use explicitly set app context (highest priority)
+  if (currentAppId) {
+    return currentAppId;
+  }
+  
+  // 2. Check URL query parameters (hash-based routing)
+  const hashQuery = window.location.hash.split('?')[1] || '';
+  const urlParams = new URLSearchParams(hashQuery);
+  const urlAppId = urlParams.get('app_id');
+  if (urlAppId) {
+    return urlAppId;
+  }
+  
+  // 3. Check for data attribute on the app container
+  const appContainer = document.querySelector('[data-app-id]');
+  if (appContainer) {
+    return appContainer.dataset.appId;
+  }
+  
+  // 4. No app context available
+  return null;
+}
+
+/**
+ * Set the current app context for analytics
+ * Call this when entering a specific app's context (viewing details, editing, etc.)
+ * 
+ * @param {string|null} appId - The app_id to set, or null to clear the context
+ */
+function setCurrentAppId(appId) {
+  currentAppId = appId;
+}
+
+/**
+ * Build a properties object with app_id included if available
+ * Helper for consistent PostHog tracking across all events
+ * 
+ * @param {Object} props - Additional event properties
+ * @returns {Object} Properties with app_id included if available
+ */
+function withAppId(props = {}) {
+  const appId = getCurrentAppId();
+  return appId ? { ...props, app_id: appId } : props;
+}
+
 // Provider icons (emoji fallback, or use SVG)
 const PROVIDER_ICONS = {
   'OPENAI_API_KEY': { icon: '🤖', name: 'OpenAI', color: '#10a37f' },
@@ -122,9 +187,10 @@ function setPageClass(path) {
 }
 
 async function loadPage(path) {
-  // Track pageview
+  // Track pageview with app context if available
+  // App context comes from: URL params (?app_id=), data attributes, or explicitly set
   if (window.posthog) {
-    posthog.capture('$pageview', { path });
+    posthog.capture('$pageview', withAppId({ path }));
   }
   
   // Handle dynamic routes (e.g., /blog/:slug)
@@ -376,9 +442,10 @@ function setupLoginForm() {
       localStorage.setItem('token', result.token);
       currentUser = result.user;
       
-      // Track login
+      // Track login with app context
+      // App_id indicates which app the user logged in from (if any)
       if (window.posthog) {
-        posthog.capture('logged_in', { email: result.user.email });
+        posthog.capture('logged_in', withAppId({ email: result.user.email }));
         posthog.identify(result.user.id, { email: result.user.email, plan: result.user.plan });
       }
       
@@ -412,9 +479,10 @@ function setupSignupForm() {
       localStorage.setItem('token', result.token);
       currentUser = result.user;
       
-      // Track signup
+      // Track signup with app context
+      // App_id indicates which app the user signed up from (if any)
       if (window.posthog) {
-        posthog.capture('signed_up', { email: result.user.email });
+        posthog.capture('signed_up', withAppId({ email: result.user.email }));
         posthog.identify(result.user.id, { email: result.user.email, plan: result.user.plan });
       }
       
@@ -640,12 +708,13 @@ function setupWaitlistForm() {
         </div>
       `;
       
-      // Track waitlist signup
+      // Track waitlist signup with app context
+      // App_id indicates which app's waitlist the user signed up for
       if (window.posthog) {
-        posthog.capture('waitlist_signed_up', { 
+        posthog.capture('waitlist_signed_up', withAppId({ 
           email: formData.get('email'),
           position: result.position
-        });
+        }));
       }
     } catch (err) {
       showError(err.message);
@@ -1155,6 +1224,10 @@ function formatNumber(num) {
 
 // Show detailed analytics for an app
 async function showAppAnalytics(appId) {
+  // Set app context for analytics tracking
+  // This ensures any events tracked during this view are associated with this app
+  setCurrentAppId(appId);
+  
   try {
     const [appResponse, analytics] = await Promise.all([
       api('/apps/' + appId),
@@ -1464,7 +1537,8 @@ async function createAppFromModal(e) {
     loadApps();
     showToast('App created! Click Edit to add your code.', 'success');
     
-    // Track app created
+    // Track app created with the newly created app's ID
+    // This event tracks the creation itself, so app_id is the new app (not a parent context)
     if (window.posthog) {
       posthog.capture('app_created', { app_id: app.id, app_name: app.name, app_slug: app.slug });
     }
@@ -2063,13 +2137,14 @@ function sendChatMessage() {
   messageCount++;
   localStorage.setItem('chat_message_count', messageCount.toString());
   
-  // Track message sent in PostHog
+  // Track message sent in PostHog with app context
+  // App_id indicates which app's chat the user is engaged with (if any)
   if (window.posthog) {
-    posthog.capture('chat_message_sent_client', {
+    posthog.capture('chat_message_sent_client', withAppId({
       session_id: chatSessionId,
       message_count: messageCount,
       message_length: text.length
-    });
+    }));
   }
   
   // Show typing indicator
@@ -2107,13 +2182,14 @@ function sendChatMessage() {
     addChatMessage('assistant', responseText);
     saveChatHistory();
     
-    // Track response received in PostHog
+    // Track response received in PostHog with app context
+    // App_id indicates which app's chat the user is engaged with (if any)
     if (window.posthog) {
-      posthog.capture('chat_response_received', {
+      posthog.capture('chat_response_received', withAppId({
         session_id: chatSessionId,
         message_count: messageCount,
         response_length: responseText.length
-      });
+      }));
     }
     
     // Check for lead capture
@@ -2255,12 +2331,13 @@ async function submitLeadCapture() {
     
     localStorage.setItem('chat_lead_captured', 'true');
     
-    // Track lead captured in PostHog
+    // Track lead captured in PostHog with app context
+    // App_id indicates which app's chat generated the lead (if any)
     if (window.posthog) {
-      posthog.capture('chat_lead_captured_client', {
+      posthog.capture('chat_lead_captured_client', withAppId({
         session_id: chatSessionId,
         message_count: messageCount
-      });
+      }));
       // Identify user with email
       posthog.identify(chatSessionId, { email });
     }

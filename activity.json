@@ -293,10 +293,32 @@
     },
     "task-095": {
       "title": "Investigate and fix broken web view after latest update",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "description": "The latest update has broken onhyper web view. Need to investigate the issue and fix it.",
-      "createdAt": "2026-02-21T02:12:00Z"
+      "createdAt": "2026-02-21T02:12:00Z",
+      "notes": "Fixed - missing closing braces in public/app.js after PostHog tracking edits"
+    },
+    "task-096": {
+      "title": "Remove HTML/JS/CSS inputs from edit app form",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Simplify the edit app modal by removing the code input fields. Code should be edited via the Monaco editor or uploaded via ZIP file instead.",
+      "createdAt": "2026-02-21T06:30:00Z"
+    },
+    "task-097": {
+      "title": "Fix app delete button on mobile",
+      "status": "pending",
+      "priority": "medium",
+      "description": "The delete button on app cards is not visible or accessible on mobile devices. Fix the mobile layout to ensure the delete button is accessible.",
+      "createdAt": "2026-02-21T06:35:00Z"
+    },
+    "task-098": {
+      "title": "Test entire OnHyper app in mobile size using agent-browser",
+      "status": "pending",
+      "priority": "medium",
+      "description": "Use agent-browser in mobile viewport size to test the entire OnHyper app flow: landing page, signup, login, dashboard, app creation, editing, publishing, etc. Document any UI issues found.",
+      "createdAt": "2026-02-21T06:40:00Z"
     }
   }
 }

@@ -28,6 +28,7 @@ import { subdomains } from './routes/subdomains.js';
 import { settings } from './routes/settings.js';
 import { audit } from './routes/audit.js';
 import { featuresRouter, adminFeaturesRouter } from './routes/features.js';
+import { analytics } from './routes/analytics.js';
 import { requireAuth, requireAdminAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { subdomainRouter } from './middleware/subdomain.js';
@@ -155,6 +156,7 @@ protectedApi.route('/secrets', secrets);
 protectedApi.route('/apps', apps);
 protectedApi.route('/dashboard', dashboard);
 protectedApi.route('/audit-logs', audit);
+protectedApi.route('/analytics', analytics);
 app.route('/api', protectedApi);
 
 // Admin API routes (require admin key - uses requireAdminAuth in routes)
