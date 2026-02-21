@@ -204,11 +204,16 @@ render.get('/:slug', async (c) => {
       </script>
     `;
     
-    let modifiedHtml = zipIndexHtml;
+    // Rewrite absolute paths to relative paths for sub-path deployment
+    // Vite/Next.js apps use absolute paths like /assets/... which need to be ./assets/...
+    let modifiedHtml = zipIndexHtml
+      .replace(/(href=")\/([^"]+)("/g, `$1./$2$3`)
+      .replace(/(src=")\/([^"]+)("/g, `$1./$2$3`);
+    
     if (zipIndexHtml.includes('</body>')) {
-      modifiedHtml = zipIndexHtml.replace('</body>', `${onhyperConfig}</body>`);
+      modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
     } else {
-      modifiedHtml = zipIndexHtml + onhyperConfig;
+      modifiedHtml = modifiedHtml + onhyperConfig;
     }
     
     setSecurityHeaders(c);
