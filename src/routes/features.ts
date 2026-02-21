@@ -478,7 +478,7 @@ appFeaturesRouter.get('/', async (c) => {
     return c.json({ error: 'Not authenticated' }, 401);
   }
   
-  const appId = c.req.param('appId');
+  const appId = c.req.param('appId') || '';
   
   // Verify app ownership
   const app = getAppById(appId);
@@ -516,7 +516,7 @@ appFeaturesRouter.post('/', async (c) => {
     return c.json({ error: 'Not authenticated' }, 401);
   }
   
-  const appId = c.req.param('appId');
+  const appId = c.req.param('appId') || '';
   
   // Verify app ownership
   const app = getAppById(appId);
@@ -573,8 +573,8 @@ appFeaturesRouter.put('/:flagName', async (c) => {
     return c.json({ error: 'Not authenticated' }, 401);
   }
   
-  const appId = c.req.param('appId');
-  const flagName = c.req.param('flagName');
+  const appId = c.req.param('appId') || '';
+  const flagName = c.req.param('flagName') || '';
   
   // Verify app ownership
   const app = getAppById(appId);
@@ -624,8 +624,8 @@ appFeaturesRouter.delete('/:flagName', async (c) => {
     return c.json({ error: 'Not authenticated' }, 401);
   }
   
-  const appId = c.req.param('appId');
-  const flagName = c.req.param('flagName');
+  const appId = c.req.param('appId') || '' || '';
+  const flagName = c.req.param('flagName') || '' || '';
   
   // Verify app ownership
   const app = getAppById(appId);
@@ -663,7 +663,7 @@ appFeaturesRouter.delete('/:flagName', async (c) => {
  * Returns flags as a simple key-value object for easy consumption.
  */
 featuresRouter.get('/appflags/:appId', async (c) => {
-  const appId = c.req.param('appId');
+  const appId = c.req.param('appId') || '';
   
   // Get flags as a simple object
   const flags = getAppFeatureFlagsAsObject(appId);
