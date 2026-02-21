@@ -454,6 +454,24 @@ function createTables(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_user_feature_overrides_user ON user_feature_overrides(user_id);
     CREATE INDEX IF NOT EXISTS idx_user_feature_overrides_feature ON user_feature_overrides(feature_name);
   `);
+
+  // Per-app feature flags (managed by customers for their own apps)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS app_feature_flags (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      app_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      value TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (app_id) REFERENCES apps(id) ON DELETE CASCADE,
+      UNIQUE(app_id, name)
+    );
+
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_app_feature_flags_app_name ON app_feature_flags(app_id, name);
+    CREATE INDEX IF NOT EXISTS idx_app_feature_flags_app ON app_feature_flags(app_id);
+  `);
 }
 
 /**
@@ -793,4 +811,15 @@ export interface UserFeatureOverride {
   reason: string | null;
   expires_at: string | null;
   created_at: string;
+}
+
+// Per-app feature flag types (managed by customers)
+export interface AppFeatureFlag {
+  id: number;
+  app_id: string;
+  name: string;
+  value: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
 }

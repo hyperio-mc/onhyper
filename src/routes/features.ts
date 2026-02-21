@@ -8,6 +8,17 @@
  * - GET /api/features - List all flags with user status
  * - GET /api/features/:name - Get detailed flag info
  * 
+ * ## App Feature Flags (public endpoint for apps)
+ * 
+ * - GET /api/features/:appId/public - Get all feature flags for an app
+ * 
+ * ## App Feature Flag Management (require auth + ownership)
+ * 
+ * - GET /api/apps/:appId/features - List flags for an app
+ * - POST /api/apps/:appId/features - Create a new flag
+ * - PUT /api/apps/:appId/features/:flagName - Update a flag
+ * - DELETE /api/apps/:appId/features/:flagName - Delete a flag
+ * 
  * ## Admin Endpoints (require admin auth)
  * 
  * - POST /api/admin/features - Create a new flag
@@ -33,8 +44,20 @@ import {
   CreateFeatureFlagParams,
   UpdateFeatureFlagParams,
 } from '../lib/features.js';
+import {
+  createAppFeatureFlag,
+  getAppFeatureFlag,
+  getAppFeatureFlags,
+  getPublicAppFeatureFlags,
+  updateAppFeatureFlag,
+  deleteAppFeatureFlag,
+  getAppFeatureFlagsAsObject,
+  CreateAppFeatureFlagParams,
+  UpdateAppFeatureFlagParams,
+} from '../lib/app-features.js';
 import { getAuthUser, requireAdminAuth } from '../middleware/auth.js';
 import { getUserById } from '../lib/users.js';
+import { getAppById } from '../lib/apps.js';
 
 // Public routes (require user auth)
 const featuresRouter = new Hono();
