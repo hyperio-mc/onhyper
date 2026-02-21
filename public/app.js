@@ -122,6 +122,11 @@ function setPageClass(path) {
 }
 
 async function loadPage(path) {
+  // Track pageview
+  if (window.posthog) {
+    posthog.capture('$pageview', { path });
+  }
+  
   // Handle dynamic routes (e.g., /blog/:slug)
   let pagePath = routes[path];
   let routeParams = {};
@@ -370,15 +375,15 @@ function setupLoginForm() {
       
       localStorage.setItem('token', result.token);
       currentUser = result.user;
+      
+      // Track login
+      if (window.posthog) {
+        posthog.capture('logged_in', { email: result.user.email });
+        posthog.identify(result.user.id, { email: result.user.email, plan: result.user.plan });
+      }
+      
       updateNav();
       navigate('/dashboard');
-    } catch (err) {
-      showError(err.message);
-    }
-  });
-}
-
-// Signup form
 function setupSignupForm() {
   const form = document.getElementById('signup-form');
   if (!form) return;
@@ -399,6 +404,13 @@ function setupSignupForm() {
       
       localStorage.setItem('token', result.token);
       currentUser = result.user;
+      
+      // Track signup
+      if (window.posthog) {
+        posthog.capture('signed_up', { email: result.user.email });
+        posthog.identify(result.user.id, { email: result.user.email, plan: result.user.plan });
+      }
+      
       updateNav();
       navigate('/dashboard');
     } catch (err) {
@@ -620,6 +632,14 @@ function setupWaitlistForm() {
           <code>${window.location.origin}?ref=${result.referralCode}</code>
         </div>
       `;
+      
+      // Track waitlist signup
+      if (window.posthog) {
+        posthog.capture('waitlist_signed_up', { 
+          email: formData.get('email'),
+          position: result.position
+        });
+      }
     } catch (err) {
       showError(err.message);
     }
@@ -1436,6 +1456,11 @@ async function createAppFromModal(e) {
     closeModal();
     loadApps();
     showToast('App created! Click Edit to add your code.', 'success');
+    
+    // Track app created
+    if (window.posthog) {
+      posthog.capture('app_created', { app_id: app.id, app_name: app.name, app_slug: app.slug });
+    }
   } catch (err) {
     showToast('Failed to create app: ' + err.message, 'error');
   }
