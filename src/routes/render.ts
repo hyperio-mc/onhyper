@@ -328,4 +328,69 @@ render.get('/:slug/js', async (c) => {
   });
 });
 
+/**
+ * Catch-all route for static files from ZIP uploads
+ * Serves files at /a/:slug/* for apps with ZIP uploads
+ */
+render.get('/:slug/*', async (c) => {
+  const slug = c.req.param('slug');
+  const filePath = c.req.path.slice(`/a/${slug}/`.length);
+  
+  const app = getAppBySlug(slug);
+  
+  if (!app) {
+    return c.text('Not Found', 404);
+  }
+  
+  // Try to serve static file from ZIP upload
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const fileMatch = filePath.match(/\.([^/]+)$/);
+  const isUnderscorePath = filePath.startsWith('_');
+  
+  // Try exact path first
+  let file = AppFilesStore.get(app.id, filePath);
+  
+  // If not found and has no extension, try adding .html
+  if (!file && !fileMatch && !isUnderscorePath) {
+    file = AppFilesStore.get(app.id, filePath + '.html');
+  }
+  
+  // If still not found, try /index.html (nested routes)
+  if (!file && !fileMatch && !isUnderscorePath && !filePath.endsWith('/index.html')) {
+    file = AppFilesStore.get(app.id, filePath + '/index.html');
+  }
+  
+  if (file) {
+    const ext = fileMatch ? fileMatch[1].toLowerCase() : filePath.split('.').pop() || '';
+    const contentTypes: Record<string, string> = {
+      'html': 'text/html',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'mjs': 'application/javascript',
+      'json': 'application/json',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'woff': 'font/woff',
+      'woff2': 'font/woff2',
+      'ttf': 'font/ttf',
+      'ico': 'image/x-icon',
+      'webp': 'image/webp',
+      'avif': 'image/avif',
+    };
+    const contentType = contentTypes[ext] || 'application/octet-stream';
+    
+    // Handle SVG specially
+    if ((ext === 'svg') && (file.startsWith('<?xml') || file.includes('<svg'))) {
+      return c.text(file, 200, { 'Content-Type': 'image/svg+xml' });
+    }
+    
+    return c.text(file, 200, { 'Content-Type': contentType });
+  }
+  
+  return c.text('Not Found', 404);
+});
+
 export { render };
