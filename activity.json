@@ -337,6 +337,73 @@
       "completedAt": "2026-02-21T16:17:00Z",
       "file": "AUTH_DESIGN.md",
       "summary": "Created comprehensive AUTH_DESIGN.md with: (1) WorkOS vs Clerk comparison (pricing, features, B2B vs B2C fit), (2) Proxy-based auth design where users store provider keys as secrets in HYPR, (3) Technical implementation for /proxy/auth/clerk/* and /proxy/auth/workos/* endpoints, (4) Three authentication patterns (frontend-only SDK, hybrid, full proxy), (5) User experience flow from provider setup to app integration, (6) Security considerations and implementation roadmap."
+    },
+    "task-114": {
+      "title": "Fix ZIP upload: Filter underscore folders during extraction",
+      "status": "pending",
+      "priority": "high",
+      "description": "Next.js and other frameworks use underscore-prefixed folders (_next, _vercel) for static assets. Current ZIP extraction only skips dotfiles (.hidden). Need to also skip underscore-prefixed folders.",
+      "createdAt": "2026-02-21T18:05:00Z",
+      "successCriteria": [
+        "ZIP extraction skips _next folder contents",
+        "ZIP extraction skips _vercel folder contents",
+        "ZIP extraction skips other underscore-prefixed folders",
+        "All other files are still extracted correctly",
+        "Unit test confirms filter works"
+      ],
+      "subtasks": [
+        {
+          "id": "114-01",
+          "title": "Update filter logic in apps.ts",
+          "description": "Modify ZIP extraction in src/routes/apps.ts to skip entries starting with '_' (underscore)",
+          "status": "pending"
+        },
+        {
+          "id": "114-02",
+          "title": "Add unit test for underscore folder filtering",
+          "description": "Create test that uploads ZIP with _next/_vercel folders and verifies they're not extracted",
+          "status": "pending"
+        },
+        {
+          "id": "114-03",
+          "title": "Deploy and verify fix",
+          "description": "Deploy to production and test with actual Next.js ZIP file",
+          "status": "pending"
+        }
+      ]
+    },
+    "task-115": {
+      "title": "Fix ZIP upload: Static assets returning 404",
+      "status": "pending",
+      "priority": "high",
+      "description": "Static assets from ZIP uploads are returning 404. Current static serving only checks for /_next/ prefix, but Next.js uses multiple underscore paths: /_next/static/, /_next/data/, /_next/image, etc.",
+      "createdAt": "2026-02-21T18:05:00Z",
+      "successCriteria": [
+        "Next.js /_next/static/ assets are served correctly",
+        "Next.js /_next/data/ assets are served correctly",
+        "Other static assets (images, fonts, CSS in subdirs) work",
+        "Test with actual Next.js build ZIP"
+      ],
+      "subtasks": [
+        {
+          "id": "115-01",
+          "title": "Update static serving logic in subdomain.ts",
+          "description": "Modify src/middleware/subdomain.ts to check if path starts with '/_' instead of exact '/_next/'",
+          "status": "pending"
+        },
+        {
+          "id": "115-02",
+          "title": "Test static asset serving",
+          "description": "Upload a Next.js ZIP and verify all asset paths work",
+          "status": "pending"
+        },
+        {
+          "id": "115-03",
+          "title": "Deploy and verify fix",
+          "description": "Deploy to production and verify client can access their static assets",
+          "status": "pending"
+        }
+      ]
     }
   }
 }

@@ -333,11 +333,12 @@ export async function subdomainRouter(c: Context, next: Next) {
   }
   
   // Try to serve static file from ZIP upload
-  // Check if path has a file extension OR is a Next.js special path
-  const isNextStatic = path.startsWith('/_next/');
+  // Check if path has a file extension OR is an underscore-prefixed path
+  // (covers _next, _vercel, and other framework special paths)
+  const isUnderscorePath = path.startsWith('/_');
   const fileMatch = path.match(/\.([^/]+)$/);
   
-  if (fileMatch || isNextStatic) {
+  if (fileMatch || isUnderscorePath) {
     // Try to get file from app files store
     const { AppFilesStore } = await import('../lib/lmdb.js');
     let filePath = path.slice(1); // Remove leading slash
@@ -346,13 +347,13 @@ export async function subdomainRouter(c: Context, next: Next) {
     let file = AppFilesStore.get(app.id, filePath);
     
     // If not found and has no extension, try adding .html (Next.js static pages)
-    if (!file && !fileMatch && !isNextStatic) {
+    if (!file && !fileMatch && !isUnderscorePath) {
       file = AppFilesStore.get(app.id, filePath + '.html');
       if (file) filePath = filePath + '.html';
     }
     
     // If still not found, try /index.html (nested routes)
-    if (!file && !fileMatch && !isNextStatic && !filePath.endsWith('/index.html')) {
+    if (!file && !fileMatch && !isUnderscorePath && !filePath.endsWith('/index.html')) {
       file = AppFilesStore.get(app.id, filePath + '/index.html');
       if (file) filePath = filePath + '/index.html';
     }
