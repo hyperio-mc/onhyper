@@ -229,6 +229,8 @@ render.get('/:slug', async (c) => {
       .replace(/href="\//g, 'href="./')  // Other /assets/ -> ./assets/
       .replace(/src="\//g, 'src="./');
     
+    console.log('[RENDER] EARLY PATH - using zipIndexHtml');
+    
     if (zipIndexHtml.includes('</body>')) {
       modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
     } else {
@@ -310,6 +312,7 @@ render.get('/:slug', async (c) => {
     
     // Set security headers
     setSecurityHeaders(c);
+    console.log('[RENDER] FALLBACK PATH - full document path');
     return c.html(modifiedHtml, 200);
   }
   
