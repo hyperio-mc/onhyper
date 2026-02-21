@@ -84,7 +84,8 @@
  * 
  * - Apps are public (no authentication to view)
  * - Proxy calls require auth (see proxy.ts)
- * - Content is not sanitized (user responsibility)
+ * - Content-Security-Policy headers restrict script execution to inline scripts
+ * - User-controlled values are escaped when interpolated into templates
  * 
  * @module routes/render
  */
@@ -97,6 +98,63 @@ import { trackAppView } from '../lib/appAnalytics.js';
 const render = new Hono();
 
 /**
+ * Escape HTML special characters to prevent XSS
+ * Use this for any user-controlled data interpolated into HTML templates
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Escape JavaScript string literals to prevent injection
+ * Use this when interpolating values into <script> blocks
+ */
+function escapeJs(str: string): string {
+  return str
+    .replace(/\\/g, '\\\\')
+    .replace(/'/g, "\\'")
+    .replace(/"/g, '\\"')
+    .replace(/`/g, '\\`')
+    .replace(/</g, '\\x3C')
+    .replace(/>/g, '\\x3E')
+    .replace(/\n/g, '\\n')
+    .replace(/\r/g, '\\r')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
+}
+
+/**
+ * Content-Security-Policy header for sandboxed app rendering
+ * Allows inline scripts and styles but restricts external resources
+ */
+const CSP_HEADER = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'", // Required for user scripts
+  "style-src 'self' 'unsafe-inline'",   // Required for user styles
+  "img-src 'self' data: https:",        // Allow images from self, data URIs, and HTTPS
+  "font-src 'self' data:",              // Allow fonts from self and data URIs
+  "connect-src 'self' https:",          // Allow API calls to self and HTTPS
+  "frame-ancestors 'none'",             // Prevent embedding in iframes
+  "base-uri 'self'",                    // Restrict <base> tag
+  "form-action 'self'",                 // Restrict form submissions
+].join('; ');
+
+/**
+ * Set security headers on response
+ */
+function setSecurityHeaders(c: any): void {
+  c.header('Content-Security-Policy', CSP_HEADER);
+  c.header('X-Content-Type-Options', 'nosniff');
+  c.header('X-Frame-Options', 'DENY');
+  c.header('X-XSS-Protection', '1; mode=block');
+}
+
+/**
  * GET /a/:slug
  * Render a published app
  */
@@ -106,10 +164,13 @@ render.get('/:slug', async (c) => {
   const app = getAppBySlug(slug);
   
   if (!app) {
+    // Escape the slug to prevent XSS in error message
+    const escapedSlug = escapeHtml(slug);
     return c.html(`
       <!DOCTYPE html>
       <html>
       <head>
+        <meta charset="UTF-8">
         <title>App Not Found | OnHyper.io</title>
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; text-align: center; padding: 50px; }
@@ -120,7 +181,7 @@ render.get('/:slug', async (c) => {
       </head>
       <body>
         <h1>App Not Found</h1>
-        <p>The app "${slug}" doesn't exist or has been removed.</p>
+        <p>The app "${escapedSlug}" doesn't exist or has been removed.</p>
         <p><a href="https://onhyper.io">Return to OnHyper.io</a></p>
       </body>
       </html>
@@ -151,6 +212,11 @@ render.get('/:slug', async (c) => {
   const css = content?.css || app.css || '';
   const js = content?.js || app.js || '';
   
+  // Escape user-controlled values for safe interpolation
+  const escapedAppName = escapeHtml(app.name);
+  const escapedAppSlug = escapeJs(app.slug);
+  const escapedAppId = escapeJs(app.id);
+  
   // Render the app with injected styles and scripts
   const renderedHtml = `
     <!DOCTYPE html>
@@ -158,7 +224,7 @@ render.get('/:slug', async (c) => {
     <head>
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${app.name} | OnHyper.io</title>
+      <title>${escapedAppName} | OnHyper.io</title>
       <style>
         /* Base reset */
         *, *::before, *::after { box-sizing: border-box; }
@@ -176,8 +242,8 @@ render.get('/:slug', async (c) => {
         // Configure proxy base
         window.ONHYPER = {
           proxyBase: '/proxy',
-          appSlug: '${app.slug}',
-          appId: '${app.id}'
+          appSlug: '${escapedAppSlug}',
+          appId: '${escapedAppId}'
         };
       </script>
       
@@ -186,6 +252,9 @@ render.get('/:slug', async (c) => {
     </body>
     </html>
   `;
+  
+  // Set security headers
+  setSecurityHeaders(c);
   
   return c.html(renderedHtml);
 });
@@ -204,6 +273,10 @@ render.get('/:slug/raw', async (c) => {
   }
   
   const content = AppContentStore.get(app.id);
+  
+  // Set security headers for raw content
+  setSecurityHeaders(c);
+  
   return c.text(content?.html || app.html || '');
 });
 
@@ -221,6 +294,11 @@ render.get('/:slug/css', async (c) => {
   }
   
   const content = AppContentStore.get(app.id);
+  
+  // Set security headers
+  c.header('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'");
+  c.header('X-Content-Type-Options', 'nosniff');
+  
   return c.text(content?.css || app.css || '', 200, {
     'Content-Type': 'text/css',
   });
@@ -240,6 +318,11 @@ render.get('/:slug/js', async (c) => {
   }
   
   const content = AppContentStore.get(app.id);
+  
+  // Set security headers
+  c.header('Content-Security-Policy', "default-src 'none'; script-src 'unsafe-inline'");
+  c.header('X-Content-Type-Options', 'nosniff');
+  
   return c.text(content?.js || app.js || '', 200, {
     'Content-Type': 'application/javascript',
   });
