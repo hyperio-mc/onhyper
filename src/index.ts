@@ -29,7 +29,7 @@ import { chat } from './routes/chat.js';
 import { subdomains } from './routes/subdomains.js';
 import { settings } from './routes/settings.js';
 import { audit } from './routes/audit.js';
-import { featuresRouter, adminFeaturesRouter } from './routes/features.js';
+import { featuresRouter, adminFeaturesRouter, appFeaturesRouter } from './routes/features.js';
 import { analytics } from './routes/analytics.js';
 import { requireAuth, requireAdminAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
@@ -183,6 +183,10 @@ protectedApi.route('/apps', apps);
 protectedApi.route('/dashboard', dashboard);
 protectedApi.route('/audit-logs', audit);
 protectedApi.route('/analytics', analytics);
+
+// App feature flags (nested under /api/apps/:appId/features)
+protectedApi.route('/apps/:appId/features', appFeaturesRouter);
+
 app.route('/api', protectedApi);
 
 // Admin API routes (require admin key - uses requireAdminAuth in routes)

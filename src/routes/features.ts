@@ -457,4 +457,239 @@ adminFeaturesRouter.get('/:name/overrides', async (c) => {
   });
 });
 
-export { featuresRouter, adminFeaturesRouter };
+// ============================================================================
+// App Feature Flag Endpoints (per-app feature flags)
+// ============================================================================
+
+/**
+ * App feature flag routes (require auth + app ownership)
+ * These are mounted under /api/apps/:appId/features
+ */
+const appFeaturesRouter = new Hono();
+
+/**
+ * GET /api/apps/:appId/features
+ * List all feature flags for an app
+ */
+appFeaturesRouter.get('/', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('appId');
+  
+  // Verify app ownership
+  const app = getAppById(appId);
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  const flags = getAppFeatureFlags(appId);
+  
+  return c.json({
+    flags: flags.map(f => ({
+      id: f.id,
+      name: f.name,
+      value: f.value,
+      description: f.description,
+      created_at: f.created_at,
+      updated_at: f.updated_at,
+    })),
+    count: flags.length,
+  });
+});
+
+/**
+ * POST /api/apps/:appId/features
+ * Create a new feature flag for an app
+ */
+appFeaturesRouter.post('/', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('appId');
+  
+  // Verify app ownership
+  const app = getAppById(appId);
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  try {
+    const body = await c.req.json();
+    const { name, value, description } = body;
+    
+    if (!name) {
+      return c.json({ error: 'Flag name is required' }, 400);
+    }
+    
+    // Default value to 'true' if not provided
+    const flagValue = value !== undefined ? String(value) : 'true';
+    
+    const flag = createAppFeatureFlag(appId, {
+      name,
+      value: flagValue,
+      description,
+    });
+    
+    return c.json({
+      success: true,
+      flag: {
+        id: flag.id,
+        name: flag.name,
+        value: flag.value,
+        description: flag.description,
+        created_at: flag.created_at,
+      },
+    }, 201);
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to create feature flag';
+    return c.json({ error: message }, 400);
+  }
+});
+
+/**
+ * PUT /api/apps/:appId/features/:flagName
+ * Update a feature flag
+ */
+appFeaturesRouter.put('/:flagName', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('appId');
+  const flagName = c.req.param('flagName');
+  
+  // Verify app ownership
+  const app = getAppById(appId);
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  try {
+    const body = await c.req.json();
+    const { value, description } = body;
+    
+    const flag = updateAppFeatureFlag(appId, flagName, { value, description });
+    
+    if (!flag) {
+      return c.json({ error: 'Feature flag not found' }, 404);
+    }
+    
+    return c.json({
+      success: true,
+      flag: {
+        id: flag.id,
+        name: flag.name,
+        value: flag.value,
+        description: flag.description,
+        updated_at: flag.updated_at,
+      },
+    });
+    
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update feature flag';
+    return c.json({ error: message }, 400);
+  }
+});
+
+/**
+ * DELETE /api/apps/:appId/features/:flagName
+ * Delete a feature flag
+ */
+appFeaturesRouter.delete('/:flagName', async (c) => {
+  const user = getAuthUser(c);
+  
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+  
+  const appId = c.req.param('appId');
+  const flagName = c.req.param('flagName');
+  
+  // Verify app ownership
+  const app = getAppById(appId);
+  if (!app) {
+    return c.json({ error: 'App not found' }, 404);
+  }
+  
+  if (app.user_id !== user.userId) {
+    return c.json({ error: 'Access denied' }, 403);
+  }
+  
+  const deleted = deleteAppFeatureFlag(appId, flagName);
+  
+  if (!deleted) {
+    return c.json({ error: 'Feature flag not found' }, 404);
+  }
+  
+  return c.json({
+    success: true,
+    deleted: flagName,
+  });
+});
+
+// ============================================================================
+// Public Endpoint for Apps to Fetch Their Flags
+// ============================================================================
+
+/**
+ * GET /api/appflags/:appId
+ * Public endpoint for apps to fetch their feature flags
+ * 
+ * This endpoint is designed to be called from client-side apps
+ * running on onhyper.io/a/:slug or custom domains.
+ * 
+ * Returns flags as a simple key-value object for easy consumption.
+ */
+featuresRouter.get('/appflags/:appId', async (c) => {
+  const appId = c.req.param('appId');
+  
+  // Get flags as a simple object
+  const flags = getAppFeatureFlagsAsObject(appId);
+  
+  return c.json({
+    appId,
+    flags,
+    count: Object.keys(flags).length,
+  });
+});
+
+// Also support query parameter for backward compatibility
+featuresRouter.get('/appflags', async (c) => {
+  const appId = c.req.query('appId');
+  
+  if (!appId) {
+    return c.json({ error: 'appId parameter is required' }, 400);
+  }
+  
+  const flags = getAppFeatureFlagsAsObject(appId);
+  
+  return c.json({
+    appId,
+    flags,
+    count: Object.keys(flags).length,
+  });
+});
+
+export { featuresRouter, adminFeaturesRouter, appFeaturesRouter };

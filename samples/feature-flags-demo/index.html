@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Flags Demo - OnHyper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --bg: #0f172a;
+      --bg-alt: #1e293b;
+      --bg-card: #1e293b;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --border: #334155;
+    }
+    
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .logo {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+    
+    .logo-icon {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+    }
+    
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1.1rem;
+    }
+    
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .card h2 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .flags-grid {
+      display: grid;
+      gap: 1rem;
+    }
+    
+    .flag-item {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    
+    .flag-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .flag-name {
+      font-weight: 600;
+      font-family: monospace;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+    }
+    
+    .flag-value {
+      font-size: 0.85rem;
+      font-family: monospace;
+    }
+    
+    .flag-value.true {
+      color: var(--success);
+    }
+    
+    .flag-value.false {
+      color: var(--error);
+    }
+    
+    .flag-value.string {
+      color: var(--primary);
+    }
+    
+    .flag-status {
+      flex-shrink: 0;
+    }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .badge-enabled {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    
+    .badge-disabled {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--error);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    
+    .badge-string {
+      background: rgba(99, 102, 241, 0.1);
+      color: var(--primary);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+    }
+    
+    .demo-section {
+      margin-top: 2rem;
+    }
+    
+    .demo-section h2 {
+      margin-bottom: 1rem;
+    }
+    
+    .demo-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+    }
+    
+    .demo-box h3 {
+      margin-bottom: 0.75rem;
+      color: var(--text);
+    }
+    
+    .demo-box p {
+      color: var(--text-muted);
+      margin-bottom: 1rem;
+    }
+    
+    .feature-box {
+      background: var(--bg-card);
+      border: 2px dashed var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+    }
+    
+    .feature-box.enabled {
+      border-style: solid;
+      border-color: var(--success);
+      background: rgba(16, 185, 129, 0.05);
+    }
+    
+    .feature-box .icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+    
+    .feature-box .status {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+    }
+    
+    .code-block {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      overflow-x: auto;
+    }
+    
+    .code-block pre {
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    
+    .code-block code {
+      color: var(--primary);
+    }
+    
+    .code-block .comment {
+      color: #64748b;
+    }
+    
+    .code-block .keyword {
+      color: #c084fc;
+    }
+    
+    .code-block .string {
+      color: #34d399;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 2rem;
+      color: var(--text-muted);
+    }
+    
+    .spinner {
+      display: inline-block;
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin-bottom: 1rem;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error-box {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      color: var(--error);
+    }
+    
+    .hint {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 8px;
+      padding: 1rem;
+      margin-top: 1rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+    
+    .hint strong {
+      color: var(--text);
+    }
+    
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+    
+    footer a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+    
+    footer a:hover {
+      text-decoration: underline;
+    }
+    
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+      
+      .flag-item {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">
+        <div class="logo-icon">🚩</div>
+        <span>Feature Flags</span>
+      </div>
+      <p class="subtitle">Control your app's behavior without redeploying</p>
+    </header>
+    
+    <main>
+      <!-- Loading State -->
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading feature flags...</p>
+      </div>
+      
+      <!-- Error State -->
+      <div id="error" class="error-box" style="display: none;">
+        <p id="error-message">Failed to load feature flags.</p>
+      </div>
+      
+      <!-- Flags Display -->
+      <div id="flags-content" style="display: none;">
+        <!-- Current Flags Card -->
+        <div class="card">
+          <h2>📋 Current Flags</h2>
+          <div id="flags-list" class="flags-grid">
+            <!-- Flags will be rendered here -->
+          </div>
+          <div id="no-flags" style="display: none; text-align: center; color: var(--text-muted); padding: 2rem;">
+            <p>No feature flags configured yet.</p>
+            <p style="margin-top: 0.5rem;">Create flags in your <a href="#/dashboard" style="color: var(--primary);">OnHyper dashboard</a>.</p>
+          </div>
+        </div>
+        
+        <!-- Demo: Feature Controlled UI -->
+        <div class="demo-section">
+          <h2>🎮 Live Demo</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1rem;">This UI reacts to your feature flags in real-time.</p>
+          
+          <div id="demo-features" class="flags-grid">
+            <!-- Demo features will be rendered here -->
+          </div>
+        </div>
+        
+        <!-- How to Use -->
+        <div class="card" style="margin-top: 2rem;">
+          <h2>💻 How It Works</h2>
+          <p style="color: var(--text-muted); margin-bottom: 1rem;">
+            Your app fetches its feature flags from OnHyper and uses them to control behavior.
+          </p>
+          
+          <div class="code-block">
+            <pre><span class="comment">// Fetch feature flags from OnHyper</span>
+<span class="keyword">const</span> response = <span class="keyword">await</span> fetch(<span class="string">'/api/appflags/YOUR_APP_ID'</span>);
+<span class="keyword">const</span> { flags } = <span class="keyword">await</span> response.json();
+
+<span class="comment">// Use flags to control your app</span>
+<span class="keyword">if</span> (flags.new_feature_enabled === <span class="string">'true'</span>) {
+  showNewFeature();
+}
+
+<span class="comment">// Flags can be any value</span>
+<span class="keyword">const</span> maxItems = parseInt(flags.max_items) || <span class="string">10</span>;
+<span class="keyword">const</span> config = JSON.parse(flags.config_json || <span class="string">'{}'</span>);</pre>
+          </div>
+          
+          <div class="hint">
+            <strong>💡 Tip:</strong> Feature flags are cached by OnHyper. Changes you make in the dashboard 
+            are reflected in your app on the next fetch. For production apps, consider caching flags 
+            locally with a TTL.
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <footer>
+      <p>
+        Built with <a href="https://onhyper.io">OnHyper</a> • 
+        <a href="#/dashboard">Dashboard</a> • 
+        <a href="#/skill">For Agents</a>
+      </p>
+    </footer>
+  </div>
+  
+  <script>
+    // App ID - This would be set when you create your app
+    // For demo purposes, we'll try to detect it from the URL
+    const APP_ID = getAppId();
+    
+    function getAppId() {
+      // Try to get app ID from script data attribute
+      const script = document.querySelector('script[data-app-id]');
+      if (script) return script.dataset.appId;
+      
+      // Try URL (apps are served at /a/:slug)
+      const match = window.location.pathname.match(/^\/a\/([^/]+)/);
+      if (match) return match[1];
+      
+      // Default to placeholder - will show "no flags" message
+      return 'demo-app';
+    }
+    
+    async function loadFeatureFlags() {
+      const loadingEl = document.getElementById('loading');
+      const errorEl = document.getElementById('error');
+      const contentEl = document.getElementById('flags-content');
+      
+      try {
+        // Fetch flags from OnHyper API
+        const response = await fetch(`/api/appflags/${APP_ID}`);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        const flags = data.flags || {};
+        
+        // Hide loading, show content
+        loadingEl.style.display = 'none';
+        contentEl.style.display = 'block';
+        
+        // Render flags
+        renderFlags(flags);
+        
+        // Render demo features
+        renderDemoFeatures(flags);
+        
+      } catch (err) {
+        loadingEl.style.display = 'none';
+        errorEl.style.display = 'block';
+        document.getElementById('error-message').textContent = 
+          `Failed to load feature flags: ${err.message}. Make sure you're running this demo on OnHyper.`;
+      }
+    }
+    
+    function renderFlags(flags) {
+      const listEl = document.getElementById('flags-list');
+      const noFlagsEl = document.getElementById('no-flags');
+      
+      const flagNames = Object.keys(flags);
+      
+      if (flagNames.length === 0) {
+        listEl.style.display = 'none';
+        noFlagsEl.style.display = 'block';
+        return;
+      }
+      
+      listEl.style.display = 'grid';
+      noFlagsEl.style.display = 'none';
+      
+      listEl.innerHTML = flagNames.map(name => {
+        const value = flags[name];
+        const isBoolean = value === 'true' || value === 'false';
+        const isEnabled = value === 'true';
+        
+        let badgeClass, badgeText;
+        if (isBoolean) {
+          badgeClass = isEnabled ? 'badge-enabled' : 'badge-disabled';
+          badgeText = isEnabled ? '✓ Enabled' : '✗ Disabled';
+        } else {
+          badgeClass = 'badge-string';
+          badgeText = 'String value';
+        }
+        
+        return `
+          <div class="flag-item">
+            <div class="flag-info">
+              <div class="flag-name">${escapeHtml(name)}</div>
+              <div class="flag-value ${isBoolean ? (isEnabled ? 'true' : 'false') : 'string'}">
+                ${escapeHtml(value)}
+              </div>
+            </div>
+            <div class="flag-status">
+              <span class="badge ${badgeClass}">${badgeText}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function renderDemoFeatures(flags) {
+      const demoEl = document.getElementById('demo-features');
+      
+      // Define demo features that react to flags
+      const demos = [
+        {
+          name: 'new_ui_enabled',
+          title: 'New UI Design',
+          description: 'Toggle between classic and new UI designs',
+          enabledIcon: '✨',
+          disabledIcon: '📱',
+          default: false
+        },
+        {
+          name: 'beta_features',
+          title: 'Beta Features',
+          description: 'Show experimental features to users',
+          enabledIcon: '🧪',
+          disabledIcon: '🔒',
+          default: false
+        },
+        {
+          name: 'dark_mode',
+          title: 'Dark Mode',
+          description: 'Enable dark mode theme',
+          enabledIcon: '🌙',
+          disabledIcon: '☀️',
+          default: true
+        },
+        {
+          name: 'max_items',
+          title: 'Max Items',
+          description: 'Configurable limit for list items',
+          enabledIcon: '📊',
+          disabledIcon: '📊',
+          default: '10',
+          isValue: true
+        }
+      ];
+      
+      demoEl.innerHTML = demos.map(demo => {
+        const value = flags[demo.name] !== undefined ? flags[demo.name] : demo.default;
+        const isBoolean = !demo.isValue;
+        const isEnabled = value === 'true' || (demo.isValue ? true : false);
+        const icon = demo.isValue ? demo.enabledIcon : (isEnabled ? demo.enabledIcon : demo.disabledIcon);
+        
+        return `
+          <div class="demo-box">
+            <h3>${escapeHtml(demo.title)}</h3>
+            <p>${escapeHtml(demo.description)}</p>
+            <div class="feature-box ${isEnabled ? 'enabled' : ''}">
+              <div class="icon">${icon}</div>
+              <div>
+                <strong>${demo.isValue ? escapeHtml(value) : (isEnabled ? 'Enabled' : 'Disabled')}</strong>
+              </div>
+              <div class="status">
+                ${flags[demo.name] !== undefined 
+                  ? `Flag: <code>${escapeHtml(demo.name)} = "${escapeHtml(value)}"</code>`
+                  : `Default: <code>${escapeHtml(String(demo.default))}</code>`}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Initialize on load
+    loadFeatureFlags();
+    
+    // Refresh flags every 30 seconds
+    setInterval(loadFeatureFlags, 30000);
+  </script>
+</body>
+</html>

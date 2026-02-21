@@ -355,6 +355,7 @@ function initMobileNav() {
     
     const action = target.dataset.action;
     const appId = target.dataset.appId;
+    const appName = target.dataset.appName;
     
     switch (action) {
       case 'delete-app':
@@ -365,6 +366,9 @@ function initMobileNav() {
         break;
       case 'show-app-analytics':
         if (appId) showAppAnalytics(appId);
+        break;
+      case 'show-app-flags':
+        if (appId) showAppFlagsModal(appId);
         break;
     }
   });
@@ -1189,6 +1193,7 @@ async function loadApps() {
               </div>
               <div class="app-card-actions">
                 <button data-action="edit-app" data-app-id="${app.id}" class="btn-secondary">Edit</button>
+                <button data-action="show-app-flags" data-app-id="${app.id}" class="btn-secondary">Flags</button>
                 <button data-action="show-app-analytics" data-app-id="${app.id}" class="btn-secondary">Stats</button>
                 <button data-action="delete-app" data-app-id="${app.id}" class="btn-danger">Delete</button>
               </div>
@@ -2357,6 +2362,441 @@ function escapeHtml(text) {
   const div = document.createElement('div');
   div.textContent = text;
   return div.innerHTML;
+}
+
+// ============================================================================
+// App Feature Flags Management
+// ============================================================================
+
+/**
+ * Show modal for managing app feature flags
+ * @param {string} appId - The app ID
+ */
+async function showAppFlagsModal(appId) {
+  // Set app context for analytics
+  setCurrentAppId(appId);
+  
+  try {
+    // Get app details
+    const app = await api(`/apps/${appId}`);
+    
+    const modalContent = `
+      <div class="flags-modal">
+        <div class="flags-header">
+          <p class="text-muted">Feature flags let you control your app's behavior without redeploying. Toggle features on/off, test new features with specific values, or configure settings dynamically.</p>
+        </div>
+        
+        <div class="flags-create">
+          <h4>Create New Flag</h4>
+          <form id="flag-create-form" onsubmit="createAppFlag(event, '${appId}')">
+            <div class="flag-form-row">
+              <div class="form-group">
+                <label for="flag-name">Name</label>
+                <input type="text" id="flag-name" name="name" required pattern="[a-zA-Z][a-zA-Z0-9_-]*" placeholder="new_feature_enabled" maxlength="64">
+                <p class="form-hint">Letters, numbers, underscores, hyphens. Must start with a letter.</p>
+              </div>
+              <div class="form-group">
+                <label for="flag-value">Value</label>
+                <input type="text" id="flag-value" name="value" placeholder="true" maxlength="1000">
+                <p class="form-hint">Any value: true, false, strings, numbers, JSON</p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="flag-description">Description (optional)</label>
+              <input type="text" id="flag-description" name="description" placeholder="Enables the new feature X" maxlength="255">
+            </div>
+            <button type="submit" class="btn-primary">Create Flag</button>
+          </form>
+        </div>
+        
+        <div class="flags-list-section">
+          <h4>Existing Flags</h4>
+          <div id="flags-list">
+            <p class="text-muted">Loading...</p>
+          </div>
+        </div>
+        
+        <div class="flags-usage">
+          <h4>How to Use in Your App</h4>
+          <p>Your app can fetch its flags with a simple API call:</p>
+          <pre><code>const flags = await fetch('/api/appflags/${appId}')
+  .then(r => r.json())
+  .then(data => data.flags);
+
+if (flags.new_feature_enabled === 'true') {
+  // Show new feature
+}</code></pre>
+        </div>
+      </div>
+      <style>
+        .flags-modal {}
+        .flags-header {
+          margin-bottom: 16px;
+        }
+        .flags-header p {
+          margin: 0;
+          font-size: 0.9rem;
+        }
+        .flags-create {
+          background: var(--bg-alt);
+          border-radius: 8px;
+          padding: 16px;
+          margin-bottom: 20px;
+        }
+        .flags-create h4 {
+          margin: 0 0 12px 0;
+        }
+        .flag-form-row {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+        @media (max-width: 600px) {
+          .flag-form-row {
+            grid-template-columns: 1fr;
+          }
+        }
+        .flags-list-section {
+          margin-bottom: 20px;
+        }
+        .flags-list-section h4 {
+          margin: 0 0 12px 0;
+        }
+        .flags-list {
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        .flag-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          padding: 12px;
+          background: var(--bg-alt);
+          border-radius: 8px;
+          border: 1px solid var(--border-color);
+        }
+        .flag-item-info {
+          flex: 1;
+          min-width: 0;
+        }
+        .flag-item-name {
+          font-weight: 600;
+          font-family: monospace;
+          color: var(--text-primary);
+        }
+        .flag-item-value {
+          font-size: 0.85rem;
+          color: var(--accent-color);
+          font-family: monospace;
+          word-break: break-all;
+        }
+        .flag-item-description {
+          font-size: 0.8rem;
+          color: var(--text-muted);
+          margin-top: 4px;
+        }
+        .flag-item-actions {
+          display: flex;
+          gap: 8px;
+        }
+        .flag-toggle {
+          appearance: none;
+          width: 44px;
+          height: 24px;
+          background: var(--border-color);
+          border-radius: 12px;
+          position: relative;
+          cursor: pointer;
+          transition: background 0.2s;
+        }
+        .flag-toggle:checked {
+          background: #10b981;
+        }
+        .flag-toggle::before {
+          content: '';
+          position: absolute;
+          top: 2px;
+          left: 2px;
+          width: 20px;
+          height: 20px;
+          background: white;
+          border-radius: 50%;
+          transition: transform 0.2s;
+        }
+        .flag-toggle:checked::before {
+          transform: translateX(20px);
+        }
+        .flags-usage {
+          background: var(--bg-alt);
+          border-radius: 8px;
+          padding: 16px;
+        }
+        .flags-usage h4 {
+          margin: 0 0 8px 0;
+        }
+        .flags-usage p {
+          margin: 0 0 8px 0;
+          font-size: 0.9rem;
+          color: var(--text-muted);
+        }
+        .flags-usage pre {
+          margin: 0;
+          padding: 12px;
+          background: var(--bg);
+          border-radius: 6px;
+          overflow-x: auto;
+          font-size: 0.85rem;
+        }
+        .flags-usage code {
+          font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        }
+        .flags-empty {
+          text-align: center;
+          padding: 24px;
+          color: var(--text-muted);
+        }
+        .flags-empty-icon {
+          font-size: 2rem;
+          margin-bottom: 8px;
+        }
+      </style>
+    `;
+    
+    showModal(`Feature Flags: ${app.name}`, modalContent);
+    
+    // Load existing flags
+    loadAppFlags(appId);
+    
+  } catch (err) {
+    showToast('Failed to load app: ' + err.message, 'error');
+  }
+}
+
+/**
+ * Load and display feature flags for an app
+ * @param {string} appId - The app ID
+ */
+async function loadAppFlags(appId) {
+  const listEl = document.getElementById('flags-list');
+  if (!listEl) return;
+  
+  try {
+    const result = await api(`/apps/${appId}/features`);
+    const flags = result.flags || [];
+    
+    if (flags.length === 0) {
+      listEl.innerHTML = `
+        <div class="flags-empty">
+          <div class="flags-empty-icon">🚩</div>
+          <p>No feature flags yet.</p>
+          <p class="text-muted">Create your first flag above to control your app's behavior.</p>
+        </div>
+      `;
+      return;
+    }
+    
+    listEl.innerHTML = `
+      <div class="flags-list">
+        ${flags.map(flag => {
+          const isBoolean = flag.value === 'true' || flag.value === 'false';
+          const isChecked = flag.value === 'true';
+          return `
+            <div class="flag-item" data-flag-id="${flag.id}" data-flag-name="${escapeHtml(flag.name)}">
+              <div class="flag-item-info">
+                <div class="flag-item-name">${escapeHtml(flag.name)}</div>
+                <div class="flag-item-value">${escapeHtml(flag.value)}</div>
+                ${flag.description ? `<div class="flag-item-description">${escapeHtml(flag.description)}</div>` : ''}
+              </div>
+              <div class="flag-item-actions">
+                ${isBoolean ? `
+                  <input type="checkbox" 
+                         class="flag-toggle" 
+                         ${isChecked ? 'checked' : ''} 
+                         onchange="toggleAppFlag('${appId}', '${escapeHtml(flag.name)}', this.checked)"
+                         title="Toggle flag">
+                ` : `
+                  <button class="btn-secondary btn-small" onclick="editAppFlagModal('${appId}', '${escapeHtml(flag.name)}', '${escapeHtml(flag.value)}', '${escapeHtml(flag.description || '')}')">
+                    Edit
+                  </button>
+                `}
+                <button class="btn-danger btn-small" onclick="deleteAppFlag('${appId}', '${escapeHtml(flag.name)}')">
+                  Delete
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  } catch (err) {
+    listEl.innerHTML = `<p class="error">Failed to load flags: ${err.message}</p>`;
+  }
+}
+
+/**
+ * Create a new feature flag
+ * @param {Event} e - Form submit event
+ * @param {string} appId - The app ID
+ */
+async function createAppFlag(e, appId) {
+  e.preventDefault();
+  
+  const form = e.target;
+  const formData = new FormData(form);
+  
+  const name = formData.get('name').trim();
+  const value = formData.get('value').trim() || 'true';
+  const description = formData.get('description').trim();
+  
+  if (!name) {
+    showToast('Flag name is required', 'error');
+    return;
+  }
+  
+  try {
+    await api(`/apps/${appId}/features`, {
+      method: 'POST',
+      body: JSON.stringify({ name, value, description }),
+    });
+    
+    // Clear form
+    form.reset();
+    
+    // Reload flags
+    await loadAppFlags(appId);
+    
+    showToast('Feature flag created!', 'success');
+    
+    // Track in analytics
+    if (window.posthog) {
+      posthog.capture('app_flag_created', withAppId({ flag_name: name }));
+    }
+  } catch (err) {
+    showToast('Failed to create flag: ' + err.message, 'error');
+  }
+}
+
+/**
+ * Toggle a boolean feature flag
+ * @param {string} appId - The app ID
+ * @param {string} flagName - The flag name
+ * @param {boolean} enabled - New value
+ */
+async function toggleAppFlag(appId, flagName, enabled) {
+  try {
+    await api(`/apps/${appId}/features/${encodeURIComponent(flagName)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value: enabled ? 'true' : 'false' }),
+    });
+    
+    showToast(`Flag "${flagName}" ${enabled ? 'enabled' : 'disabled'}`, 'success');
+    
+    // Track in analytics
+    if (window.posthog) {
+      posthog.capture('app_flag_toggled', withAppId({ flag_name: flagName, enabled }));
+    }
+  } catch (err) {
+    showToast('Failed to update flag: ' + err.message, 'error');
+    // Revert toggle
+    await loadAppFlags(appId);
+  }
+}
+
+/**
+ * Show modal to edit a feature flag
+ * @param {string} appId - The app ID
+ * @param {string} flagName - The flag name
+ * @param {string} currentValue - Current flag value
+ * @param {string} currentDescription - Current description
+ */
+function editAppFlagModal(appId, flagName, currentValue, currentDescription) {
+  const modalContent = `
+    <form id="flag-edit-form" onsubmit="updateAppFlag(event, '${appId}', '${escapeHtml(flagName)}')">
+      <div class="form-group">
+        <label>Flag Name</label>
+        <input type="text" value="${escapeHtml(flagName)}" disabled class="form-input-disabled">
+      </div>
+      <div class="form-group">
+        <label for="edit-flag-value">Value</label>
+        <input type="text" id="edit-flag-value" name="value" value="${escapeHtml(currentValue)}" maxlength="1000">
+        <p class="form-hint">Any value: true, false, strings, numbers, JSON</p>
+      </div>
+      <div class="form-group">
+        <label for="edit-flag-description">Description</label>
+        <input type="text" id="edit-flag-description" name="description" value="${escapeHtml(currentDescription)}" maxlength="255">
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal(); showAppFlagsModal('${appId}')" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Update Flag</button>
+      </div>
+    </form>
+  `;
+  
+  showModal(`Edit Flag: ${flagName}`, modalContent);
+}
+
+/**
+ * Update a feature flag
+ * @param {Event} e - Form submit event
+ * @param {string} appId - The app ID
+ * @param {string} flagName - The flag name
+ */
+async function updateAppFlag(e, appId, flagName) {
+  e.preventDefault();
+  
+  const form = e.target;
+  const formData = new FormData(form);
+  
+  const value = formData.get('value');
+  const description = formData.get('description');
+  
+  try {
+    await api(`/apps/${appId}/features/${encodeURIComponent(flagName)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value, description }),
+    });
+    
+    // Close and reopen flags modal
+    closeModal();
+    await showAppFlagsModal(appId);
+    
+    showToast('Flag updated!', 'success');
+    
+    // Track in analytics
+    if (window.posthog) {
+      posthog.capture('app_flag_updated', withAppId({ flag_name: flagName }));
+    }
+  } catch (err) {
+    showToast('Failed to update flag: ' + err.message, 'error');
+  }
+}
+
+/**
+ * Delete a feature flag
+ * @param {string} appId - The app ID
+ * @param {string} flagName - The flag name
+ */
+async function deleteAppFlag(appId, flagName) {
+  if (!confirm(`Delete flag "${flagName}"?`)) return;
+  
+  try {
+    await api(`/apps/${appId}/features/${encodeURIComponent(flagName)}`, {
+      method: 'DELETE',
+    });
+    
+    // Reload flags
+    await loadAppFlags(appId);
+    
+    showToast('Flag deleted', 'success');
+    
+    // Track in analytics
+    if (window.posthog) {
+      posthog.capture('app_flag_deleted', withAppId({ flag_name: flagName }));
+    }
+  } catch (err) {
+    showToast('Failed to delete flag: ' + err.message, 'error');
+  }
 }
 
 // Modal management
