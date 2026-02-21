@@ -165,8 +165,11 @@ render.get('/:slug/_next/*', async (c) => {
   
   const app = getAppBySlug(slug);
   if (!app) {
+    console.log('[ASSET] App not found for slug:', slug);
     return c.text('Not found', 404);
   }
+  
+  console.log('[ASSET] Looking for:', `_next/${assetPath}`, 'app.id:', app.id);
   
   // Try to get from AppFilesStore
   const { AppFilesStore } = await import('../lib/lmdb.js');
