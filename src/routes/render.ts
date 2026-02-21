@@ -364,7 +364,8 @@ render.get('/:slug/js', async (c) => {
  */
 render.get('/:slug/*', async (c) => {
   const slug = c.req.param('slug');
-  const filePath = c.req.path.slice(`/a/${slug}/`.length);
+  const basePath = `/a/${slug}/`;
+  const filePath = c.req.path.slice(basePath.length);
   
   const app = getAppBySlug(slug);
   
