@@ -328,6 +328,15 @@
       "completedAt": "2026-02-21T11:05:00Z",
       "file": "blog/analytics-guide.md",
       "summary": "Created comprehensive analytics guide (blog/analytics-guide.md) covering: (1) Analytics capture endpoint POST /api/analytics/capture with auth, (2) JavaScript code examples including helper class, (3) Common event types and properties tables, (4) How to view analytics in dashboard and via API, (5) Best practices for event naming, privacy, and offline handling."
+    },
+    "task-106": {
+      "title": "Design auth flow for HYPR (proxy-based)",
+      "status": "completed",
+      "priority": "high",
+      "description": "Design proxy-based auth flow where users bring their own auth provider (Clerk or WorkOS), add keys as secrets, and HYPR proxies auth requests. Research WorkOS as alternative/complement to Clerk.",
+      "completedAt": "2026-02-21T16:17:00Z",
+      "file": "AUTH_DESIGN.md",
+      "summary": "Created comprehensive AUTH_DESIGN.md with: (1) WorkOS vs Clerk comparison (pricing, features, B2B vs B2C fit), (2) Proxy-based auth design where users store provider keys as secrets in HYPR, (3) Technical implementation for /proxy/auth/clerk/* and /proxy/auth/workos/* endpoints, (4) Three authentication patterns (frontend-only SDK, hybrid, full proxy), (5) User experience flow from provider setup to app integration, (6) Security considerations and implementation roadmap."
     }
   }
 }
