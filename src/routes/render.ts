@@ -188,6 +188,33 @@ render.get('/:slug', async (c) => {
     `, 404);
   }
   
+  // Check for ZIP upload first - serve index.html if exists
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
+  
+  if (zipIndexHtml) {
+    // Inject ONHYPER config into the ZIP's index.html
+    const onhyperConfig = `
+      <script>
+        window.ONHYPER = {
+          proxyBase: '/proxy',
+          appSlug: '${escapeJs(app.slug)}',
+          appId: '${escapeJs(app.id)}'
+        };
+      </script>
+    `;
+    
+    let modifiedHtml = zipIndexHtml;
+    if (zipIndexHtml.includes('</body>')) {
+      modifiedHtml = zipIndexHtml.replace('</body>', `${onhyperConfig}</body>`);
+    } else {
+      modifiedHtml = zipIndexHtml + onhyperConfig;
+    }
+    
+    setSecurityHeaders(c);
+    return c.html(modifiedHtml, 200);
+  }
+  
   // Get content from LMDB
   const content = AppContentStore.get(app.id);
   
