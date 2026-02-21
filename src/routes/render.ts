@@ -207,8 +207,8 @@ render.get('/:slug', async (c) => {
     // Rewrite absolute paths to relative paths for sub-path deployment
     // Vite/Next.js apps use absolute paths like /assets/... which need to be ./assets/...
     let modifiedHtml = zipIndexHtml
-      .replace(/(href=")\/([^"]+)("/g, `$1./$2$3`)
-      .replace(/(src=")\/([^"]+)("/g, `$1./$2$3`);
+      .replace(/href="\//g, 'href="./')
+      .replace(/src="\//g, 'src="./');
     
     if (zipIndexHtml.includes('</body>')) {
       modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
