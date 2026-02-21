@@ -81,6 +81,7 @@ interface SecretValidation {
   envVar: string;
   description: string;
   defaultValue: string;
+  minLength: number;
 }
 
 const CRITICAL_SECRETS: SecretValidation[] = [
@@ -88,13 +89,46 @@ const CRITICAL_SECRETS: SecretValidation[] = [
     envVar: 'ONHYPER_JWT_SECRET',
     description: 'JWT secret for signing authentication tokens',
     defaultValue: 'dev-jwt-secret-change-in-production',
+    minLength: 32,
   },
   {
     envVar: 'ONHYPER_MASTER_KEY',
     description: 'Master key for encrypting user secrets (32+ character hex string recommended)',
     defaultValue: 'dev-master-key-change-in-production',
+    minLength: 32,
   },
 ];
+
+/**
+ * Patterns that indicate insecure secrets
+ * These patterns should NEVER appear in production secrets
+ */
+const INSECURE_PATTERNS = [
+  /^dev[-_]?/i,                    // Starts with "dev-" or "dev_"
+  /change[-_]?me/i,                // Contains "change-me" or "change_me"
+  /secret$/i,                      // Ends with just "secret"
+  /^test[-_]?/i,                   // Starts with "test-" or "test_"
+  /^example[-_]?/i,                // Starts with "example-" or "example_"
+  /^default[-_]?/i,                // Starts with "default-" or "default_"
+  /^password$/i,                   // Just "password"
+  /^secret$/i,                     // Just "secret"
+  /^admin$/i,                      // Just "admin"
+  /^key$/i,                        // Just "key"
+  /123456/,                        // Common number sequences
+  /^abc[-_]?123/i,                 // Common placeholder
+];
+
+/**
+ * Check if a secret value matches any insecure pattern
+ */
+function hasInsecurePattern(value: string): string | null {
+  for (const pattern of INSECURE_PATTERNS) {
+    if (pattern.test(value)) {
+      return pattern.source;
+    }
+  }
+  return null;
+}
 
 /**
  * Validate that all critical secrets are properly configured in production
@@ -110,6 +144,8 @@ export function validateProductionSecrets(): void {
 
   const missing: string[] = [];
   const usingDefaults: string[] = [];
+  const insecurePatterns: string[] = [];
+  const tooShort: string[] = [];
 
   for (const secret of CRITICAL_SECRETS) {
     const value = process.env[secret.envVar];
@@ -118,10 +154,20 @@ export function validateProductionSecrets(): void {
       missing.push(secret.envVar);
     } else if (value === secret.defaultValue) {
       usingDefaults.push(secret.envVar);
+    } else {
+      // Check for insecure patterns
+      const matchedPattern = hasInsecurePattern(value);
+      if (matchedPattern) {
+        insecurePatterns.push(`${secret.envVar} (matches pattern: ${matchedPattern})`);
+      }
+      // Check minimum length
+      if (value.length < secret.minLength) {
+        tooShort.push(`${secret.envVar} (${value.length} chars, needs ${secret.minLength})`);
+      }
     }
   }
 
-  if (missing.length > 0 || usingDefaults.length > 0) {
+  if (missing.length > 0 || usingDefaults.length > 0 || insecurePatterns.length > 0 || tooShort.length > 0) {
     const errorParts: string[] = [];
     
     if (missing.length > 0) {
@@ -129,6 +175,12 @@ export function validateProductionSecrets(): void {
     }
     if (usingDefaults.length > 0) {
       errorParts.push(`Using insecure default values for: ${usingDefaults.join(', ')}`);
+    }
+    if (insecurePatterns.length > 0) {
+      errorParts.push(`Secrets contain insecure patterns: ${insecurePatterns.join('; ')}`);
+    }
+    if (tooShort.length > 0) {
+      errorParts.push(`Secrets too short: ${tooShort.join('; ')}`);
     }
 
     const errorMessage = `
