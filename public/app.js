@@ -2426,7 +2426,7 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   
-  // 1, 2, 3 - Switch tabs
+  // 1, 2, 3, 4, 5 - Switch tabs (Apps, Keys, Analytics, Activity, Settings)
   if (e.key === '1') {
     e.preventDefault();
     if (typeof switchTab === 'function') switchTab('apps');
@@ -2438,6 +2438,16 @@ document.addEventListener('keydown', (e) => {
     return;
   }
   if (e.key === '3') {
+    e.preventDefault();
+    if (typeof switchTab === 'function') switchTab('analytics');
+    return;
+  }
+  if (e.key === '4') {
+    e.preventDefault();
+    if (typeof switchTab === 'function') switchTab('activity');
+    return;
+  }
+  if (e.key === '5') {
     e.preventDefault();
     if (typeof switchTab === 'function') switchTab('settings');
     return;
@@ -2464,6 +2474,14 @@ function showShortcutsHelp() {
         </div>
         <div class="shortcut">
           <kbd>3</kbd>
+          <span>Go to Analytics tab</span>
+        </div>
+        <div class="shortcut">
+          <kbd>4</kbd>
+          <span>Go to Activity tab</span>
+        </div>
+        <div class="shortcut">
+          <kbd>5</kbd>
           <span>Go to Settings tab</span>
         </div>
         <div class="shortcut">
@@ -2576,6 +2594,238 @@ function showToast(message, type) {
   }, 3000);
 }
 
+// ============================================================================
+// ANALYTICS DASHBOARD
+// ============================================================================
+
+/**
+ * Load analytics data for the dashboard
+ * 
+ * Fetches stats from /api/analytics/stats endpoint and renders:
+ * - Total events, unique users, views, API calls
+ * - Daily activity chart
+ * - Top events list
+ * - Per-app breakdown
+ * 
+ * @param {number} days - Number of days to include (from filter)
+ * @param {string} appId - Filter by specific app (from filter, optional)
+ */
+async function loadAnalyticsData() {
+  const appFilter = document.getElementById('analytics-app-filter');
+  const daysFilter = document.getElementById('analytics-days-filter');
+  const loadingEl = document.getElementById('analytics-loading');
+  const contentEl = document.getElementById('analytics-content');
+  const emptyEl = document.getElementById('analytics-empty');
+  
+  if (!loadingEl || !contentEl || !emptyEl) return;
+  
+  // Show loading state
+  loadingEl.style.display = 'block';
+  contentEl.style.display = 'none';
+  emptyEl.style.display = 'none';
+  
+  const days = daysFilter?.value || '30';
+  const appId = appFilter?.value || '';
+  
+  try {
+    // Build query string
+    const params = new URLSearchParams({ days });
+    if (appId) params.set('app_id', appId);
+    
+    const response = await api(`/analytics/stats?${params}`);
+    
+    // Hide loading
+    loadingEl.style.display = 'none';
+    
+    // Check if no data
+    if (response.totalEvents === 0 && response.apps.length === 0) {
+      emptyEl.style.display = 'block';
+      return;
+    }
+    
+    // Show content
+    contentEl.style.display = 'block';
+    
+    // Update summary cards
+    document.getElementById('analytics-total-events').textContent = formatNumber(response.totalEvents);
+    document.getElementById('analytics-unique-users').textContent = formatNumber(response.uniqueUsers);
+    document.getElementById('analytics-views').textContent = formatNumber(response.summary?.views || 0);
+    document.getElementById('analytics-calls').textContent = formatNumber(response.summary?.apiCalls || 0);
+    
+    // Render daily chart
+    renderAnalyticsChart(response.dailyBreakdown);
+    
+    // Render top events
+    renderTopEvents(response.topEvents);
+    
+    // Render apps breakdown
+    renderAnalyticsApps(response.apps);
+    
+    // Show errors section if there are errors
+    const errorCount = response.summary?.errors || 0;
+    const errorsSection = document.getElementById('analytics-errors-section');
+    if (errorsSection && errorCount > 0) {
+      errorsSection.style.display = 'block';
+      document.getElementById('analytics-error-count').textContent = errorCount;
+    } else if (errorsSection) {
+      errorsSection.style.display = 'none';
+    }
+    
+  } catch (err) {
+    console.error('Failed to load analytics:', err);
+    loadingEl.innerHTML = `<p class="error">Failed to load analytics: ${err.message}</p>`;
+  }
+}
+
+/**
+ * Render the daily activity chart
+ * Uses simple HTML/CSS bars (no external charting library needed)
+ */
+function renderAnalyticsChart(dailyData) {
+  const chartEl = document.getElementById('analytics-chart');
+  if (!chartEl || !dailyData || dailyData.length === 0) {
+    chartEl.innerHTML = '<p class="text-muted">No daily data available</p>';
+    return;
+  }
+  
+  // Find max for scaling
+  const maxEvents = Math.max(...dailyData.map(d => d.events || 0), 1);
+  
+  // Render bars (show last 14 days if more data)
+  const displayData = dailyData.slice(0, 14).reverse();
+  
+  chartEl.innerHTML = `
+    <div class="chart-bars">
+      ${displayData.map(day => {
+        const height = Math.round(((day.events || 0) / maxEvents) * 100);
+        return `
+          <div class="chart-bar" title="${day.date}: ${formatNumber(day.events || 0)} events">
+            <div class="bar-fill" style="height: ${height}%"></div>
+            <span class="bar-label">${formatDateShort(day.date)}</span>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="chart-legend">
+      <span class="legend-item">
+        <span class="legend-color" style="background: var(--accent-color)"></span>
+        Events
+      </span>
+    </div>
+  `;
+}
+
+/**
+ * Render top events list
+ */
+function renderTopEvents(topEvents) {
+  const eventsEl = document.getElementById('analytics-top-events');
+  if (!eventsEl) return;
+  
+  if (!topEvents || topEvents.length === 0) {
+    eventsEl.innerHTML = '<p class="text-muted">No events recorded yet</p>';
+    return;
+  }
+  
+  // Calculate total for percentage
+  const total = topEvents.reduce((sum, e) => sum + (e.count || 0), 0) || 1;
+  
+  eventsEl.innerHTML = `
+    <div class="events-list">
+      ${topEvents.slice(0, 8).map(event => {
+        const percent = Math.round(((event.count || 0) / total) * 100);
+        return `
+          <div class="event-item">
+            <div class="event-bar-container">
+              <div class="event-bar" style="width: ${percent}%"></div>
+            </div>
+            <div class="event-info">
+              <span class="event-name">${escapeHtml(event.event || 'Unknown')}</span>
+              <span class="event-count">${formatNumber(event.count || 0)}</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Render per-app breakdown
+ */
+function renderAnalyticsApps(apps) {
+  const appsEl = document.getElementById('analytics-apps-list');
+  if (!appsEl) return;
+  
+  if (!apps || apps.length === 0) {
+    appsEl.innerHTML = '<p class="text-muted">No apps with analytics data</p>';
+    return;
+  }
+  
+  // Sort by total events (descending)
+  const sortedApps = [...apps].sort((a, b) => (b.totalEvents || 0) - (a.totalEvents || 0));
+  
+  appsEl.innerHTML = `
+    <div class="analytics-apps">
+      ${sortedApps.map(app => `
+        <div class="analytics-app-item" onclick="filterAnalyticsByApp('${app.id}')">
+          <div class="app-name">${escapeHtml(app.name)}</div>
+          <div class="app-stats">
+            <span class="stat">
+              <span class="stat-icon">👁</span>
+              ${formatNumber(app.views || 0)} views
+            </span>
+            <span class="stat">
+              <span class="stat-icon">⚡</span>
+              ${formatNumber(app.apiCalls || 0)} calls
+            </span>
+            ${(app.errors || 0) > 0 ? `
+              <span class="stat stat-error">
+                <span class="stat-icon">⚠️</span>
+                ${formatNumber(app.errors)} errors
+              </span>
+            ` : ''}
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+/**
+ * Filter analytics to a specific app (called when clicking an app in the list)
+ */
+function filterAnalyticsByApp(appId) {
+  const appFilter = document.getElementById('analytics-app-filter');
+  if (appFilter) {
+    appFilter.value = appId;
+    loadAnalyticsData();
+  }
+}
+
+/**
+ * Populate the app filter dropdown with user's apps
+ */
+async function populateAnalyticsAppFilter() {
+  const appFilter = document.getElementById('analytics-app-filter');
+  if (!appFilter) return;
+  
+  try {
+    const response = await api('/apps');
+    const apps = response.apps || [];
+    
+    // Add options for each app
+    apps.forEach(app => {
+      const option = document.createElement('option');
+      option.value = app.id;
+      option.textContent = app.name;
+      appFilter.appendChild(option);
+    });
+  } catch (err) {
+    console.error('Failed to load apps for filter:', err);
+  }
+}
+
 // Dashboard tab switching
 function switchTab(tabName) {
   // Update hash query (keep SPA routing state in hash)
@@ -2601,6 +2851,15 @@ function switchTab(tabName) {
     loadCustomKeys();
   }
   
+  // Load analytics tab content
+  if (tabName === 'analytics' && typeof loadAnalyticsData === 'function') {
+    // Populate app filter first time
+    if (typeof populateAnalyticsAppFilter === 'function') {
+      populateAnalyticsAppFilter();
+    }
+    loadAnalyticsData();
+  }
+  
   // Load activity tab content
   if (tabName === 'activity' && typeof loadActivityTimeline === 'function') {
     loadActivityTimeline();
@@ -2612,7 +2871,7 @@ function initDashboardTabs() {
   const tab = new URLSearchParams(hashQuery).get('tab');
 
   // Validate tab name, default to 'apps'
-  const validTabs = ['apps', 'keys', 'activity', 'settings'];
+  const validTabs = ['apps', 'keys', 'analytics', 'activity', 'settings'];
   const activeTab = validTabs.includes(tab) ? tab : 'apps';
 
   switchTab(activeTab);
