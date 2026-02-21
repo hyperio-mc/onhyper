@@ -751,13 +751,21 @@ apps.post('/:id/zip', async (c) => {
     
     // If index.html exists, use it as the main HTML
     const indexHtml = AppFilesStore.get(appId, 'index.html');
-    console.log('[ZIP] indexHtml found:', !!indexHtml, 'len:', indexHtml?.length);
     if (indexHtml) {
-      console.log('[ZIP] Calling updateApp with html of length:', indexHtml.length);
-      // Update the app's html field
+      // Update the app's html field in SQLite
       const { updateApp } = await import('../lib/apps.js');
       await updateApp(appId, user.userId, { html: indexHtml });
-      console.log('[ZIP] updateApp completed');
+      
+      // Also save to AppContentStore in LMDB (used by render route)
+      const { AppContentStore } = await import('../lib/lmdb.js');
+      const existing = AppContentStore.get(appId);
+      await AppContentStore.save(appId, {
+        appId,
+        html: indexHtml,
+        css: existing?.css || '',
+        js: existing?.js || '',
+        updatedAt: new Date().toISOString()
+      });
     }
     
     // Audit log
