@@ -365,12 +365,17 @@ render.get('/:slug/js', async (c) => {
 render.get('/:slug/*', async (c) => {
   const slug = c.req.param('slug');
   const basePath = `/a/${slug}/`;
-  const filePath = c.req.path.slice(basePath.length);
+  let filePath = c.req.path.slice(basePath.length);
   
   const app = getAppBySlug(slug);
   
   if (!app) {
     return c.text('Not Found', 404);
+  }
+  
+  // If filePath is empty, serve index.html (root of app)
+  if (!filePath) {
+    filePath = 'index.html';
   }
   
   // Try to serve static file from ZIP upload
