@@ -31,7 +31,6 @@ import { settings } from './routes/settings.js';
 import { audit } from './routes/audit.js';
 import { featuresRouter, adminFeaturesRouter, appFeaturesRouter } from './routes/features.js';
 import { analytics } from './routes/analytics.js';
-import { admin } from './routes/admin.js';
 import { requireAuth, requireAdminAuth } from './middleware/auth.js';
 import { updateUserPlan } from './lib/users.js';
 import { getDatabase } from './lib/db.js';
@@ -198,7 +197,6 @@ app.route('/api', protectedApi);
 app.route('/api/admin/features', adminFeaturesRouter);
 
 // Admin routes (users, migration, status)
-app.route('/api/admin', admin);
 
 // Admin endpoint to upgrade user plan (requires master key)
 app.patch('/api/admin/users/:userId/plan', requireAdminAuth, async (c) => {
