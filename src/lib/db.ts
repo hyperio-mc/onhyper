@@ -389,13 +389,18 @@ function createTables(db: Database.Database): void {
       api_key TEXT NOT NULL,
       auth_type TEXT NOT NULL,
       auth_header TEXT,
+      instructions TEXT,
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+      updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     );
 
     CREATE INDEX IF NOT EXISTS idx_custom_secrets_user ON custom_secrets(user_id);
     CREATE INDEX IF NOT EXISTS idx_custom_secrets_name ON custom_secrets(user_id, name);
   `);
+
+  // Migration: Add instructions to custom_secrets if missing
+  migrateCustomSecretsTable(db);
 
   // Audit logs for tracking user actions and security events
   db.exec(`
@@ -520,6 +525,23 @@ function migrateAppsTable(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token);
     CREATE INDEX IF NOT EXISTS idx_password_resets_expires ON password_resets(expires_at);
   `);
+}
+
+/**
+ * Migrate custom_secrets table to add new optional columns
+ */
+function migrateCustomSecretsTable(db: Database.Database): void {
+  const tableInfo = db.prepare('PRAGMA table_info(custom_secrets)').all() as { name: string }[];
+  const existingColumns = new Set(tableInfo.map(col => col.name));
+
+  if (!existingColumns.has('instructions')) {
+    db.exec('ALTER TABLE custom_secrets ADD COLUMN instructions TEXT');
+  }
+
+  if (!existingColumns.has('updated_at')) {
+    db.exec('ALTER TABLE custom_secrets ADD COLUMN updated_at TEXT');
+    db.exec('UPDATE custom_secrets SET updated_at = created_at WHERE updated_at IS NULL');
+  }
 }
 
 // Type exports
@@ -671,7 +693,9 @@ export interface CustomSecret {
   api_key: string;  // Encrypted in storage, decrypted on retrieval
   auth_type: 'bearer' | 'custom';
   auth_header: string | null;  // For custom auth, e.g., 'X-API-Key'
+  instructions: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 // User settings helper functions

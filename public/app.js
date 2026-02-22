@@ -1864,6 +1864,26 @@ async function addKey(e) {
 }
 
 // Custom API Keys
+function formatCustomKeyUpdatedAt(dateStr) {
+  if (!dateStr) return 'unknown';
+
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return 'unknown';
+
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleString();
+}
+
 async function loadCustomKeys() {
   if (!currentUser) {
     navigate('/login');
@@ -1889,9 +1909,12 @@ async function loadCustomKeys() {
           <span class="key-name">${escapeHtml(secret.name)}</span>
           <span class="key-url">${escapeHtml(secret.base_url)}</span>
           <span class="key-auth">${secret.auth_type === 'bearer' ? 'Bearer Token' : escapeHtml(secret.auth_header || 'Custom Header')}</span>
+          ${secret.instructions ? `<span class="key-auth">Notes: ${escapeHtml(secret.instructions)}</span>` : ''}
+          <span class="key-auth">Updated: ${escapeHtml(formatCustomKeyUpdatedAt(secret.updated_at))}</span>
         </div>
         <div class="custom-key-actions">
           <code class="endpoint-hint">/proxy/${encodeURIComponent(secret.name)}/</code>
+          <button onclick="showEditCustomKeyModal('${secret.id}', '${encodeURIComponent(secret.name)}', '${encodeURIComponent(secret.base_url)}', '${secret.auth_type}', '${encodeURIComponent(secret.auth_header || '')}', '${encodeURIComponent(secret.instructions || '')}')" class="btn-secondary btn-small">Edit</button>
           <button onclick="deleteCustomKey('${secret.id}', '${escapeHtml(secret.name)}')" class="btn-danger btn-small">Delete</button>
         </div>
       </div>
@@ -1944,6 +1967,13 @@ function showAddCustomKeyModal() {
           <option value="custom">Custom Header</option>
         </select>
       </div>
+
+      <div class="form-group">
+        <label for="custom-instructions">Usage Instructions (optional)</label>
+        <textarea id="custom-instructions" name="instructions" rows="4" maxlength="2000" placeholder="How this API works, key endpoints, auth caveats, expected request/response shapes..."></textarea>
+        <p class="form-hint">Saved as notes for this custom API and shown in your dashboard.</p>
+      </div>
+
       <div class="form-group" id="custom-auth-header-group" style="display: none;">
         <label for="custom-auth-header">Header Name</label>
         <input type="text" id="custom-auth-header" name="auth_header" placeholder="X-API-Key">
@@ -1965,10 +1995,56 @@ function showAddCustomKeyModal() {
   showModal('Add Custom API Backend', modalContent);
 }
 
-function toggleCustomAuthHeader() {
-  const authType = document.getElementById('custom-auth-type').value;
-  const headerGroup = document.getElementById('custom-auth-header-group');
+function toggleCustomAuthHeader(authTypeId = 'custom-auth-type', headerGroupId = 'custom-auth-header-group') {
+  const authType = document.getElementById(authTypeId).value;
+  const headerGroup = document.getElementById(headerGroupId);
   headerGroup.style.display = authType === 'custom' ? 'block' : 'none';
+}
+
+function showEditCustomKeyModal(id, encodedName, encodedBaseUrl, authType, encodedAuthHeader, encodedInstructions) {
+  const name = decodeURIComponent(encodedName || '');
+  const baseUrl = decodeURIComponent(encodedBaseUrl || '');
+  const authHeader = decodeURIComponent(encodedAuthHeader || '');
+  const instructions = decodeURIComponent(encodedInstructions || '');
+
+  const modalContent = `
+    <form id="custom-key-edit-form" onsubmit="updateCustomKey(event, '${id}')">
+      <div class="form-group">
+        <label for="edit-custom-name">Name</label>
+        <input type="text" id="edit-custom-name" name="name" required value="${escapeHtml(name)}" maxlength="64">
+        <p class="form-hint">Used in the proxy URL: /proxy/&lt;name&gt;/...</p>
+      </div>
+      <div class="form-group">
+        <label for="edit-custom-base-url">Base URL</label>
+        <input type="url" id="edit-custom-base-url" name="base_url" required value="${escapeHtml(baseUrl)}">
+      </div>
+      <div class="form-group">
+        <label for="edit-custom-api-key">API Key (optional)</label>
+        <input type="password" id="edit-custom-api-key" name="api_key" placeholder="Leave blank to keep existing key">
+      </div>
+      <div class="form-group">
+        <label for="edit-custom-auth-type">Authentication Type</label>
+        <select id="edit-custom-auth-type" name="auth_type" required onchange="toggleCustomAuthHeader('edit-custom-auth-type', 'edit-custom-auth-header-group')">
+          <option value="bearer" ${authType === 'bearer' ? 'selected' : ''}>Bearer Token (Authorization: Bearer &lt;key&gt;)</option>
+          <option value="custom" ${authType === 'custom' ? 'selected' : ''}>Custom Header</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="edit-custom-instructions">Usage Instructions (optional)</label>
+        <textarea id="edit-custom-instructions" name="instructions" rows="4" maxlength="2000">${escapeHtml(instructions)}</textarea>
+      </div>
+      <div class="form-group" id="edit-custom-auth-header-group" style="display: ${authType === 'custom' ? 'block' : 'none'};">
+        <label for="edit-custom-auth-header">Header Name</label>
+        <input type="text" id="edit-custom-auth-header" name="auth_header" value="${escapeHtml(authHeader)}" placeholder="X-API-Key">
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Save Changes</button>
+      </div>
+    </form>
+  `;
+
+  showModal('Edit Custom API Backend', modalContent);
 }
 
 async function createCustomKey(e) {
@@ -1991,13 +2067,53 @@ async function createCustomKey(e) {
         base_url: formData.get('base_url'),
         api_key: formData.get('api_key'),
         auth_type: authType,
-        auth_header: authType === 'custom' ? authHeader : null
+        auth_header: authType === 'custom' ? authHeader : null,
+        instructions: formData.get('instructions') || null
       })
     });
     
     closeModal();
     loadCustomKeys();
     showToast(`Custom API "${formData.get('name')}" created! Use /proxy/${encodeURIComponent(result.name)}/...`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+  }
+}
+
+async function updateCustomKey(e, id) {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+
+  const authType = formData.get('auth_type');
+  const authHeader = formData.get('auth_header');
+  const apiKey = String(formData.get('api_key') || '').trim();
+
+  if (authType === 'custom' && !authHeader) {
+    showToast('Header name is required for custom auth type', 'error');
+    return;
+  }
+
+  try {
+    const payload = {
+      name: formData.get('name'),
+      base_url: formData.get('base_url'),
+      auth_type: authType,
+      auth_header: authType === 'custom' ? authHeader : null,
+      instructions: formData.get('instructions') || null,
+    };
+
+    if (apiKey) {
+      payload.api_key = apiKey;
+    }
+
+    const result = await api(`/secrets/custom/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    });
+
+    closeModal();
+    loadCustomKeys();
+    showToast(`Custom API "${result.name}" updated. Use /proxy/${encodeURIComponent(result.name)}/...`, 'success');
   } catch (err) {
     showToast(err.message, 'error');
   }

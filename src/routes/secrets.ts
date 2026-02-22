@@ -317,7 +317,7 @@ secrets.post('/custom', async (c) => {
   
   try {
     const body = await c.req.json();
-    const { name, base_url, api_key, auth_type, auth_header } = body;
+    const { name, base_url, api_key, auth_type, auth_header, instructions } = body;
     
     if (!name || !base_url || !api_key || !auth_type) {
       return c.json({ error: 'Name, base_url, api_key, and auth_type are required' }, 400);
@@ -329,6 +329,10 @@ secrets.post('/custom', async (c) => {
     
     if (auth_type === 'custom' && !auth_header) {
       return c.json({ error: 'auth_header is required for custom auth type' }, 400);
+    }
+
+    if (instructions && String(instructions).length > 2000) {
+      return c.json({ error: 'instructions must be 2000 characters or less' }, 400);
     }
 
     if (RESERVED_PROXY_NAMES.has(String(name).toLowerCase())) {
@@ -357,7 +361,8 @@ secrets.post('/custom', async (c) => {
       base_url,
       api_key,
       auth_type,
-      auth_header
+      auth_header,
+      instructions,
     );
     
     // Audit log
@@ -377,6 +382,7 @@ secrets.post('/custom', async (c) => {
       base_url: secret.base_url,
       auth_type: secret.auth_type,
       auth_header: secret.auth_header,
+      instructions: secret.instructions,
       created: true,
       message: 'Custom API created successfully. Use /proxy/' + secret.name + '/... to make requests.',
     }, 201);
@@ -429,7 +435,7 @@ secrets.put('/custom/:id', async (c) => {
   
   try {
     const body = await c.req.json();
-    const { name, base_url, api_key, auth_type, auth_header } = body;
+    const { name, base_url, api_key, auth_type, auth_header, instructions } = body;
     
     // Validate auth_type if provided
     if (auth_type && auth_type !== 'bearer' && auth_type !== 'custom') {
@@ -438,6 +444,10 @@ secrets.put('/custom/:id', async (c) => {
     
     if (auth_type === 'custom' && !auth_header) {
       return c.json({ error: 'auth_header is required for custom auth type' }, 400);
+    }
+
+    if (instructions && String(instructions).length > 2000) {
+      return c.json({ error: 'instructions must be 2000 characters or less' }, 400);
     }
 
     if (name && RESERVED_PROXY_NAMES.has(String(name).toLowerCase())) {
@@ -452,6 +462,7 @@ secrets.put('/custom/:id', async (c) => {
       api_key,
       auth_type,
       auth_header: auth_header !== undefined ? auth_header : undefined,
+      instructions: instructions !== undefined ? instructions : undefined,
     });
     
     // Audit log
@@ -471,6 +482,7 @@ secrets.put('/custom/:id', async (c) => {
       base_url: secret.base_url,
       auth_type: secret.auth_type,
       auth_header: secret.auth_header,
+      instructions: secret.instructions,
       updated: true,
     });
     

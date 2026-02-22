@@ -239,6 +239,7 @@ import { CustomSecret } from './db.js';
  * @param apiKey - The API key to use for authentication
  * @param authType - 'bearer' for Bearer token, 'custom' for custom header
  * @param authHeader - For custom auth, the header name (e.g., 'X-API-Key')
+ * @param instructions - Optional usage notes shown in dashboard
  * @returns The created custom secret (without the plaintext key)
  */
 export async function createCustomSecret(
@@ -247,7 +248,8 @@ export async function createCustomSecret(
   baseUrl: string,
   apiKey: string,
   authType: 'bearer' | 'custom',
-  authHeader?: string
+  authHeader?: string,
+  instructions?: string
 ): Promise<Omit<CustomSecret, 'api_key'>> {
   const db = getDatabase();
   
@@ -274,6 +276,10 @@ export async function createCustomSecret(
   if (authType === 'custom' && !authHeader) {
     throw new Error('Custom auth header name is required for custom auth type');
   }
+
+  if (instructions && instructions.length > 2000) {
+    throw new Error('Instructions must be 2000 characters or less');
+  }
   
   // Check if name already exists for this user
   const existing = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ? COLLATE NOCASE')
@@ -291,9 +297,9 @@ export async function createCustomSecret(
   const now = new Date().toISOString();
   
   db.prepare(`
-    INSERT INTO custom_secrets (id, user_id, name, base_url, api_key, auth_type, auth_header, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(id, userId, name, baseUrl, `${encrypted}:${iv}:${salt}`, authType, authHeader || null, now);
+    INSERT INTO custom_secrets (id, user_id, name, base_url, api_key, auth_type, auth_header, instructions, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, userId, name, baseUrl, `${encrypted}:${iv}:${salt}`, authType, authHeader || null, instructions || null, now, now);
   
   return {
     id,
@@ -302,7 +308,9 @@ export async function createCustomSecret(
     base_url: baseUrl,
     auth_type: authType,
     auth_header: authHeader || null,
+    instructions: instructions || null,
     created_at: now,
+    updated_at: now,
   };
 }
 
@@ -313,7 +321,7 @@ export function listCustomSecrets(userId: string): Array<Omit<CustomSecret, 'api
   const db = getDatabase();
   
   const secrets = db.prepare(`
-    SELECT id, user_id, name, base_url, auth_type, auth_header, created_at 
+    SELECT id, user_id, name, base_url, auth_type, auth_header, instructions, created_at, updated_at 
     FROM custom_secrets 
     WHERE user_id = ? 
     ORDER BY created_at DESC
@@ -371,7 +379,7 @@ export function getCustomSecret(userId: string, id: string): Omit<CustomSecret, 
   const db = getDatabase();
   
   const secret = db.prepare(`
-    SELECT id, user_id, name, base_url, auth_type, auth_header, created_at 
+    SELECT id, user_id, name, base_url, auth_type, auth_header, instructions, created_at, updated_at 
     FROM custom_secrets 
     WHERE id = ? AND user_id = ?
   `).get(id, userId) as Omit<CustomSecret, 'api_key'> | undefined;
@@ -391,6 +399,7 @@ export async function updateCustomSecret(
     api_key?: string;
     auth_type?: 'bearer' | 'custom';
     auth_header?: string | null;
+    instructions?: string | null;
   }
 ): Promise<Omit<CustomSecret, 'api_key'>> {
   const db = getDatabase();
@@ -410,6 +419,10 @@ export async function updateCustomSecret(
     } catch {
       throw new Error('Invalid base URL');
     }
+  }
+
+  if (updates.instructions !== undefined && updates.instructions !== null && updates.instructions.length > 2000) {
+    throw new Error('Instructions must be 2000 characters or less');
   }
   
   // Validate name uniqueness if changing
@@ -433,7 +446,7 @@ export async function updateCustomSecret(
   const now = new Date().toISOString();
   db.prepare(`
     UPDATE custom_secrets 
-    SET name = ?, base_url = ?, api_key = ?, auth_type = ?, auth_header = ?
+    SET name = ?, base_url = ?, api_key = ?, auth_type = ?, auth_header = ?, instructions = ?, updated_at = ?
     WHERE id = ? AND user_id = ?
   `).run(
     updates.name || existing.name,
@@ -441,6 +454,8 @@ export async function updateCustomSecret(
     apiKeyValue,
     updates.auth_type || existing.auth_type,
     updates.auth_header !== undefined ? updates.auth_header : existing.auth_header,
+    updates.instructions !== undefined ? updates.instructions : existing.instructions,
+    now,
     id,
     userId
   );
@@ -452,6 +467,8 @@ export async function updateCustomSecret(
     base_url: updates.base_url || existing.base_url,
     auth_type: updates.auth_type || existing.auth_type,
     auth_header: updates.auth_header !== undefined ? updates.auth_header : existing.auth_header,
+    instructions: updates.instructions !== undefined ? updates.instructions : existing.instructions,
     created_at: existing.created_at,
+    updated_at: now,
   };
 }

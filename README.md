@@ -276,6 +276,7 @@ Important:
 
 - Custom names cannot collide with built-in proxy endpoints.
 - Route matching checks built-in endpoints first, then custom key names.
+- You can store optional per-key usage instructions in the dashboard for team context.
 
 ### ScoutOS Proxy Examples
 
