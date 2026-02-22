@@ -1789,45 +1789,78 @@ async function loadKeys() {
     navigate('/login');
     return;
   }
-  
+
+  const list = document.getElementById('key-list');
+  if (!list) return;
+
   try {
-    const response = await api('/secrets');
-    const secrets = response.secrets || [];
-    const list = document.getElementById('key-list');
-    
-    if (secrets.length === 0) {
+    const [regularResponse, customResponse] = await Promise.all([
+      api('/secrets'),
+      api('/secrets/custom'),
+    ]);
+
+    const regularKeys = regularResponse.secrets || [];
+    const customKeys = customResponse.secrets || [];
+    const total = regularKeys.length + customKeys.length;
+
+    if (total === 0) {
       list.innerHTML = `
         <div class="empty-state">
           <div class="empty-state-icon">🔐</div>
-          <h3>Add Your First API Key</h3>
-          <p>Store your API keys securely. They're encrypted and never exposed to browsers.</p>
+          <h3>Add Your First Credential</h3>
+          <p>Store provider keys and custom API credentials securely. They're encrypted and injected server-side only.</p>
           <div class="empty-state-providers">
             <span class="provider-badge" style="--provider-color: #10a37f;">🤖 OpenAI</span>
             <span class="provider-badge" style="--provider-color: #d97706;">🧠 Anthropic</span>
             <span class="provider-badge" style="--provider-color: #6366f1;">🔀 OpenRouter</span>
-            <span class="provider-badge" style="--provider-color: #8b5cf6;">🔭 Scout</span>
-            <span class="provider-badge" style="--provider-color: #64748b;">🦙 Ollama</span>
+            <span class="provider-badge">🔗 Custom API</span>
           </div>
         </div>
       `;
-      return;
-    }
-    
-    list.innerHTML = secrets.map(secret => {
-      const provider = getProviderInfo(secret.name);
-      return `
-        <div class="key-card" style="--provider-color: ${provider.color};">
-          <div class="key-icon">${provider.icon}</div>
+    } else {
+      const regularMarkup = regularKeys.map(secret => {
+        const provider = getProviderInfo(secret.name);
+        return `
+          <div class="key-card" style="--provider-color: ${provider.color};">
+            <div class="key-icon">${provider.icon}</div>
+            <div class="key-info">
+              <span class="key-name">${provider.name}</span>
+              <span class="key-value">${secret.preview}</span>
+              <span class="key-auth">Type: Provider</span>
+            </div>
+            <button onclick="deleteKey('${secret.name}')" class="btn-danger btn-small">Delete</button>
+          </div>
+        `;
+      }).join('');
+
+      const customMarkup = customKeys.map(secret => `
+        <div class="key-card custom-key-card">
+          <div class="key-icon">🔗</div>
           <div class="key-info">
-            <span class="key-name">${provider.name}</span>
-            <span class="key-value">${secret.preview}</span>
+            <span class="key-name">${escapeHtml(secret.name)}</span>
+            <span class="key-url">${escapeHtml(secret.base_url)}</span>
+            <span class="key-auth">Type: Custom (${secret.auth_type === 'bearer' ? 'Bearer' : escapeHtml(secret.auth_header || 'Header')})</span>
+            ${secret.instructions ? `<span class="key-auth">Notes: ${escapeHtml(secret.instructions)}</span>` : ''}
+            <span class="key-auth">Updated: ${escapeHtml(formatCustomKeyUpdatedAt(secret.updated_at))}</span>
           </div>
-          <button onclick="deleteKey('${secret.name}')" class="btn-danger btn-small">Delete</button>
+          <div class="custom-key-actions">
+            <code class="endpoint-hint">/proxy/${encodeURIComponent(secret.name)}/</code>
+            <button onclick="showEditCustomKeyModal('${secret.id}', '${encodeURIComponent(secret.name)}', '${encodeURIComponent(secret.base_url)}', '${secret.auth_type}', '${encodeURIComponent(secret.auth_header || '')}', '${encodeURIComponent(secret.instructions || '')}')" class="btn-secondary btn-small">Edit</button>
+            <button onclick="deleteCustomKey('${secret.id}', '${escapeHtml(secret.name)}')" class="btn-danger btn-small">Delete</button>
+          </div>
         </div>
-      `;
-    }).join('');
+      `).join('');
+
+      list.innerHTML = regularMarkup + customMarkup;
+    }
+
+    const statKeys = document.getElementById('stat-secrets');
+    if (statKeys) {
+      statKeys.textContent = String(total);
+    }
   } catch (err) {
     showError(err.message);
+    list.innerHTML = `<p class="error">Failed to load credentials: ${err.message}</p>`;
   }
 }
 
@@ -1846,20 +1879,92 @@ async function deleteKey(name) {
 // Add key form
 async function addKey(e) {
   e.preventDefault();
-  const formData = new FormData(e.target);
-  
+  const form = e.target;
+  const formData = new FormData(form);
+  const keyKind = formData.get('key_kind') || 'provider';
+
   try {
-    await api('/secrets', {
-      method: 'POST',
-      body: JSON.stringify({
-        name: formData.get('name'),
-        value: formData.get('value')
-      })
-    });
-    e.target.reset();
+    if (keyKind === 'custom') {
+      const authType = formData.get('auth_type');
+      const authHeader = formData.get('auth_header');
+
+      if (!formData.get('custom_name') || !formData.get('base_url') || !formData.get('api_key')) {
+        showToast('Name, base URL, and API key are required for custom APIs', 'error');
+        return;
+      }
+
+      if (authType === 'custom' && !authHeader) {
+        showToast('Header name is required for custom auth type', 'error');
+        return;
+      }
+
+      await api('/secrets/custom', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: formData.get('custom_name'),
+          base_url: formData.get('base_url'),
+          api_key: formData.get('api_key'),
+          auth_type: authType,
+          auth_header: authType === 'custom' ? authHeader : null,
+          instructions: formData.get('instructions') || null,
+        }),
+      });
+
+      form.reset();
+      toggleKeyFormMode();
+      showToast('Custom API credential added', 'success');
+    } else {
+      if (!formData.get('name') || !formData.get('value')) {
+        showToast('Provider and API key are required', 'error');
+        return;
+      }
+
+      await api('/secrets', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: formData.get('name'),
+          value: formData.get('value'),
+        }),
+      });
+
+      form.reset();
+      toggleKeyFormMode();
+      showToast('Provider key added', 'success');
+    }
+
     loadKeys();
   } catch (err) {
     showError(err.message);
+  }
+}
+
+function toggleKeyFormMode() {
+  const modeEl = document.getElementById('key-kind');
+  const providerFields = document.getElementById('provider-key-fields');
+  const customFields = document.getElementById('custom-key-fields');
+  const providerName = document.getElementById('key-name');
+  const providerValue = document.getElementById('key-value');
+  const customName = document.getElementById('custom-inline-name');
+  const customBaseUrl = document.getElementById('custom-inline-base-url');
+  const customApiKey = document.getElementById('custom-inline-api-key');
+  const customAuthType = document.getElementById('custom-inline-auth-type');
+
+  if (!modeEl || !providerFields || !customFields) return;
+
+  const isCustom = modeEl.value === 'custom';
+
+  providerFields.style.display = isCustom ? 'none' : 'block';
+  customFields.style.display = isCustom ? 'block' : 'none';
+
+  if (providerName) providerName.required = !isCustom;
+  if (providerValue) providerValue.required = !isCustom;
+  if (customName) customName.required = isCustom;
+  if (customBaseUrl) customBaseUrl.required = isCustom;
+  if (customApiKey) customApiKey.required = isCustom;
+  if (customAuthType) customAuthType.required = isCustom;
+
+  if (isCustom) {
+    toggleCustomAuthHeader('custom-inline-auth-type', 'custom-inline-auth-header-group');
   }
 }
 
@@ -1885,53 +1990,8 @@ function formatCustomKeyUpdatedAt(dateStr) {
 }
 
 async function loadCustomKeys() {
-  if (!currentUser) {
-    navigate('/login');
-    return;
-  }
-  
-  try {
-    const response = await api('/secrets/custom');
-    const secrets = response.secrets || [];
-    const list = document.getElementById('custom-key-list');
-    
-    if (secrets.length === 0) {
-      list.innerHTML = `
-        <p class="text-muted">No custom APIs configured. Add one to connect to any backend.</p>
-      `;
-      return;
-    }
-    
-    list.innerHTML = secrets.map(secret => `
-      <div class="key-card custom-key-card">
-        <div class="key-icon">🔗</div>
-        <div class="key-info">
-          <span class="key-name">${escapeHtml(secret.name)}</span>
-          <span class="key-url">${escapeHtml(secret.base_url)}</span>
-          <span class="key-auth">${secret.auth_type === 'bearer' ? 'Bearer Token' : escapeHtml(secret.auth_header || 'Custom Header')}</span>
-          ${secret.instructions ? `<span class="key-auth">Notes: ${escapeHtml(secret.instructions)}</span>` : ''}
-          <span class="key-auth">Updated: ${escapeHtml(formatCustomKeyUpdatedAt(secret.updated_at))}</span>
-        </div>
-        <div class="custom-key-actions">
-          <code class="endpoint-hint">/proxy/${encodeURIComponent(secret.name)}/</code>
-          <button onclick="showEditCustomKeyModal('${secret.id}', '${encodeURIComponent(secret.name)}', '${encodeURIComponent(secret.base_url)}', '${secret.auth_type}', '${encodeURIComponent(secret.auth_header || '')}', '${encodeURIComponent(secret.instructions || '')}')" class="btn-secondary btn-small">Edit</button>
-          <button onclick="deleteCustomKey('${secret.id}', '${escapeHtml(secret.name)}')" class="btn-danger btn-small">Delete</button>
-        </div>
-      </div>
-    `).join('');
-    
-    // Update stats if on dashboard
-    const statKeys = document.getElementById('stat-secrets');
-    if (statKeys) {
-      const regularKeysCount = await getRegularKeysCount();
-      statKeys.textContent = regularKeysCount + secrets.length;
-    }
-  } catch (err) {
-    const list = document.getElementById('custom-key-list');
-    if (list) {
-      list.innerHTML = `<p class="error">Failed to load custom APIs: ${err.message}</p>`;
-    }
-  }
+  // Backward-compatible wrapper: keys are now loaded in one unified list.
+  return loadKeys();
 }
 
 async function getRegularKeysCount() {
@@ -2049,7 +2109,8 @@ function showEditCustomKeyModal(id, encodedName, encodedBaseUrl, authType, encod
 
 async function createCustomKey(e) {
   e.preventDefault();
-  const formData = new FormData(e.target);
+  const form = e.target;
+  const formData = new FormData(form);
   
   const authType = formData.get('auth_type');
   const authHeader = formData.get('auth_header');
@@ -2071,8 +2132,15 @@ async function createCustomKey(e) {
         instructions: formData.get('instructions') || null
       })
     });
-    
-    closeModal();
+
+    const isModalForm = !!form.closest('.modal-overlay');
+    if (isModalForm) {
+      closeModal();
+    } else {
+      form.reset();
+      toggleCustomAuthHeader('custom-inline-auth-type', 'custom-inline-auth-header-group');
+    }
+
     loadCustomKeys();
     showToast(`Custom API "${formData.get('name')}" created! Use /proxy/${encodeURIComponent(result.name)}/...`, 'success');
   } catch (err) {
@@ -3455,7 +3523,9 @@ function switchTab(tabName) {
   // Load tab content
   if (tabName === 'keys' && typeof loadKeys === 'function') {
     loadKeys();
-    loadCustomKeys();
+    if (typeof toggleKeyFormMode === 'function') {
+      toggleKeyFormMode();
+    }
   }
   
   // Load analytics tab content

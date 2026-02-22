@@ -51,7 +51,7 @@
 
   <div id="tab-keys" class="tab-panel" role="tabpanel">
     <h2>API Keys</h2>
-    <p class="text-muted">Store your API keys securely. They're encrypted and never exposed to browsers.</p>
+    <p class="text-muted">Manage provider keys and custom API credentials in one place. All keys are encrypted and never exposed to browsers.</p>
 
     <div id="key-list">
       <p>Loading...</p>
@@ -59,42 +59,73 @@
 
     <hr>
 
-    <h3>Add New Key</h3>
+    <h3>Add New Credential</h3>
     <form id="key-form" onsubmit="addKey(event)">
       <div class="form-group">
-        <label for="key-name">API Provider</label>
-        <select id="key-name" name="name" required>
-          <option value="">Select...</option>
-          <option value="OPENAI_API_KEY">🤖 OpenAI</option>
-          <option value="ANTHROPIC_API_KEY">🧠 Anthropic</option>
-          <option value="OPENROUTER_API_KEY">🔀 OpenRouter</option>
-          <option value="SCOUT_API_KEY">🔭 Scout</option>
-          <option value="OLLAMA_API_KEY">🦙 Ollama</option>
+        <label for="key-kind">Credential Type</label>
+        <select id="key-kind" name="key_kind" onchange="toggleKeyFormMode()">
+          <option value="provider" selected>Provider Key (OpenAI, Anthropic, etc.)</option>
+          <option value="custom">Custom API Backend</option>
         </select>
       </div>
-      <div class="form-group">
-        <label for="key-value">API Key</label>
-        <input type="password" id="key-value" name="value" required placeholder="sk-...">
+
+      <div id="provider-key-fields">
+        <div class="form-group">
+          <label for="key-name">API Provider</label>
+          <select id="key-name" name="name">
+            <option value="">Select...</option>
+            <option value="OPENAI_API_KEY">🤖 OpenAI</option>
+            <option value="ANTHROPIC_API_KEY">🧠 Anthropic</option>
+            <option value="OPENROUTER_API_KEY">🔀 OpenRouter</option>
+            <option value="SCOUT_API_KEY">🔭 Scout</option>
+            <option value="OLLAMA_API_KEY">🦙 Ollama</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="key-value">API Key</label>
+          <input type="password" id="key-value" name="value" placeholder="sk-...">
+        </div>
       </div>
-      <button type="submit" class="btn-primary">Add Key</button>
+
+      <div id="custom-key-fields" style="display: none;">
+        <div class="form-group">
+          <label for="custom-inline-name">Name</label>
+          <input type="text" id="custom-inline-name" name="custom_name" placeholder="my-api" maxlength="64">
+          <p class="form-hint">Used in the proxy URL: /proxy/&lt;name&gt;/...</p>
+        </div>
+        <div class="form-group">
+          <label for="custom-inline-base-url">Base URL</label>
+          <input type="url" id="custom-inline-base-url" name="base_url" placeholder="https://api.example.com/v1">
+        </div>
+        <div class="form-group">
+          <label for="custom-inline-api-key">API Key</label>
+          <input type="password" id="custom-inline-api-key" name="api_key" placeholder="Your API key">
+        </div>
+        <div class="form-group">
+          <label for="custom-inline-auth-type">Authentication Type</label>
+          <select id="custom-inline-auth-type" name="auth_type" onchange="toggleCustomAuthHeader('custom-inline-auth-type', 'custom-inline-auth-header-group')">
+            <option value="bearer">Bearer Token (Authorization: Bearer &lt;key&gt;)</option>
+            <option value="custom">Custom Header</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="custom-inline-instructions">Usage Instructions (optional)</label>
+          <textarea id="custom-inline-instructions" name="instructions" rows="4" maxlength="2000" placeholder="How this API works, key endpoints, auth caveats, expected request/response shapes..."></textarea>
+        </div>
+        <div class="form-group" id="custom-inline-auth-header-group" style="display: none;">
+          <label for="custom-inline-auth-header">Header Name</label>
+          <input type="text" id="custom-inline-auth-header" name="auth_header" placeholder="X-API-Key">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-primary">Add Credential</button>
     </form>
 
     <div class="info-box">
       <h4>Using Your Keys in Apps</h4>
-      <p>Your apps call APIs through the proxy endpoints. Keys are injected server-side.</p>
+      <p>Your apps call APIs through secure proxy endpoints. Auth credentials are injected server-side.</p>
       <code>fetch('/proxy/openai/chat/completions', { method: 'POST', body: ... })</code>
     </div>
-
-    <hr>
-
-    <h3>Custom API Backends</h3>
-    <p class="text-muted">Connect to any API with custom authentication headers.</p>
-
-    <div id="custom-key-list">
-      <p>Loading...</p>
-    </div>
-
-    <button onclick="showAddCustomKeyModal()" class="btn-secondary">Add Custom API</button>
   </div>
 
   <div id="tab-analytics" class="tab-panel" role="tabpanel">
