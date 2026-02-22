@@ -166,6 +166,7 @@ import {
   isSubdomainAvailable,
   getSubdomainOwner,
   releaseSubdomain,
+  claimSubdomain,
 } from '../lib/subdomains.js';
 import { getAppAnalytics, getUserAppsWithAnalytics } from '../lib/appAnalytics.js';
 import { logAuditEvent } from '../lib/db.js';
@@ -180,6 +181,27 @@ function getRequestMetadata(c: Parameters<typeof getAuthUser>[0]): { ipAddress: 
   const ip = forwardedFor?.split(',')[0].trim() || realIp || undefined;
   const userAgent = c.req.header('user-agent') || undefined;
   return { ipAddress: ip, userAgent };
+}
+
+/**
+ * Generate a subdomain candidate from app name.
+ * Similar to slug generation but for subdomains.
+ * Returns null if the name can't produce a valid subdomain.
+ */
+function generateSubdomainFromName(name: string): string | null {
+  const slug = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 63);
+  
+  // Must be at least 3 characters
+  if (slug.length < 3) {
+    return null;
+  }
+  
+  return slug;
 }
 
 const apps = new Hono();
@@ -202,6 +224,7 @@ apps.get('/', async (c) => {
       id: app.id,
       name: app.name,
       slug: app.slug,
+      subdomain: app.subdomain,
       createdAt: app.created_at,
       updatedAt: app.updated_at,
     })),
@@ -245,6 +268,27 @@ apps.post('/', async (c) => {
     // Create the app
     const app = await createApp(user.userId, name, { html, css, js });
     
+    // Attempt to auto-claim a subdomain for the app
+    let subdomainUrl: string | null = null;
+    const subdomainCandidate = generateSubdomainFromName(name);
+    
+    if (subdomainCandidate) {
+      // Check if subdomain is available (not reserved, not claimed)
+      const reserved = isReserved(subdomainCandidate);
+      const available = reserved ? false : await isSubdomainAvailable(subdomainCandidate);
+      
+      if (available) {
+        // Attempt to claim the subdomain
+        const claimResult = await claimSubdomain(user.userId, subdomainCandidate, app.id);
+        
+        if (claimResult.success) {
+          // Update the app with the subdomain
+          await updateAppSubdomain(app.id, user.userId, subdomainCandidate);
+          subdomainUrl = `${subdomainCandidate}.onhyper.io`;
+        }
+      }
+    }
+    
     // Audit log
     const metadata = getRequestMetadata(c);
     logAuditEvent({
@@ -252,7 +296,12 @@ apps.post('/', async (c) => {
       action: 'app_create',
       resourceType: 'app',
       resourceId: app.id,
-      details: { app_name: app.name, app_slug: app.slug },
+      details: { 
+        app_name: app.name, 
+        app_slug: app.slug,
+        auto_subdomain: subdomainCandidate || null,
+        subdomain_claimed: subdomainUrl !== null,
+      },
       ...metadata,
     });
     
@@ -263,6 +312,7 @@ apps.post('/', async (c) => {
       name: app.name,
       slug: app.slug,
       url: `${baseUrl}/a/${app.slug}`,
+      subdomain: subdomainUrl,
       createdAt: app.created_at,
     }, 201);
     
@@ -297,14 +347,24 @@ apps.get('/:id', async (c) => {
   
   const baseUrl = config.baseUrl;
   
+  // Build URLs - subdomain is primary if available
+  const pathUrl = `${baseUrl}/a/${app.slug}`;
+  const subdomainUrl = app.subdomain ? `${app.subdomain}.onhyper.io` : null;
+  
   return c.json({
     id: app.id,
     name: app.name,
     slug: app.slug,
+    subdomain: app.subdomain,
     html: app.html,
     css: app.css,
     js: app.js,
-    url: `${baseUrl}/a/${app.slug}`,
+    url: subdomainUrl || pathUrl,
+    urls: {
+      path: pathUrl,
+      subdomain: subdomainUrl,
+      primary: subdomainUrl || pathUrl,
+    },
     createdAt: app.created_at,
     updatedAt: app.updated_at,
   });
@@ -394,16 +454,79 @@ apps.delete('/:id', async (c) => {
 });
 
 /**
+ * Generate a random suffix for subdomain collision resolution
+ */
+function generateRandomSuffix(): string {
+  return Math.random().toString(36).substring(2, 6); // 4 char random suffix
+}
+
+/**
+ * Attempt to claim a subdomain with automatic fallback
+ * Tries the preferred subdomain first, then with random suffixes
+ */
+async function claimSubdomainWithFallback(
+  userId: string,
+  appId: string,
+  preferredSubdomain: string,
+  maxAttempts: number = 3
+): Promise<{ success: boolean; subdomain?: string; error?: string }> {
+  let subdomain = preferredSubdomain;
+  
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // Validate subdomain format
+    const validation = validateSubdomain(subdomain);
+    if (!validation.valid) {
+      // If validation fails, try with a cleaner version
+      if (attempt === 0) {
+        const cleaned = generateSubdomainFromName(subdomain);
+        subdomain = cleaned && cleaned.length >= 3 ? cleaned : `app-${generateRandomSuffix()}`;
+        continue;
+      }
+      return { success: false, error: validation.error };
+    }
+    
+    // Check if subdomain is reserved
+    if (isReserved(subdomain)) {
+      // Try with a suffix to avoid reserved names
+      subdomain = `${preferredSubdomain}-${generateRandomSuffix()}`;
+      continue;
+    }
+    
+    // Check availability
+    const available = await isSubdomainAvailable(subdomain);
+    
+    if (available) {
+      // Try to claim it
+      const claimResult = await claimSubdomainForApp(userId, subdomain, appId);
+      if (claimResult.success) {
+        return { success: true, subdomain };
+      }
+      // Race condition - someone else claimed it, try with suffix
+    }
+    
+    // Try with a random suffix for next attempt
+    subdomain = `${preferredSubdomain}-${generateRandomSuffix()}`;
+  }
+  
+  return { success: false, error: 'Could not claim a subdomain after multiple attempts' };
+}
+
+/**
  * POST /api/apps/:id/publish
- * Publish an app with optional subdomain
+ * Publish an app with automatic subdomain assignment
  * 
- * When a subdomain is provided:
- * - Validates format and availability
- * - Claims the subdomain for the user (if available)
- * - Allows user to reassign their owned subdomain to a different app
- * - Updates the app's subdomain field
+ * New behavior (task-108):
+ * - Automatically generates a subdomain from the app name
+ * - Attempts to claim the subdomain, with fallbacks for collisions
+ * - Falls back to path-based URL only if subdomain claim fails
  * 
- * Returns both path-based URL and subdomain URL (if configured)
+ * Request Body (optional):
+ * - subdomain: string - Override the auto-generated subdomain
+ * 
+ * Response:
+ * - urls.path: string - Path-based URL (/a/slug)
+ * - urls.subdomain: string | null - Subdomain URL if claimed successfully
+ * - urls.primary: string - The preferred URL (subdomain if available, else path)
  */
 apps.post('/:id/publish', async (c) => {
   const user = getAuthUser(c);
@@ -425,115 +548,186 @@ apps.post('/:id/publish', async (c) => {
   }
   
   try {
-    const body = await c.req.json();
-    const { subdomain } = body;
+    const body = await c.req.json().catch(() => ({})) as { subdomain?: string };
+    const { subdomain: requestedSubdomain } = body;
     
-    // If no subdomain provided, just return success with path URL
-    if (!subdomain) {
+    // Generate preferred subdomain from app name (or use slug as fallback)
+    const preferredSubdomain = requestedSubdomain || 
+      generateSubdomainFromName(app.name) || 
+      app.slug.replace(/-[a-z0-9]{8}$/, ''); // Remove UUID suffix from slug
+    
+    // Check if the app already has a subdomain assigned
+    const currentSubdomain = app.subdomain;
+    
+    // If user explicitly requested a specific subdomain, validate and try to claim it
+    if (requestedSubdomain) {
+      const normalizedSubdomain = requestedSubdomain.toLowerCase();
+      
+      // Validate subdomain format
+      const validation = validateSubdomain(normalizedSubdomain);
+      if (!validation.valid) {
+        return c.json({ 
+          success: false, 
+          error: validation.error 
+        }, 400);
+      }
+      
+      // Check if subdomain is reserved
+      if (isReserved(normalizedSubdomain)) {
+        return c.json({ 
+          success: false, 
+          error: 'This subdomain is reserved and cannot be claimed' 
+        }, 400);
+      }
+      
+      // Check feature flag for short subdomains (< 6 chars)
+      if (normalizedSubdomain.length < 6) {
+        const shortSubdomainFeature = await isFeatureEnabled('short_subdomains', user.userId, { subdomain: normalizedSubdomain });
+        if (!shortSubdomainFeature.enabled) {
+          return c.json({
+            success: false,
+            error: 'Short subdomains (fewer than 6 characters) require a BUSINESS plan',
+            hint: `Subdomain "${normalizedSubdomain}" has ${normalizedSubdomain.length} characters. Upgrade to BUSINESS for short subdomains.`,
+            subdomain_length: normalizedSubdomain.length,
+          }, 403);
+        }
+      }
+      
+      // Check who owns this subdomain
+      const subdomainOwner = await getSubdomainOwner(normalizedSubdomain);
+      
+      // Case 1: Subdomain already claimed by another user
+      if (subdomainOwner && subdomainOwner !== user.userId) {
+        return c.json({ 
+          success: false, 
+          error: 'This subdomain is already claimed by another user' 
+        }, 409);
+      }
+      
+      // Case 2: Subdomain already claimed by this user (reassignment)
+      if (subdomainOwner === user.userId) {
+        // Release the existing subdomain assignment
+        await releaseSubdomain(user.userId, normalizedSubdomain);
+      }
+      
+      // Claim the subdomain for this app
+      const claimResult = await claimSubdomainForApp(user.userId, normalizedSubdomain, appId);
+      
+      if (!claimResult.success) {
+        return c.json({ 
+          success: false, 
+          error: claimResult.error 
+        }, 400);
+      }
+      
+      // Update app's subdomain field
+      await updateAppSubdomain(appId, user.userId, normalizedSubdomain);
+      
+      // Audit log
+      const metadata = getRequestMetadata(c);
+      logAuditEvent({
+        userId: user.userId,
+        action: 'app_publish',
+        resourceType: 'app',
+        resourceId: appId,
+        details: { app_name: app.name, app_slug: app.slug, subdomain: normalizedSubdomain },
+        ...metadata,
+      });
+      
       return c.json({
         success: true,
         urls: {
           path: `${config.baseUrl}/a/${app.slug}`,
-          subdomain: null,
+          subdomain: `${normalizedSubdomain}.onhyper.io`,
+          primary: `${normalizedSubdomain}.onhyper.io`,
         },
       });
     }
     
-    const normalizedSubdomain = subdomain.toLowerCase();
-    
-    // Validate subdomain format
-    const validation = validateSubdomain(normalizedSubdomain);
-    if (!validation.valid) {
-      return c.json({ 
-        success: false, 
-        error: validation.error 
-      }, 400);
+    // Auto-generate and claim subdomain
+    // First, check if we should release any existing subdomain for this app
+    if (currentSubdomain) {
+      // App already has a subdomain, keep it unless user explicitly requests a change
+      return c.json({
+        success: true,
+        urls: {
+          path: `${config.baseUrl}/a/${app.slug}`,
+          subdomain: `${currentSubdomain}.onhyper.io`,
+          primary: `${currentSubdomain}.onhyper.io`,
+        },
+      });
     }
     
-    // Check if subdomain is reserved
-    if (isReserved(normalizedSubdomain)) {
-      return c.json({ 
-        success: false, 
-        error: 'This subdomain is reserved and cannot be claimed' 
-      }, 400);
-    }
+    // Check feature flag for subdomains (respect plan restrictions)
+    const subdomainFeature = await isFeatureEnabled('subdomains', user.userId, { subdomain: preferredSubdomain });
     
-    // NOTE: Feature flag checks commented out for FREE tier - re-enable after fixing DB
-    // const subdomainFeature = await isFeatureEnabled('subdomains', user.userId, { subdomain: normalizedSubdomain });
-    // if (!subdomainFeature.enabled) {
-    //   return c.json({
-    //     success: false,
-    //     error: subdomainFeature.reason,
-    //     hint: `Upgrade to PRO or higher to use custom subdomains.`,
-    //   }, 403);
-    // }
+    // Try to claim a subdomain with fallbacks
+    const claimResult = await claimSubdomainWithFallback(user.userId, appId, preferredSubdomain);
     
-    // Check feature flag for short subdomains (< 6 chars)
-    if (normalizedSubdomain.length < 6) {
-      const shortSubdomainFeature = await isFeatureEnabled('short_subdomains', user.userId, { subdomain: normalizedSubdomain });
-      if (!shortSubdomainFeature.enabled) {
-        return c.json({
-          success: false,
-          error: 'Short subdomains (fewer than 6 characters) require a BUSINESS plan',
-          hint: `Subdomain "${normalizedSubdomain}" has ${normalizedSubdomain.length} characters. Upgrade to BUSINESS for short subdomains.`,
-          subdomain_length: normalizedSubdomain.length,
-        }, 403);
+    if (claimResult.success && claimResult.subdomain) {
+      // Check short subdomain feature flag if needed
+      if (claimResult.subdomain.length < 6) {
+        const shortSubdomainFeature = await isFeatureEnabled('short_subdomains', user.userId, { subdomain: claimResult.subdomain });
+        if (!shortSubdomainFeature.enabled) {
+          // Try with a longer suffix
+          const longerResult = await claimSubdomainWithFallback(
+            user.userId, 
+            appId, 
+            `${preferredSubdomain}-app`,
+            3
+          );
+          
+          if (longerResult.success && longerResult.subdomain) {
+            claimResult.subdomain = longerResult.subdomain;
+          } else {
+            // Fall back to path-based URL
+            return c.json({
+              success: true,
+              urls: {
+                path: `${config.baseUrl}/a/${app.slug}`,
+                subdomain: null,
+                primary: `${config.baseUrl}/a/${app.slug}`,
+              },
+              message: 'Could not claim a suitable subdomain. Using path-based URL.',
+            });
+          }
+        }
       }
+      
+      // Update app's subdomain field
+      await updateAppSubdomain(appId, user.userId, claimResult.subdomain);
+      
+      // Audit log
+      const metadata = getRequestMetadata(c);
+      logAuditEvent({
+        userId: user.userId,
+        action: 'app_publish',
+        resourceType: 'app',
+        resourceId: appId,
+        details: { app_name: app.name, app_slug: app.slug, subdomain: claimResult.subdomain, auto_claimed: true },
+        ...metadata,
+      });
+      
+      return c.json({
+        success: true,
+        urls: {
+          path: `${config.baseUrl}/a/${app.slug}`,
+          subdomain: `${claimResult.subdomain}.onhyper.io`,
+          primary: `${claimResult.subdomain}.onhyper.io`,
+        },
+        auto_claimed: true,
+      });
     }
     
-    // Check who owns this subdomain
-    const subdomainOwner = await getSubdomainOwner(normalizedSubdomain);
-    
-    // Case 1: Subdomain already claimed by another user
-    if (subdomainOwner && subdomainOwner !== user.userId) {
-      return c.json({ 
-        success: false, 
-        error: 'This subdomain is already claimed by another user' 
-      }, 409);
-    }
-    
-    // Case 2: Subdomain is available (not claimed by anyone)
-    // Case 3: Subdomain already claimed by this user (reassignment)
-    // Both cases we proceed to claim/update
-    
-    // If this user already owns it, we need to:
-    // 1. Release it from the current app it's assigned to (if any)
-    // 2. Re-claim it for this new app
-    if (subdomainOwner === user.userId) {
-      // Release the existing subdomain assignment
-      await releaseSubdomain(user.userId, normalizedSubdomain);
-    }
-    
-    // Claim the subdomain for this app
-    const claimResult = await claimSubdomainForApp(user.userId, normalizedSubdomain, appId);
-    
-    if (!claimResult.success) {
-      return c.json({ 
-        success: false, 
-        error: claimResult.error 
-      }, 400);
-    }
-    
-    // Update app's subdomain field
-    await updateAppSubdomain(appId, user.userId, normalizedSubdomain);
-    
-    // Audit log
-    const metadata = getRequestMetadata(c);
-    logAuditEvent({
-      userId: user.userId,
-      action: 'app_publish',
-      resourceType: 'app',
-      resourceId: appId,
-      details: { app_name: app.name, app_slug: app.slug, subdomain: normalizedSubdomain },
-      ...metadata,
-    });
-    
+    // Fallback to path-based URL only
     return c.json({
       success: true,
       urls: {
         path: `${config.baseUrl}/a/${app.slug}`,
-        subdomain: `${normalizedSubdomain}.onhyper.io`,
+        subdomain: null,
+        primary: `${config.baseUrl}/a/${app.slug}`,
       },
+      message: 'Could not claim a subdomain. Using path-based URL.',
     });
     
   } catch (error) {

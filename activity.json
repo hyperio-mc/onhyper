@@ -330,25 +330,26 @@
       "summary": "Created comprehensive analytics guide (blog/analytics-guide.md) covering: (1) Analytics capture endpoint POST /api/analytics/capture with auth, (2) JavaScript code examples including helper class, (3) Common event types and properties tables, (4) How to view analytics in dashboard and via API, (5) Best practices for event naming, privacy, and offline handling."
     },
 {
-    "task-107": {
-      "title": "Fix ZIP upload - only last file stored (bug)",
+    "task-108": {
+      "title": "Make subdomains the default (change path-based to subdomain)",
       "status": "pending",
       "priority": "high",
-      "description": "When uploading ZIP files with >2 files, only the last file gets stored. All files are extracted but only the last one persists. Next.js apps return 404.",
-      "createdAt": "2026-02-22T09:10:00Z",
-      "bug": "ZIP upload reports all files extracted but only last file saved to LMDB",
-      "tests": [
-        {"name": "simple-test (1 file)", "files": 1, "stored": 1, "status": "pass"},
-        {"name": "test-nested (2 files)", "files": 2, "stored": 2, "status": "pass"},
-        {"name": "test-many (50 files)", "files": 50, "stored": 1, "status": "fail"},
-        {"name": "nextjs-todo (46 files)", "files": 46, "stored": 1, "status": "fail"}
-      ],
-      "rootCause": "LMDB writes in Node.js are ASYNC (return Promise). AppFilesStore.save() is called synchronously in a loop without await, so only last write persists.",
+      "description": "Change the default app URL from path-based (/a/:slug) to subdomain (*.onhyper.io). This eliminates path issues with assets/JS files and provides cleaner URLs for users.",
+      "createdAt": "2026-02-22T09:26:00Z",
+      "rationale": "Subdomains avoid asset/JS path issues, provide cleaner URLs, and differentiate from path-based free tier.",
       "steps": [
-        {"id": "107-01", "title": "Diagnose root cause in AppFilesStore.save()", "status": "completed"},
-        {"id": "107-02", "title": "Fix: Add await to LMDB writes in ZIP upload loop", "status": "in_progress"},
-        {"id": "107-03", "title": "Test fix with multi-file ZIP uploads", "status": "pending"},
-        {"id": "107-04", "title": "Deploy fix and verify Next.js apps work", "status": "pending"}
+        {"id": "108-01", "title": "Update app creation to default to subdomain", "status": "in_progress", "description": "Change POST /api/apps to automatically claim subdomain on creation if available, without requiring explicit publish step."},
+        {"id": "108-02", "title": "Update publish flow to use subdomain by default", "status": "completed", "completedAt": "2026-02-22T14:35:00Z", "description": "Modify POST /api/apps/:id/publish to attempt subdomain claim first before falling back to path-based.", "summary": "Modified POST /api/apps/:id/publish to auto-generate subdomain from app name, attempt to claim it with fallback (tries preferred, then with random suffix), and return urls.primary field with preferred URL. App creation (step 108-01) already adds subdomain on create. Added claimSubdomainWithFallback helper function. Build passes, core functionality works."}, 
+        {"id": "108-03", "title": "Update frontend to show subdomain as primary URL", "status": "pending", "description": "Change dashboard to display subdomain URL prominently, with path URL as secondary option."},
+        {"id": "108-04", "title": "Update docs and marketing copy", "status": "pending", "description": "Update landing page, pricing page, and documentation to reflect subdomain-first approach."},
+        {"id": "108-05", "title": "Add tests for subdomain default flow", "status": "pending", "description": "Write integration tests covering: app creation defaults to subdomain, publish uses subdomain, fallback to path works."}
+      ],
+      "successCriteria": [
+        "New apps automatically get subdomains (if available) without separate publish step",
+        "Publish action prioritizes subdomain over path-based URL",
+        "Dashboard displays subdomain URL as primary",
+        "Documentation updated to show subdomain as default",
+        "All existing tests pass + new subdomain default tests pass"
       ]
     }
   }
