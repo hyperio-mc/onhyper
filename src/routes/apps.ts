@@ -718,8 +718,8 @@ apps.post('/:id/zip', async (c) => {
     for (const entry of entries) {
       if (!entry.isDirectory && !entry.entryName.includes('__MACOSX') && !entry.entryName.startsWith('.')) {
         const parts = entry.entryName.split('/');
-        // Only use as root if it doesn't start with underscore
-        if (parts.length > 1 && !rootFolder && !parts[0].startsWith('_')) {
+        // Only use as root if it doesn't start with underscore AND isn't a Next.js special folder
+        if (parts.length > 1 && !rootFolder && !parts[0].startsWith('_') && parts[0] !== '404') {
           rootFolder = parts[0];
         }
       }
