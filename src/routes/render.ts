@@ -190,33 +190,60 @@ render.get('/:slug/_next/:path*', async (c) => {
 });
 
 /**
- * GET /a/:slug/:file (favicon.ico, next.svg, etc.)
- * Serve root-level assets from ZIP upload
+ * GET /a/:slug/_next/:path* - Serve app _next assets
  */
-render.get('/:slug/:file(*)', async (c) => {
+render.get('/:slug/_next/:path*', async (c) => {
   const slug = c.req.param('slug');
-  const assetPath = c.req.param('file') || '';
-  
-  // Only allow known asset patterns (favicon, svg, etc.)
-  if (!assetPath || assetPath.includes('..') || assetPath.includes('/')) {
-    return c.text('Invalid path', 400);
-  }
+  const assetPath = c.req.param('path');
+  if (!assetPath) return c.text('Not found', 404);
   
   const app = getAppBySlug(slug);
-  if (!app) {
-    return c.text('Not found', 404);
-  }
+  if (!app) return c.text('Not found', 404);
   
   const { AppFilesStore } = await import('../lib/lmdb.js');
-  const content = AppFilesStore.get(app.id, assetPath);
+  const content = AppFilesStore.get(app.id, `_next/${assetPath}`);
   
   if (content) {
     let contentType = 'application/octet-stream';
     if (assetPath.endsWith('.js')) contentType = 'application/javascript';
     else if (assetPath.endsWith('.css')) contentType = 'text/css';
+    else if (assetPath.endsWith('.woff2')) contentType = 'font/woff2';
     else if (assetPath.endsWith('.svg')) contentType = 'image/svg+xml';
     else if (assetPath.endsWith('.png')) contentType = 'image/png';
     else if (assetPath.endsWith('.ico')) contentType = 'image/x-icon';
+    
+    return c.body(content, 200, {
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=31536000'
+    });
+  }
+  
+  return c.text('Asset not found', 404);
+});
+
+/**
+ * GET /a/:slug/:file - Serve root-level assets (favicon, svg, etc.)
+ */
+render.get('/:slug/:file', async (c) => {
+  const slug = c.req.param('slug');
+  const file = c.req.param('file');
+  if (!file || file.includes('..') || file.includes('/')) {
+    return c.text('Invalid path', 400);
+  }
+  
+  const app = getAppBySlug(slug);
+  if (!app) return c.text('Not found', 404);
+  
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const content = AppFilesStore.get(app.id, file);
+  
+  if (content) {
+    let contentType = 'application/octet-stream';
+    if (file.endsWith('.js')) contentType = 'application/javascript';
+    else if (file.endsWith('.css')) contentType = 'text/css';
+    else if (file.endsWith('.svg')) contentType = 'image/svg+xml';
+    else if (file.endsWith('.png')) contentType = 'image/png';
+    else if (file.endsWith('.ico')) contentType = 'image/x-icon';
     
     return c.body(content, 200, {
       'Content-Type': contentType,
