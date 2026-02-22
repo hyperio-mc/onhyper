@@ -71,7 +71,7 @@ OnHyper is a secure proxy platform for frontend developers. It allows publishing
 - Secure secret storage (AES-256-GCM encryption)
 - Pre-configured proxy endpoints for popular APIs
 - No backend required - just HTML/CSS/JS
-- App hosting at onhyper.io/a/{slug}
+- App hosting at yourapp.onhyper.io (subdomain) or onhyper.io/a/{slug} (path fallback)
 - Free tier: 100 requests/day, 3 apps
 
 ## Your Role

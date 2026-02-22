@@ -5,7 +5,7 @@
 ## Overview
 
 ### Current Behavior
-- Apps accessible at: `onhyper.io/a/{slug}`
+- Apps accessible at: `{subdomain}.onhyper.io` (primary) or `onhyper.io/a/{slug}` (fallback)
 - URL pattern: `/a/{random-id}`
 
 ### New Behavior

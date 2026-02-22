@@ -16,7 +16,7 @@ Enable OnHyper apps to call OnHyper's own API through the proxy, allowing apps t
 ### Architecture
 
 ```
-Builder App (onhyper.io/a/builder)
+Builder App (builder.onhyper.io)
     │
     ├── POST /proxy/openrouter/v1/chat/completions
     │   └── Agent generates HTML/CSS/JS
@@ -24,7 +24,7 @@ Builder App (onhyper.io/a/builder)
     └── POST /proxy/onhyper/api/apps
         └── Creates new app using user's own API token
 
-New App (onhyper.io/a/new-app-xyz) ✅
+New App (new-app-xyz.onhyper.io) ✅
 ```
 
 ### Components

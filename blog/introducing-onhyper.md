@@ -117,7 +117,7 @@ Here's the mental model:
 **Your key never touches the browser.**
 
 You also get:
-- **App hosting**: Write HTML/CSS/JS, publish it at `onhyper.io/a/your-app`
+- **App hosting**: Write HTML/CSS/JS, publish it at `yourapp.onhyper.io`
 - **Usage tracking**: See how many API calls each app makes
 - **Multiple APIs**: OpenAI, Anthropic, OpenRouter, Ollama, ScoutOS Atoms, and more
 - **Analytics**: PostHog integration for user behavior tracking
@@ -187,7 +187,7 @@ Your frontend sees only the response. The key never exists in browser memory.
 
 ### 4. Your App Is Published
 
-Every app gets a public URL: `https://onhyper.io/a/your-app-slug`
+Every app gets a public URL: `https://yourapp.onhyper.io` (subdomain - recommended) or `https://onhyper.io/a/your-app-slug` (path-based fallback).
 
 Share it. Embed it. Let anyone use it. Your API key stays safe because the proxy is the only thing that ever sees it.
 
@@ -321,7 +321,7 @@ Click **New App**. Give it a name and paste this HTML:
 
 ### Step 4: Publish and Share
 
-Click **Publish**. Your app is now live at `https://onhyper.io/a/your-app-slug`.
+Click **Publish**. Your app is now live at `https://yourapp.onhyper.io` (or `https://onhyper.io/a/your-app-slug`).
 
 That's it. No build step. No deployment pipeline. No backend code.
 

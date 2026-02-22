@@ -118,7 +118,9 @@ All endpoints support:
 
 #### 1.4 App Publishing
 - Create app with name and HTML frontend
-- App gets unique subdomain or path: `my-app.onhyper.io` or `onhyper.io/a/my-app`
+- App gets unique subdomain (primary): `my-app.onhyper.io`
+- Path-based URL also available: `onhyper.io/a/my-app`
+- Subdomains auto-generated from app name when available
 - Apps can use any proxy endpoint where owner has a key configured
 
 #### 1.5 Usage Limits
@@ -500,12 +502,12 @@ export default app;
 
 ## Pricing
 
-| Plan | Price | Proxy Requests/day | Apps | Custom Domains |
-|------|-------|-------------------|------|----------------|
-| Free | $0 | 100 | 3 | No |
-| Hobby | $5/mo | 1,000 | 10 | No |
-| Pro | $15/mo | 10,000 | 50 | Yes |
-| Business | $49/mo | 100,000 | Unlimited | Yes |
+| Plan | Price | Proxy Requests/day | Apps | Subdomains | Custom Domains |
+|------|-------|-------------------|------|------------|----------------|
+| Free | $0 | 100 | 3 | Yes (auto-generated) | No |
+| Hobby | $5/mo | 1,000 | 10 | Yes | No |
+| Pro | $15/mo | 10,000 | 50 | Yes | Yes |
+| Business | $49/mo | 100,000 | Unlimited | Yes | Yes |
 
 ---
 

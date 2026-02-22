@@ -1111,6 +1111,15 @@ function copyApiToken() {
   });
 }
 
+// Copy app URL to clipboard
+function copyAppUrl(url) {
+  navigator.clipboard.writeText(url).then(() => {
+    showToast('URL copied to clipboard!', 'success');
+  }).catch(() => {
+    showToast('Could not copy URL', 'error');
+  });
+}
+
 // Apps
 async function loadApps() {
   if (!currentUser) {
@@ -1160,6 +1169,11 @@ async function loadApps() {
         <div class="app-grid">
           ${apps.map(app => {
             const stats = analyticsMap.get(app.id) || { views: 0, apiCalls: 0, errors: 0 };
+            // Build URLs - subdomain is primary if available
+            const pathUrl = `onhyper.io/a/${app.slug}`;
+            const subdomainUrl = app.subdomain ? `${app.subdomain}.onhyper.io` : null;
+            const primaryUrl = subdomainUrl || pathUrl;
+            const primaryHref = subdomainUrl ? `https://${subdomainUrl}` : `https://${pathUrl}`;
             return `
             <div class="app-card">
               <div class="app-card-header">
@@ -1169,9 +1183,11 @@ async function loadApps() {
                   <span class="app-status app-status--active">Active</span>
                 </div>
               </div>
-              <p class="app-card-meta">
-                <a href="https://onhyper.io/a/${app.slug}" target="_blank">onhyper.io/a/${app.slug}</a>
-              </p>
+              <div class="app-card-url">
+                <a href="${primaryHref}" target="_blank" class="app-url-primary">${primaryUrl}</a>
+                <button class="app-url-copy" onclick="copyAppUrl('${primaryHref}')" title="Copy URL">📋</button>
+                ${subdomainUrl ? `<a href="https://${pathUrl}" target="_blank" class="app-url-secondary">${pathUrl}</a>` : ''}
+              </div>
               <div class="app-card-stats">
                 <div class="app-stat">
                   <span class="stat-icon">👁</span>
@@ -1298,7 +1314,11 @@ async function showAppAnalytics(appId) {
         ` : ''}
         
         <div class="analytics-url">
-          <a href="https://onhyper.io/a/${app.slug}" target="_blank">onhyper.io/a/${app.slug}</a>
+          <div class="url-primary">
+            <a href="${app.subdomain ? `https://${app.subdomain}.onhyper.io` : `https://onhyper.io/a/${app.slug}`}" target="_blank">${app.subdomain ? `${app.subdomain}.onhyper.io` : `onhyper.io/a/${app.slug}`}</a>
+            <button class="url-copy-btn" onclick="copyAppUrl('${app.subdomain ? `https://${app.subdomain}.onhyper.io` : `https://onhyper.io/a/${app.slug}`}')" title="Copy URL">📋</button>
+          </div>
+          ${app.subdomain ? `<div class="url-secondary"><a href="https://onhyper.io/a/${app.slug}" target="_blank">onhyper.io/a/${app.slug}</a></div>` : ''}
         </div>
       </div>
       <style>
@@ -1414,6 +1434,36 @@ async function showAppAnalytics(appId) {
           padding-top: 16px;
           border-top: 1px solid var(--border-color);
         }
+        .url-primary {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 8px;
+        }
+        .url-primary a {
+          color: var(--accent-color);
+          font-weight: 600;
+          font-size: 1.1rem;
+        }
+        .url-copy-btn {
+          background: var(--bg-alt);
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          padding: 4px 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+          transition: background 0.2s;
+        }
+        .url-copy-btn:hover {
+          background: var(--bg);
+        }
+        .url-secondary {
+          margin-top: 8px;
+        }
+        .url-secondary a {
+          color: var(--text-muted);
+          font-size: 0.85rem;
+        }
         .analytics-url a {
           color: var(--accent-color);
         }
@@ -1448,11 +1498,12 @@ function showCreateAppModal() {
         <input type="text" id="modal-app-name" name="name" required placeholder="My Awesome App">
       </div>
       <div class="form-group">
-        <label for="modal-app-slug">Slug (URL path)</label>
+        <label for="modal-app-slug">URL Slug (optional)</label>
         <div class="slug-preview">
           <span class="slug-prefix">onhyper.io/a/</span>
-          <input type="text" id="modal-app-slug" name="slug" required pattern="[a-z0-9-]+" placeholder="my-app">
+          <input type="text" id="modal-app-slug" name="slug" pattern="[a-z0-9-]+" placeholder="auto-generated">
         </div>
+        <p class="form-hint" style="margin-top: 4px; font-size: 0.85em;">Leave empty to auto-generate. Your app will be available at <code>yourapp.onhyper.io</code> (subdomain) and <code>onhyper.io/a/slug</code> (path).</p>
       </div>
       <div class="agent-notice">
         <strong>🤖 Agents:</strong> Read the skill docs at <a href="https://markdown.new/https://onhyper.io/pages/skill.html" target="_blank">markdown.new/.../skill.html</a>

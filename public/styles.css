@@ -419,6 +419,58 @@ input::placeholder, textarea::placeholder {
   color: var(--text-muted);
 }
 
+/* Card URL Display */
+.app-card-url {
+  margin-bottom: 0.75rem;
+}
+
+.app-url-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.app-url-primary a {
+  color: var(--accent-color);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.app-url-primary a:hover {
+  text-decoration: underline;
+}
+
+.app-url-copy {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.75rem;
+  cursor: pointer;
+  opacity: 0.6;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.app-url-copy:hover {
+  opacity: 1;
+  background: var(--bg-alt);
+}
+
+.app-url-secondary {
+  font-size: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.app-url-secondary a {
+  color: var(--text-muted);
+  text-decoration: none;
+}
+
+.app-url-secondary a:hover {
+  text-decoration: underline;
+}
+
 .app-meta-item {
   display: flex;
   align-items: center;

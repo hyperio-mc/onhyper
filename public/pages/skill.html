@@ -25,7 +25,7 @@
       </div>
       <div class="feature-highlight">
         <h4>🌐 App hosting</h4>
-        <p>Publish at <code>onhyper.io/a/{slug}</code> or <code>{subdomain}.onhyper.io</code></p>
+        <p>Publish at <code>{subdomain}.onhyper.io</code> (default) or <code>onhyper.io/a/{slug}</code></p>
       </div>
       <div class="feature-highlight">
         <h4>🔗 Custom subdomains</h4>
@@ -79,8 +79,8 @@ curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
   -d '{"subdomain": "my-app"}'</code></pre>
     <p>App becomes available at:</p>
     <ul>
-      <li><code>https://onhyper.io/a/{slug}</code> (always)</li>
-      <li><code>https://{subdomain}.onhyper.io</code> (if subdomain claimed)</li>
+      <li><code>https://{subdomain}.onhyper.io</code> (if subdomain claimed — recommended)</li>
+      <li><code>https://onhyper.io/a/{slug}</code> (always available as fallback)</li>
     </ul>
 
     <h3>Slug Resolution Behavior</h3>
@@ -92,8 +92,8 @@ curl -X POST https://onhyper.io/api/apps/&lt;app_id&gt;/publish \
     </ul>
 
     <h3>5. Custom Subdomains</h3>
-    <p>Each user can claim <strong>one unique subdomain</strong> for their apps.</p>
-    <p class="note"><strong>Note:</strong> Subdomains require a PRO plan or higher. Free users can only use path-based URLs (<code>/a/{slug}</code>).</p>
+    <p>Each user can claim <strong>one unique subdomain</strong> for their apps. <strong>Subdomains are the default and recommended way to access your apps.</strong></p>
+    <p class="note"><strong>Note:</strong> Subdomains provide cleaner URLs (<code>myapp.onhyper.io</code> vs <code>onhyper.io/a/my-app-abc123</code>) and support client-side routing for SPAs. Path-based URLs (<code>/a/{slug}</code>) are available as fallback for custom domain setups.</p>
     <pre><code># Check availability
 curl "https://onhyper.io/api/subdomains/check?name=my-app"
 
@@ -349,12 +349,12 @@ curl https://onhyper.io/api/subdomains/mine \
       <tbody>
         <tr>
           <td>Simple Todo</td>
-          <td><code>onhyper.io/a/simple-todo-d0839b31</code></td>
+          <td><code>simple-todo.onhyper.io</code></td>
           <td>Basic todo app</td>
         </tr>
         <tr>
           <td>AI Todo (Server)</td>
-          <td><code>onhyper.io/a/ai-todo-server-side-5db414b2</code></td>
+          <td><code>ai-todo.onhyper.io</code></td>
           <td>Todo with server-side storage</td>
         </tr>
         <tr>
