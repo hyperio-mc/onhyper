@@ -242,16 +242,16 @@ export const UserAppsStore = {
  * Key format: app_files:{appId}:{path}
  */
 export const AppFilesStore = {
-  save(appId: string, path: string, content: string): void {
+  async save(appId: string, path: string, content: string): Promise<void> {
     const db = getLMDB();
     const key = `app_files:${appId}:${path}`;
-    db.put(key, content);
+    await db.put(key, content);
     // Add to index
     const indexKey = `app_files_index:${appId}`;
     const files: string[] = db.get(indexKey) || [];
     if (!files.includes(path)) {
       files.push(path);
-      db.put(indexKey, files);
+      await db.put(indexKey, files);
     }
   },
 
@@ -261,10 +261,10 @@ export const AppFilesStore = {
     return db.get(key);
   },
 
-  delete(appId: string, path: string): void {
+  async delete(appId: string, path: string): Promise<void> {
     const db = getLMDB();
     const key = `app_files:${appId}:${path}`;
-    db.remove(key);
+    await db.remove(key);
   },
 
   list(appId: string): string[] {
@@ -279,20 +279,20 @@ export const AppFilesStore = {
     const db = getLMDB();
     for (const path of files) {
       const key = `app_files:${appId}:${path}`;
-      db.remove(key);
+      await db.remove(key);
     }
     // Remove the index
     const indexKey = `app_files_index:${appId}`;
-    db.remove(indexKey);
+    await db.remove(indexKey);
   },
 
-  _addToIndex(appId: string, path: string): void {
+  async _addToIndex(appId: string, path: string): Promise<void> {
     const db = getLMDB();
     const indexKey = `app_files_index:${appId}`;
     const files: string[] = db.get(indexKey) || [];
     if (!files.includes(path)) {
       files.push(path);
-      db.put(indexKey, files);
+      await db.put(indexKey, files);
     }
   },
 };

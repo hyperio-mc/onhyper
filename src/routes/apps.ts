@@ -745,7 +745,7 @@ apps.post('/:id/zip', async (c) => {
       const text = entry.getData().toString('utf-8');
       
       // Store in LMDB
-      AppFilesStore.save(appId, filePath, text);
+      await AppFilesStore.save(appId, filePath, text);
       files.push(filePath);
     }
     

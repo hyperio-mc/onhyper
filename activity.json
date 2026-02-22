@@ -329,14 +329,27 @@
       "file": "blog/analytics-guide.md",
       "summary": "Created comprehensive analytics guide (blog/analytics-guide.md) covering: (1) Analytics capture endpoint POST /api/analytics/capture with auth, (2) JavaScript code examples including helper class, (3) Common event types and properties tables, (4) How to view analytics in dashboard and via API, (5) Best practices for event naming, privacy, and offline handling."
     },
-    "task-106": {
-      "title": "Design auth flow for HYPR (proxy-based)",
-      "status": "completed",
+{
+    "task-107": {
+      "title": "Fix ZIP upload - only last file stored (bug)",
+      "status": "pending",
       "priority": "high",
-      "description": "Design proxy-based auth flow where users bring their own auth provider (Clerk or WorkOS), add keys as secrets, and HYPR proxies auth requests. Research WorkOS as alternative/complement to Clerk.",
-      "completedAt": "2026-02-21T16:17:00Z",
-      "file": "AUTH_DESIGN.md",
-      "summary": "Created comprehensive AUTH_DESIGN.md with: (1) WorkOS vs Clerk comparison (pricing, features, B2B vs B2C fit), (2) Proxy-based auth design where users store provider keys as secrets in HYPR, (3) Technical implementation for /proxy/auth/clerk/* and /proxy/auth/workos/* endpoints, (4) Three authentication patterns (frontend-only SDK, hybrid, full proxy), (5) User experience flow from provider setup to app integration, (6) Security considerations and implementation roadmap."
+      "description": "When uploading ZIP files with >2 files, only the last file gets stored. All files are extracted but only the last one persists. Next.js apps return 404.",
+      "createdAt": "2026-02-22T09:10:00Z",
+      "bug": "ZIP upload reports all files extracted but only last file saved to LMDB",
+      "tests": [
+        {"name": "simple-test (1 file)", "files": 1, "stored": 1, "status": "pass"},
+        {"name": "test-nested (2 files)", "files": 2, "stored": 2, "status": "pass"},
+        {"name": "test-many (50 files)", "files": 50, "stored": 1, "status": "fail"},
+        {"name": "nextjs-todo (46 files)", "files": 46, "stored": 1, "status": "fail"}
+      ],
+      "rootCause": "LMDB writes in Node.js are ASYNC (return Promise). AppFilesStore.save() is called synchronously in a loop without await, so only last write persists.",
+      "steps": [
+        {"id": "107-01", "title": "Diagnose root cause in AppFilesStore.save()", "status": "completed"},
+        {"id": "107-02", "title": "Fix: Add await to LMDB writes in ZIP upload loop", "status": "in_progress"},
+        {"id": "107-03", "title": "Test fix with multi-file ZIP uploads", "status": "pending"},
+        {"id": "107-04", "title": "Deploy fix and verify Next.js apps work", "status": "pending"}
+      ]
     }
   }
 }
