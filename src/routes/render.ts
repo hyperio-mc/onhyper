@@ -289,9 +289,6 @@ render.get('/:slug', async (c) => {
   const { AppFilesStore } = await import('../lib/lmdb.js');
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
-  console.error('[RENDER] zipIndexHtml found:', !!zipIndexHtml, 'len:', zipIndexHtml?.length);
-  console.error('[RENDER] app.id:', app.id);
-  
   if (zipIndexHtml) {
     // Inject ONHYPER config into the ZIP's index.html
     const onhyperConfig = `
@@ -305,22 +302,15 @@ render.get('/:slug', async (c) => {
     `;
     
     // Transform absolute paths to relative for sub-path deployment
-    // Next.js uses /_next/..., Vercel uses /_vercel/..., Vite uses /assets/...
-    // BUT keep /a/..., /api/..., /proxy/... paths absolute
+    // Uses lookbehind to find / right after href=" or src="
+    // Negative lookahead ensures we don't match:
+    //   - // (protocol-relative URLs like //cdn.example.com)
+    //   - /. (paths like /./ or /../ which are already relative-ish)
+    //   - /a/ /api/ /proxy/ /_next/ /_vercel/ (app routes that must stay absolute)
     function toRelative(html: string): string {
-      const result = html
-        // Next.js static assets
-        .replace(/href="\/_next\//g, 'href="./_next/')
-        .replace(/src="\/_next\//g, 'src="./_next/')
-        // Vercel builds
-        .replace(/href="\/_vercel\//g, 'href="./_vercel/')
-        .replace(/src="\/_vercel\//g, 'src="./_vercel/')
-        // Other absolute paths (but not /a/, /api/, /proxy/)
-        .replace(/href="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'href="./')
-        .replace(/src="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'src="./');
-      console.error('[TRANSFORM] Input paths:', html.match(/href="\/[^"]+"/g)?.slice(0,3));
-      console.error('[TRANSFORM] Output paths:', result.match(/href="\.[^"]+"|href="\/[^"]+"/g)?.slice(0,3));
-      return result;
+      return html
+        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './')
+        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './');
     }
     
     let modifiedHtml = toRelative(zipIndexHtml);
@@ -380,19 +370,15 @@ render.get('/:slug', async (c) => {
     `;
     
     // Transform absolute paths to relative for sub-path deployment
-    // Next.js uses /_next/..., Vercel uses /_vercel/..., Vite uses /assets/...
-    // BUT keep /a/..., /api/..., /proxy/... paths absolute
+    // Uses lookbehind to find / right after href=" or src="
+    // Negative lookahead ensures we don't match:
+    //   - // (protocol-relative URLs like //cdn.example.com)
+    //   - /. (paths like /./ or /../ which are already relative-ish)
+    //   - /a/ /api/ /proxy/ /_next/ /_vercel/ (app routes that must stay absolute)
     function toRelative(html: string): string {
       return html
-        // Next.js static assets
-        .replace(/href="\/_next\//g, 'href="./_next/')
-        .replace(/src="\/_next\//g, 'src="./_next/')
-        // Vercel builds
-        .replace(/href="\/_vercel\//g, 'href="./_vercel/')
-        .replace(/src="\/_vercel\//g, 'src="./_vercel/')
-        // Other absolute paths (but not /a/, /api/, /proxy/, /_next/, /_vercel/)
-        .replace(/href="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'href="./')
-        .replace(/src="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'src="./');
+        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './')
+        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './');
     }
     
     let transformedHtml = toRelative(html);
