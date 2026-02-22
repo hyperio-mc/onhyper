@@ -155,13 +155,11 @@ function setSecurityHeaders(c: any): void {
 }
 
 /**
- * GET /a/:slug/_next/* or /a/:slug/_vercel/*
- * Serve app assets (JS, CSS, images) from ZIP upload
- * This is needed because browser requests go to /_next/... (root-relative)
+ * GET /a/:slug/_next/* - Serve app _next assets
  */
-render.get('/:slug/_next/*', async (c) => {
+render.get('/:slug/_next/:path*', async (c) => {
   const slug = c.req.param('slug');
-  const assetPath = c.req.param('*') || '';
+  const assetPath = c.req.param('path') || '';
   
   const app = getAppBySlug(slug);
   if (!app) {
@@ -233,12 +231,11 @@ render.get('/:slug/:file(*)', async (c) => {
 });
 
 /**
- * GET /a/:slug/_vercel/*
- * Serve Vercel-style assets from ZIP upload
+ * GET /a/:slug/_vercel/* - Serve app _vercel assets
  */
-render.get('/:slug/_vercel/*', async (c) => {
+render.get('/:slug/_vercel/:path*', async (c) => {
   const slug = c.req.param('slug');
-  const assetPath = c.req.param('*') || '';
+  const assetPath = c.req.param('path') || '';
   
   const app = getAppBySlug(slug);
   if (!app) {
