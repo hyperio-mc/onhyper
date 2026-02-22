@@ -33,7 +33,7 @@
  *   name: 'new_feature',
  *   display_name: 'New Feature',
  *   description: 'A brand new feature',
- *   min_plan_tier: 'PRO',
+ *   min_plan_tier: 'FREE',
  * });
  * ```
  * 
@@ -631,7 +631,7 @@ export function seedDefaultFeatureFlags(): void {
         type: 'or',
         conditions: [
           { type: 'subdomain_length', operator: '>=', value: 6 },
-          { type: 'plan_tier', operator: '>=', value: 'BUSINESS' },
+          { type: 'plan_tier', operator: '>=', value: 'PRO' },
         ],
       },
     },
