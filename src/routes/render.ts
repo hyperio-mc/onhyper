@@ -312,22 +312,20 @@ render.get('/:slug', async (c) => {
     // Rewrite absolute paths to relative paths for sub-path deployment
     // Vite apps use /assets/... which need to become ./assets/...
     // Next.js uses /_next/... which needs to become ./_next/... 
-    // (so browser resolves to /a/slug/_next/... correctly)
-    // 
-    // But DON'T rewrite framework paths that need to stay absolute:
-    // - /a/... (our app paths)
-    // - /api/... (API routes)
-    let modifiedHtml = zipIndexHtml
-      .replace(/href="\/a\//g, 'href="/a/')
-      .replace(/src="\/a\//g, 'src="/a/')
-      .replace(/href="\/api\//g, 'href="/api/')
-      .replace(/src="\/api\//g, 'src="/api/')
-      .replace(/href="\/_next\//g, 'href="./_next/')  // Next.js: /_next/ -> ./_next/
-      .replace(/src="\/_next\//g, 'src="./_next/')
-      .replace(/href="\/_vercel\//g, 'href="./_vercel/')
-      .replace(/src="\/_vercel\//g, 'src="./_vercel/')
-      .replace(/href="\//g, 'href="./')  // Other /assets/ -> ./assets/
-      .replace(/src="\//g, 'src="./');
+    // Transform absolute paths to relative for sub-path deployment
+    // BUT keep /a/... and /api/... paths absolute
+    function toRelative(html: string): string {
+      return html
+        .replace(/href="\/_next\//g, 'href="./_next/')
+        .replace(/src="\/_next\//g, 'src="./_next/')
+        .replace(/href="\/_vercel\"/g, 'href="./_vercel/')
+        .replace(/src="\/_vercel\"/g, 'src="./_vercel/')
+        // Convert /something to ./something, but NOT /a/, /api/, /proxy/
+        .replace(/href="\/(?!a\/|api\/|proxy\/)/g, 'href="./')
+        .replace(/src="\/(?!a\/|api\/|proxy\/)/g, 'src="./');
+    }
+    
+    let modifiedHtml = toRelative(zipIndexHtml);
     
     
     if (zipIndexHtml.includes('</body>')) {
@@ -339,7 +337,6 @@ render.get('/:slug', async (c) => {
     setSecurityHeaders(c);
     // Add debug header
     modifiedHtml = '' + modifiedHtml;
-    return c.html(modifiedHtml, 200, { 'X-Debug-Path': 'early-zip' });
   }
   
   // Get content from LMDB
@@ -388,18 +385,19 @@ render.get('/:slug', async (c) => {
     `;
     
     // Transform absolute paths to relative for sub-path deployment
-    let transformedHtml = html
-      .replace(/<html/, '<html')
-      .replace(/href="\/a\//g, 'href="/a/')
-      .replace(/src="\/a\//g, 'src="/a/')
-      .replace(/href="\/api\//g, 'href="/api/')
-      .replace(/src="\/api\//g, 'src="/api/')
-      .replace(/href="\/_next\//g, 'href="./_next/')
-      .replace(/src="\/_next\//g, 'src="./_next/')
-      .replace(/href="\/_vercel\//g, 'href="./_vercel/')
-      .replace(/src="\/_vercel\//g, 'src="./_vercel/')
-      .replace(/href="\//g, 'href="./')
-      .replace(/src="\//g, 'src="./');
+    // BUT keep /a/... and /api/... paths absolute
+    function toRelative(html: string): string {
+      return html
+        .replace(/href="\/_next\//g, 'href="./_next/')
+        .replace(/src="\/_next\//g, 'src="./_next/')
+        .replace(/href="\/_vercel\"/g, 'href="./_vercel/')
+        .replace(/src="\/_vercel\"/g, 'src="./_vercel/')
+        // Convert /something to ./something, but NOT /a/, /api/, /proxy/
+        .replace(/href="\/(?!a\/|api\/|proxy\/)/g, 'href="./')
+        .replace(/src="\/(?!a\/|api\/|proxy\/)/g, 'src="./');
+    }
+    
+    let transformedHtml = toRelative(html);
     
     // Inject before </body> or at end of document
     let modifiedHtml = transformedHtml;
