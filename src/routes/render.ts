@@ -342,7 +342,7 @@ render.get('/:slug', async (c) => {
     // Transform absolute paths to relative for sub-path deployment
     // BUT keep /a/... and /api/... paths absolute
     function toRelative(html: string): string {
-      return html
+      const result = html
         .replace(/href="\/_next\//g, 'href="./_next/')
         .replace(/src="\/_next\//g, 'src="./_next/')
         .replace(/href="\/_vercel\"/g, 'href="./_vercel/')
@@ -350,6 +350,9 @@ render.get('/:slug', async (c) => {
         // Convert /something to ./something, but NOT /a/, /api/, /proxy/
         .replace(/href="\/(?!a\/|api\/|proxy\/)/g, 'href="./')
         .replace(/src="\/(?!a\/|api\/|proxy\/)/g, 'src="./');
+      console.log('[TRANSFORM] Input paths:', html.match(/href="\/[^"]+"/g)?.slice(0,3));
+      console.log('[TRANSFORM] Output paths:', result.match(/href="\/[^"]+"|href="\.\//g)?.slice(0,3));
+      return result;
     }
     
     let modifiedHtml = toRelative(zipIndexHtml);
