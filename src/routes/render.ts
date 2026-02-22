@@ -163,11 +163,8 @@ render.get('/:slug/_next/:path*', async (c) => {
   
   const app = getAppBySlug(slug);
   if (!app) {
-    console.log('[ASSET] App not found for slug:', slug);
     return c.text('Not found', 404);
   }
-  
-  console.log('[ASSET] Looking for:', `_next/${assetPath}`, 'app.id:', app.id);
   
   // Try to get from AppFilesStore
   const { AppFilesStore } = await import('../lib/lmdb.js');
@@ -298,8 +295,6 @@ render.get('/:slug', async (c) => {
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
   if (!zipIndexHtml) {
-    console.log('[RENDER] WARNING: No ZIP content, falling back to app.html');
-    console.log('[RENDER] app.id from DB:', app.id);
   }
   
   if (zipIndexHtml) {
@@ -334,7 +329,6 @@ render.get('/:slug', async (c) => {
       .replace(/href="\//g, 'href="./')  // Other /assets/ -> ./assets/
       .replace(/src="\//g, 'src="./');
     
-    console.log('[RENDER] EARLY PATH - using zipIndexHtml');
     
     if (zipIndexHtml.includes('</body>')) {
       modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
@@ -344,7 +338,7 @@ render.get('/:slug', async (c) => {
     
     setSecurityHeaders(c);
     // Add debug header
-    modifiedHtml = '<!--EARLY_PATH-->' + modifiedHtml;
+    modifiedHtml = '' + modifiedHtml;
     return c.html(modifiedHtml, 200, { 'X-Debug-Path': 'early-zip' });
   }
   
@@ -378,12 +372,10 @@ render.get('/:slug', async (c) => {
                          html.trim().toLowerCase().startsWith('<html');
   
   if (isFullDocument) {
-    console.log('[RENDER] Serving full document, html length:', html.length);
-    console.log('[RENDER] HTML starts:', html.trim().substring(0, 30));
     
     // Inject ONHYPER config into the full document
     // Add test marker
-    let htmlWithMarker = html.replace(/<html/, '<html<!--FULL_DOCUMENT_PATH-->');
+    let htmlWithMarker = html.replace(/<html/, '<html');
     
     const onhyperConfig = `
       <script>
@@ -397,7 +389,7 @@ render.get('/:slug', async (c) => {
     
     // Transform absolute paths to relative for sub-path deployment
     let transformedHtml = html
-      .replace(/<html/, '<html<!--TRANSFORMED-->')
+      .replace(/<html/, '<html')
       .replace(/href="\/a\//g, 'href="/a/')
       .replace(/src="\/a\//g, 'src="/a/')
       .replace(/href="\/api\//g, 'href="/api/')
@@ -420,7 +412,7 @@ render.get('/:slug', async (c) => {
     // Set security headers
     setSecurityHeaders(c);
     // Add debug marker in actual response
-    modifiedHtml = '<!--FALLBACK_PATH-->' + modifiedHtml;
+    modifiedHtml = '' + modifiedHtml;
     return c.html(modifiedHtml, 200);
   }
   
