@@ -194,6 +194,21 @@ app.route('/api', protectedApi);
 // Admin API routes (require admin key - uses requireAdminAuth in routes)
 app.route('/api/admin/features', adminFeaturesRouter);
 
+// Admin endpoint to upgrade user plan
+import { updateUserPlan } from './lib/users.js';
+
+app.patch('/api/admin/users/:userId/plan', requireAdminAuth, async (c) => {
+  const userId = c.req.param('userId');
+  const { plan } = await c.req.json();
+  
+  if (!plan || !['FREE', 'HOBBY', 'PRO', 'BUSINESS'].includes(plan)) {
+    return c.json({ error: 'Invalid plan' }, 400);
+  }
+  
+  updateUserPlan(userId, plan);
+  return c.json({ success: true, userId, plan });
+});
+
 // Proxy routes (uses own auth mechanism)
 app.route('/proxy', proxy);
 
