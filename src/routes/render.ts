@@ -289,8 +289,8 @@ render.get('/:slug', async (c) => {
   const { AppFilesStore } = await import('../lib/lmdb.js');
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
-  console.log('[RENDER] zipIndexHtml found:', !!zipIndexHtml, 'len:', zipIndexHtml?.length);
-  console.log('[RENDER] app.id:', app.id);
+  console.error('[RENDER] zipIndexHtml found:', !!zipIndexHtml, 'len:', zipIndexHtml?.length);
+  console.error('[RENDER] app.id:', app.id);
   
   if (zipIndexHtml) {
     // Inject ONHYPER config into the ZIP's index.html
@@ -318,8 +318,8 @@ render.get('/:slug', async (c) => {
         // Other absolute paths (but not /a/, /api/, /proxy/)
         .replace(/href="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'href="./')
         .replace(/src="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'src="./');
-      console.log('[TRANSFORM] Input paths:', html.match(/href="\/[^"]+"/g)?.slice(0,3));
-      console.log('[TRANSFORM] Output paths:', result.match(/href="\.[^"]+"|href="\/[^"]+"/g)?.slice(0,3));
+      console.error('[TRANSFORM] Input paths:', html.match(/href="\/[^"]+"/g)?.slice(0,3));
+      console.error('[TRANSFORM] Output paths:', result.match(/href="\.[^"]+"|href="\/[^"]+"/g)?.slice(0,3));
       return result;
     }
     
