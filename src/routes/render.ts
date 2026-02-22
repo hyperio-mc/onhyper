@@ -190,38 +190,6 @@ render.get('/:slug/_next/:path*', async (c) => {
 });
 
 /**
- * GET /a/:slug/_next/:path* - Serve app _next assets
- */
-render.get('/:slug/_next/:path*', async (c) => {
-  const slug = c.req.param('slug');
-  const assetPath = c.req.param('path');
-  if (!assetPath) return c.text('Not found', 404);
-  
-  const app = getAppBySlug(slug);
-  if (!app) return c.text('Not found', 404);
-  
-  const { AppFilesStore } = await import('../lib/lmdb.js');
-  const content = AppFilesStore.get(app.id, `_next/${assetPath}`);
-  
-  if (content) {
-    let contentType = 'application/octet-stream';
-    if (assetPath.endsWith('.js')) contentType = 'application/javascript';
-    else if (assetPath.endsWith('.css')) contentType = 'text/css';
-    else if (assetPath.endsWith('.woff2')) contentType = 'font/woff2';
-    else if (assetPath.endsWith('.svg')) contentType = 'image/svg+xml';
-    else if (assetPath.endsWith('.png')) contentType = 'image/png';
-    else if (assetPath.endsWith('.ico')) contentType = 'image/x-icon';
-    
-    return c.body(content, 200, {
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=31536000'
-    });
-  }
-  
-  return c.text('Asset not found', 404);
-});
-
-/**
  * GET /a/:slug/:file - Serve root-level assets (favicon, svg, etc.)
  */
 render.get('/:slug/:file', async (c) => {
@@ -321,9 +289,6 @@ render.get('/:slug', async (c) => {
   const { AppFilesStore } = await import('../lib/lmdb.js');
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
-  if (!zipIndexHtml) {
-  }
-  
   if (zipIndexHtml) {
     // Inject ONHYPER config into the ZIP's index.html
     const onhyperConfig = `
@@ -336,37 +301,35 @@ render.get('/:slug', async (c) => {
       </script>
     `;
     
-    // Rewrite absolute paths to relative paths for sub-path deployment
-    // Vite apps use /assets/... which need to become ./assets/...
-    // Next.js uses /_next/... which needs to become ./_next/... 
     // Transform absolute paths to relative for sub-path deployment
-    // BUT keep /a/... and /api/... paths absolute
+    // Next.js uses /_next/..., Vercel uses /_vercel/..., Vite uses /assets/...
+    // BUT keep /a/..., /api/..., /proxy/... paths absolute
     function toRelative(html: string): string {
       const result = html
+        // Next.js static assets
         .replace(/href="\/_next\//g, 'href="./_next/')
         .replace(/src="\/_next\//g, 'src="./_next/')
-        .replace(/href="\/_vercel\"/g, 'href="./_vercel/')
-        .replace(/src="\/_vercel\"/g, 'src="./_vercel/')
-        // Convert /something to ./something, but NOT /a/, /api/, /proxy/
-        .replace(/href="\/(?!a\/|api\/|proxy\/)/g, 'href="./')
-        .replace(/src="\/(?!a\/|api\/|proxy\/)/g, 'src="./');
+        // Vercel builds
+        .replace(/href="\/_vercel\//g, 'href="./_vercel/')
+        .replace(/src="\/_vercel\//g, 'src="./_vercel/')
+        // Other absolute paths (but not /a/, /api/, /proxy/)
+        .replace(/href="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'href="./')
+        .replace(/src="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'src="./');
       console.log('[TRANSFORM] Input paths:', html.match(/href="\/[^"]+"/g)?.slice(0,3));
-      console.log('[TRANSFORM] Output paths:', result.match(/href="\/[^"]+"|href="\.\//g)?.slice(0,3));
+      console.log('[TRANSFORM] Output paths:', result.match(/href="\.[^"]+"|href="\/[^"]+"/g)?.slice(0,3));
       return result;
     }
     
     let modifiedHtml = toRelative(zipIndexHtml);
     
-    
-    if (zipIndexHtml.includes('</body>')) {
+    if (modifiedHtml.includes('</body>')) {
       modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
     } else {
       modifiedHtml = modifiedHtml + onhyperConfig;
     }
     
     setSecurityHeaders(c);
-    // Add debug header
-    modifiedHtml = '' + modifiedHtml;
+    return c.html(modifiedHtml, 200);
   }
   
   // Get content from LMDB
@@ -399,11 +362,7 @@ render.get('/:slug', async (c) => {
                          html.trim().toLowerCase().startsWith('<html');
   
   if (isFullDocument) {
-    
-    // Inject ONHYPER config into the full document
-    // Add test marker
-    let htmlWithMarker = html.replace(/<html/, '<html');
-    
+    // Inject ONHYPER config into full document
     const onhyperConfig = `
       <script>
         window.ONHYPER = {
@@ -415,16 +374,19 @@ render.get('/:slug', async (c) => {
     `;
     
     // Transform absolute paths to relative for sub-path deployment
-    // BUT keep /a/... and /api/... paths absolute
+    // Next.js uses /_next/..., Vercel uses /_vercel/..., Vite uses /assets/...
+    // BUT keep /a/..., /api/..., /proxy/... paths absolute
     function toRelative(html: string): string {
       return html
+        // Next.js static assets
         .replace(/href="\/_next\//g, 'href="./_next/')
         .replace(/src="\/_next\//g, 'src="./_next/')
-        .replace(/href="\/_vercel\"/g, 'href="./_vercel/')
-        .replace(/src="\/_vercel\"/g, 'src="./_vercel/')
-        // Convert /something to ./something, but NOT /a/, /api/, /proxy/
-        .replace(/href="\/(?!a\/|api\/|proxy\/)/g, 'href="./')
-        .replace(/src="\/(?!a\/|api\/|proxy\/)/g, 'src="./');
+        // Vercel builds
+        .replace(/href="\/_vercel\//g, 'href="./_vercel/')
+        .replace(/src="\/_vercel\//g, 'src="./_vercel/')
+        // Other absolute paths (but not /a/, /api/, /proxy/, /_next/, /_vercel/)
+        .replace(/href="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'href="./')
+        .replace(/src="\/(?!a\/|api\/|proxy\/|_next\/|_vercel\/)/g, 'src="./');
     }
     
     let transformedHtml = toRelative(html);
@@ -439,8 +401,6 @@ render.get('/:slug', async (c) => {
     
     // Set security headers
     setSecurityHeaders(c);
-    // Add debug marker in actual response
-    modifiedHtml = '' + modifiedHtml;
     return c.html(modifiedHtml, 200);
   }
   
