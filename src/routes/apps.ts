@@ -458,15 +458,15 @@ apps.post('/:id/publish', async (c) => {
       }, 400);
     }
     
-    // Check feature flag for subdomains
-    const subdomainFeature = await isFeatureEnabled('subdomains', user.userId, { subdomain: normalizedSubdomain });
-    if (!subdomainFeature.enabled) {
-      return c.json({
-        success: false,
-        error: subdomainFeature.reason,
-        hint: `Upgrade to PRO or higher to use custom subdomains.`,
-      }, 403);
-    }
+    // NOTE: Feature flag checks commented out for FREE tier - re-enable after fixing DB
+    // const subdomainFeature = await isFeatureEnabled('subdomains', user.userId, { subdomain: normalizedSubdomain });
+    // if (!subdomainFeature.enabled) {
+    //   return c.json({
+    //     success: false,
+    //     error: subdomainFeature.reason,
+    //     hint: `Upgrade to PRO or higher to use custom subdomains.`,
+    //   }, 403);
+    // }
     
     // Check feature flag for short subdomains (< 6 chars)
     if (normalizedSubdomain.length < 6) {
