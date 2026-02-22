@@ -112,10 +112,12 @@
 import { Hono } from 'hono';
 import { storeSecret, listSecrets, deleteSecret, hasSecret, getSecretCount, createCustomSecret, listCustomSecrets, getCustomSecret, deleteCustomSecret, updateCustomSecret } from '../lib/secrets.js';
 import { getAuthUser } from '../middleware/auth.js';
-import { config } from '../config.js';
+import { config, PROXY_ENDPOINTS } from '../config.js';
 import { logAuditEvent } from '../lib/db.js';
 
 const secrets = new Hono();
+// Prevent custom keys from shadowing built-in proxy namespaces.
+const RESERVED_PROXY_NAMES = new Set([...Object.keys(PROXY_ENDPOINTS), 'auth']);
 
 /**
  * Extract client IP and user agent from request
@@ -303,7 +305,8 @@ secrets.get('/custom', async (c) => {
 
 /**
  * POST /api/secrets/custom
- * Create a new custom secret
+ * Create a new custom secret.
+ * The `name` is also used as the proxy route segment: /proxy/:name/*
  */
 secrets.post('/custom', async (c) => {
   const user = getAuthUser(c);
@@ -326,6 +329,12 @@ secrets.post('/custom', async (c) => {
     
     if (auth_type === 'custom' && !auth_header) {
       return c.json({ error: 'auth_header is required for custom auth type' }, 400);
+    }
+
+    if (RESERVED_PROXY_NAMES.has(String(name).toLowerCase())) {
+      return c.json({
+        error: `"${name}" is reserved. Choose a different custom key name.`,
+      }, 409);
     }
     
     // Check total secrets limit (regular + custom)
@@ -369,7 +378,7 @@ secrets.post('/custom', async (c) => {
       auth_type: secret.auth_type,
       auth_header: secret.auth_header,
       created: true,
-      message: 'Custom API created successfully. Use /proxy/custom/' + secret.id + '/... to make requests.',
+      message: 'Custom API created successfully. Use /proxy/' + secret.name + '/... to make requests.',
     }, 201);
     
   } catch (error) {
@@ -406,7 +415,8 @@ secrets.get('/custom/:id', async (c) => {
 
 /**
  * PUT /api/secrets/custom/:id
- * Update a custom secret
+ * Update a custom secret.
+ * If `name` is changed, proxy usage moves to /proxy/:name/*
  */
 secrets.put('/custom/:id', async (c) => {
   const user = getAuthUser(c);
@@ -428,6 +438,12 @@ secrets.put('/custom/:id', async (c) => {
     
     if (auth_type === 'custom' && !auth_header) {
       return c.json({ error: 'auth_header is required for custom auth type' }, 400);
+    }
+
+    if (name && RESERVED_PROXY_NAMES.has(String(name).toLowerCase())) {
+      return c.json({
+        error: `"${name}" is reserved. Choose a different custom key name.`,
+      }, 409);
     }
     
     const secret = await updateCustomSecret(user.userId, id, {

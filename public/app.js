@@ -1891,7 +1891,7 @@ async function loadCustomKeys() {
           <span class="key-auth">${secret.auth_type === 'bearer' ? 'Bearer Token' : escapeHtml(secret.auth_header || 'Custom Header')}</span>
         </div>
         <div class="custom-key-actions">
-          <code class="endpoint-hint">/proxy/custom/${secret.id}/</code>
+          <code class="endpoint-hint">/proxy/${encodeURIComponent(secret.name)}/</code>
           <button onclick="deleteCustomKey('${secret.id}', '${escapeHtml(secret.name)}')" class="btn-danger btn-small">Delete</button>
         </div>
       </div>
@@ -1925,8 +1925,8 @@ function showAddCustomKeyModal() {
     <form id="custom-key-form" onsubmit="createCustomKey(event)">
       <div class="form-group">
         <label for="custom-name">Name</label>
-        <input type="text" id="custom-name" name="name" required placeholder="My API Backend" maxlength="64">
-        <p class="form-hint">A friendly name for this API connection</p>
+        <input type="text" id="custom-name" name="name" required placeholder="my-api" maxlength="64">
+        <p class="form-hint">Used in the proxy URL: /proxy/&lt;name&gt;/...</p>
       </div>
       <div class="form-group">
         <label for="custom-base-url">Base URL</label>
@@ -1997,7 +1997,7 @@ async function createCustomKey(e) {
     
     closeModal();
     loadCustomKeys();
-    showToast(`Custom API "${formData.get('name')}" created! Use /proxy/custom/${result.id}/...`, 'success');
+    showToast(`Custom API "${formData.get('name')}" created! Use /proxy/${encodeURIComponent(result.name)}/...`, 'success');
   } catch (err) {
     showToast(err.message, 'error');
   }

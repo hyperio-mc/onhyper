@@ -34,7 +34,7 @@
  * ```
  * 
  * ### ALL /proxy/:endpoint/*
- * Forward requests to the target API.
+ * Forward requests to a built-in endpoint or a custom key endpoint.
  * 
  * **Authentication (one of):**
  * - `Authorization: Bearer <jwt>` - JWT from login
@@ -46,6 +46,10 @@
  * - Success: Returns the API response with CORS headers
  * - Error: Returns error JSON with details
  * 
+ * **Routing behavior:**
+ * - If `:endpoint` matches `PROXY_ENDPOINTS`, use built-in provider config.
+ * - Otherwise, resolve `:endpoint` as a user custom key name.
+ *
  * **Error Codes:**
  * - 401: Authentication required / No secret configured for endpoint
  * - 404: Unknown proxy endpoint
@@ -111,7 +115,7 @@
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { PROXY_ENDPOINTS, config } from '../config.js';
-import { getSecretValue, getCustomSecretValue } from '../lib/secrets.js';
+import { getSecretValue, getCustomSecretValueByName } from '../lib/secrets.js';
 import { getAppBySlug, getAppById } from '../lib/apps.js';
 import { getApiKeyByKey, verifyToken, getUserApiKeyByUserId } from '../lib/users.js';
 import { getUserSettings } from '../lib/db.js';
@@ -199,17 +203,7 @@ async function identifyUser(c: any): Promise<{ userId: string; appId?: string } 
  */
 proxy.all('/:endpoint/*', async (c) => {
   const startTime = Date.now();
-  const endpoint = c.req.param('endpoint') as keyof typeof PROXY_ENDPOINTS;
-  
-  // Validate endpoint
-  if (!endpoint || !PROXY_ENDPOINTS[endpoint]) {
-    return c.json({
-      error: 'Unknown proxy endpoint',
-      available: Object.keys(PROXY_ENDPOINTS),
-    }, 404);
-  }
-  
-  const endpointConfig = PROXY_ENDPOINTS[endpoint];
+  const endpoint = c.req.param('endpoint');
   
   // Identify user/app
   const identity = await identifyUser(c);
@@ -220,50 +214,81 @@ proxy.all('/:endpoint/*', async (c) => {
     }, 401);
   }
   
-  // Get the secret value for this endpoint
-  let secretValue: string | null;
-  
-  // Handle self-endpoints (like 'onhyper') differently
-  if ((endpointConfig as any).self) {
-    // Check if user has enabled this feature
-    const userSettings = getUserSettings(identity.userId);
-    if (!userSettings || userSettings.onhyper_api_enabled !== 1) {
-      return c.json({
-        error: 'OnHyper API access not enabled. Enable it in Settings.',
-      }, 403);
+  // Resolve built-in endpoint first, then fall back to user custom key name.
+  const builtInEndpoint = PROXY_ENDPOINTS[endpoint as keyof typeof PROXY_ENDPOINTS];
+  let targetBaseUrl: string;
+  let authHeader: { header: string; value: string };
+  let analyticsEndpoint = endpoint;
+
+  if (builtInEndpoint) {
+    // Get the secret value for this endpoint
+    let secretValue: string | null;
+
+    // Handle self-endpoints (like 'onhyper') differently
+    if ((builtInEndpoint as any).self) {
+      // Check if user has enabled this feature
+      const userSettings = getUserSettings(identity.userId);
+      if (!userSettings || userSettings.onhyper_api_enabled !== 1) {
+        return c.json({
+          error: 'OnHyper API access not enabled. Enable it in Settings.',
+        }, 403);
+      }
+
+      // Get user's own API key
+      const userApiKey = getUserApiKeyByUserId(identity.userId);
+      if (!userApiKey) {
+        return c.json({
+          error: 'No API key found. Generate one in Dashboard.',
+        }, 401);
+      }
+
+      // Use user's own API key as the secret value
+      secretValue = userApiKey;
+    } else {
+      // Normal flow: get secret from storage
+      secretValue = getSecretValue(identity.userId, builtInEndpoint.secretKey);
     }
-    
-    // Get user's own API key
-    const userApiKey = getUserApiKeyByUserId(identity.userId);
-    if (!userApiKey) {
+
+    if (!secretValue) {
       return c.json({
-        error: 'No API key found. Generate one in Dashboard.',
+        error: `No ${builtInEndpoint.secretKey} configured. Add it in your OnHyper dashboard.`,
+        hint: `Go to Settings > Secrets and add "${builtInEndpoint.secretKey}"`,
       }, 401);
     }
-    
-    // Use user's own API key as the secret value
-    secretValue = userApiKey;
+
+    targetBaseUrl = builtInEndpoint.target;
+    authHeader = buildAuthHeader(endpoint as keyof typeof PROXY_ENDPOINTS, secretValue);
   } else {
-    // Normal flow: get secret from storage
-    secretValue = getSecretValue(identity.userId, endpointConfig.secretKey);
-  }
-  
-  if (!secretValue) {
-    return c.json({
-      error: `No ${endpointConfig.secretKey} configured. Add it in your OnHyper dashboard.`,
-      hint: `Go to Settings > Secrets and add "${endpointConfig.secretKey}"`,
-    }, 401);
+    const customSecret = getCustomSecretValueByName(identity.userId, endpoint);
+
+    if (!customSecret) {
+      return c.json({
+        error: 'Unknown proxy endpoint or custom key not found',
+        available: Object.keys(PROXY_ENDPOINTS),
+      }, 404);
+    }
+
+    targetBaseUrl = customSecret.baseUrl;
+    analyticsEndpoint = `custom:${endpoint}`;
+
+    if (customSecret.authType === 'bearer') {
+      authHeader = { header: 'Authorization', value: `Bearer ${customSecret.apiKey}` };
+    } else {
+      authHeader = {
+        header: customSecret.authHeader || 'X-API-Key',
+        value: customSecret.apiKey,
+      };
+    }
   }
   
   // Build target URL
   const path = c.req.path.replace(`/proxy/${endpoint}`, '');
-  const targetUrl = endpointConfig.target + path + (c.req.query() ? '?' + new URLSearchParams(c.req.query()) : '');
+  const targetUrl = targetBaseUrl + path + (c.req.query() ? '?' + new URLSearchParams(c.req.query()) : '');
   
   try {
     // Prepare headers
-    const auth = buildAuthHeader(endpoint, secretValue);
     const headers: Record<string, string> = {
-      [auth.header]: auth.value,
+      [authHeader.header]: authHeader.value,
       'User-Agent': 'OnHyper-Proxy/1.0',
     };
     
@@ -321,7 +346,7 @@ proxy.all('/:endpoint/*', async (c) => {
       const duration = Date.now() - startTime;
       recordUsage({
         appId: identity.appId,
-        endpoint,
+        endpoint: analyticsEndpoint,
         status: response.status,
         duration,
       });
@@ -330,7 +355,7 @@ proxy.all('/:endpoint/*', async (c) => {
       trackProxyRequest({
         userId: identity.userId,
         appId: identity.appId,
-        endpoint,
+        endpoint: analyticsEndpoint,
         status: response.status,
         durationMs: duration,
         success: response.status >= 200 && response.status < 400,
@@ -340,7 +365,7 @@ proxy.all('/:endpoint/*', async (c) => {
       if (identity.appId) {
         setImmediate(() => {
           try {
-            trackAppApiCall(identity.appId!, { endpoint, status: response.status, duration });
+            trackAppApiCall(identity.appId!, { endpoint: analyticsEndpoint, status: response.status, duration });
           } catch (e) {
             console.error('[AppAnalytics] Failed to track SSE call:', e);
           }
@@ -373,7 +398,7 @@ proxy.all('/:endpoint/*', async (c) => {
     const duration = Date.now() - startTime;
     recordUsage({
       appId: identity.appId,
-      endpoint,
+      endpoint: analyticsEndpoint,
       status: response.status,
       duration,
     });
@@ -382,7 +407,7 @@ proxy.all('/:endpoint/*', async (c) => {
     trackProxyRequest({
       userId: identity.userId,
       appId: identity.appId,
-      endpoint,
+      endpoint: analyticsEndpoint,
       status: response.status,
       durationMs: duration,
       success: response.status >= 200 && response.status < 400,
@@ -392,7 +417,7 @@ proxy.all('/:endpoint/*', async (c) => {
     if (identity.appId) {
       setImmediate(() => {
         try {
-          trackAppApiCall(identity.appId!, { endpoint, status: response.status, duration });
+          trackAppApiCall(identity.appId!, { endpoint: analyticsEndpoint, status: response.status, duration });
         } catch (e) {
           console.error('[AppAnalytics] Failed to track API call:', e);
         }
@@ -441,7 +466,7 @@ proxy.all('/:endpoint/*', async (c) => {
     // Record failed request
     recordUsage({
       appId: identity.appId,
-      endpoint,
+      endpoint: analyticsEndpoint,
       status: 0,
       duration,
     });
@@ -450,7 +475,7 @@ proxy.all('/:endpoint/*', async (c) => {
     trackProxyRequest({
       userId: identity.userId,
       appId: identity.appId,
-      endpoint,
+      endpoint: analyticsEndpoint,
       status: 0,
       durationMs: duration,
       success: false,
@@ -460,7 +485,7 @@ proxy.all('/:endpoint/*', async (c) => {
     if (identity.appId) {
       setImmediate(() => {
         try {
-          trackAppApiCall(identity.appId!, { endpoint, status: 0, duration });
+          trackAppApiCall(identity.appId!, { endpoint: analyticsEndpoint, status: 0, duration });
         } catch (e) {
           console.error('[AppAnalytics] Failed to track failed API call:', e);
         }
@@ -513,257 +538,6 @@ proxy.get('/', (c) => {
         note: 'Uses X-App-Slug for app-scoped authentication',
       },
     },
-  });
-});
-
-/**
- * ALL /proxy/custom/:id/*
- * Forward requests to a user-defined custom API backend
- */
-proxy.all('/custom/:id/*', async (c) => {
-  const startTime = Date.now();
-  const customId = c.req.param('id');
-  
-  // Identify user/app
-  const identity = await identifyUser(c);
-  
-  if (!identity) {
-    return c.json({
-      error: 'Authentication required. Provide Bearer token, X-API-Key, or X-App-Slug header.',
-    }, 401);
-  }
-  
-  // Get the custom secret configuration
-  const secretConfig = getCustomSecretValue(identity.userId, customId);
-  
-  if (!secretConfig) {
-    return c.json({
-      error: 'Custom API not found. Check the ID or create it in your dashboard.',
-    }, 404);
-  }
-  
-  // Build target URL
-  const path = c.req.path.replace(`/proxy/custom/${customId}`, '');
-  const targetUrl = secretConfig.baseUrl + path + (c.req.query() ? '?' + new URLSearchParams(c.req.query()) : '');
-  
-  // Build auth headers based on auth type
-  const headers: Record<string, string> = {
-    'User-Agent': 'OnHyper-Proxy/1.0',
-  };
-  
-  if (secretConfig.authType === 'bearer') {
-    headers['Authorization'] = `Bearer ${secretConfig.apiKey}`;
-  } else {
-    // Custom header auth
-    const headerName = secretConfig.authHeader || 'X-API-Key';
-    headers[headerName] = secretConfig.apiKey;
-  }
-  
-  // Forward relevant headers (excluding authentication)
-  const forwardHeaders = ['content-type', 'accept', 'accept-language'];
-  for (const header of forwardHeaders) {
-    const value = c.req.header(header);
-    if (value) {
-      headers[header] = value;
-    }
-  }
-  
-  // Request uncompressed content
-  headers['accept-encoding'] = 'identity';
-  
-  try {
-    // Get request body for non-GET requests
-    let body: string | undefined;
-    if (!['GET', 'HEAD'].includes(c.req.method)) {
-      const contentLength = c.req.header('content-length');
-      if (contentLength && parseInt(contentLength) > config.proxy.maxRequestSize) {
-        return c.json({ error: 'Request body too large' }, 413);
-      }
-      body = await c.req.text();
-    }
-    
-    // Make the request with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), config.proxy.timeoutMs);
-    
-    const response = await fetch(targetUrl, {
-      method: c.req.method,
-      headers,
-      body,
-      signal: controller.signal,
-    });
-    
-    clearTimeout(timeoutId);
-    
-    // Check response size
-    const contentLength = response.headers.get('content-length');
-    if (contentLength && parseInt(contentLength) > config.proxy.maxResponseSize) {
-      return c.json({ error: 'Response too large' }, 502);
-    }
-    
-    const contentType = response.headers.get('content-type') || '';
-    
-    // Handle SSE streaming responses
-    if (contentType.includes('text/event-stream')) {
-      const duration = Date.now() - startTime;
-      recordUsage({
-        appId: identity.appId,
-        endpoint: `custom:${customId}`,
-        status: response.status,
-        duration,
-      });
-      
-      trackProxyRequest({
-        userId: identity.userId,
-        appId: identity.appId,
-        endpoint: `custom:${customId}`,
-        status: response.status,
-        durationMs: duration,
-        success: response.status >= 200 && response.status < 400,
-      });
-      
-      if (identity.appId) {
-        setImmediate(() => {
-          try {
-            trackAppApiCall(identity.appId!, { endpoint: `custom:${customId}`, status: response.status, duration });
-          } catch (e) {
-            console.error('[AppAnalytics] Failed to track SSE call:', e);
-          }
-        });
-      }
-      
-      return streamSSE(c, async (stream) => {
-        const reader = response.body?.getReader();
-        if (!reader) return;
-        
-        const decoder = new TextDecoder();
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            await stream.write(decoder.decode(value));
-          }
-        } catch (error) {
-          console.error('SSE stream error:', error);
-        }
-      });
-    }
-    
-    // Non-streaming: read response body
-    const responseText = await response.text();
-    
-    // Record usage
-    const duration = Date.now() - startTime;
-    recordUsage({
-      appId: identity.appId,
-      endpoint: `custom:${customId}`,
-      status: response.status,
-      duration,
-    });
-    
-    trackProxyRequest({
-      userId: identity.userId,
-      appId: identity.appId,
-      endpoint: `custom:${customId}`,
-      status: response.status,
-      durationMs: duration,
-      success: response.status >= 200 && response.status < 400,
-    });
-    
-    if (identity.appId) {
-      setImmediate(() => {
-        try {
-          trackAppApiCall(identity.appId!, { endpoint: `custom:${customId}`, status: response.status, duration });
-        } catch (e) {
-          console.error('[AppAnalytics] Failed to track API call:', e);
-        }
-      });
-    }
-    
-    // Build response headers
-    const responseHeaders: Record<string, string> = {};
-    const allowedResponseHeaders = [
-      'content-type', 'content-encoding', 'cache-control',
-      'etag', 'last-modified', 'x-request-id',
-    ];
-    
-    for (const header of allowedResponseHeaders) {
-      const value = response.headers.get(header);
-      if (value) {
-        responseHeaders[header] = value;
-      }
-    }
-    
-    // Add CORS headers
-    responseHeaders['Access-Control-Allow-Origin'] = '*';
-    responseHeaders['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-    responseHeaders['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-API-Key, X-App-Slug, X-App-ID';
-    
-    // Try to parse as JSON
-    let responseBody: unknown = responseText;
-    if (contentType.includes('application/json')) {
-      try {
-        responseBody = JSON.parse(responseText);
-        return c.json(responseBody, response.status as any, responseHeaders);
-      } catch {
-        // Not valid JSON, return as text
-      }
-    }
-    
-    return new Response(responseText, {
-      status: response.status,
-      headers: responseHeaders,
-    });
-    
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    
-    recordUsage({
-      appId: identity.appId,
-      endpoint: `custom:${customId}`,
-      status: 0,
-      duration,
-    });
-    
-    trackProxyRequest({
-      userId: identity.userId,
-      appId: identity.appId,
-      endpoint: `custom:${customId}`,
-      status: 0,
-      durationMs: duration,
-      success: false,
-    });
-    
-    if (identity.appId) {
-      setImmediate(() => {
-        try {
-          trackAppApiCall(identity.appId!, { endpoint: `custom:${customId}`, status: 0, duration });
-        } catch (e) {
-          console.error('[AppAnalytics] Failed to track failed API call:', e);
-        }
-      });
-    }
-    
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        return c.json({ error: 'Request timed out' }, 504);
-      }
-      return c.json({ error: error.message }, 502);
-    }
-    
-    return c.json({ error: 'Proxy request failed' }, 502);
-  }
-});
-
-/**
- * OPTIONS /proxy/custom/:id/*
- * Handle CORS preflight for custom endpoints
- */
-proxy.options('/custom/:id/*', (c) => {
-  return c.body(null, 204, {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key, X-App-Slug, X-App-ID',
   });
 });
 

@@ -276,7 +276,7 @@ export async function createCustomSecret(
   }
   
   // Check if name already exists for this user
-  const existing = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ?')
+  const existing = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ? COLLATE NOCASE')
     .get(userId, name);
   if (existing) {
     throw new Error(`A custom API named "${name}" already exists`);
@@ -326,23 +326,22 @@ export function listCustomSecrets(userId: string): Array<Omit<CustomSecret, 'api
 }
 
 /**
- * Get a custom secret by ID with decrypted API key
+ * Get a custom secret by name with decrypted API key
  */
-export function getCustomSecretValue(userId: string, id: string): { baseUrl: string; apiKey: string; authType: string; authHeader: string | null } | null {
+export function getCustomSecretValueByName(userId: string, name: string): { baseUrl: string; apiKey: string; authType: string; authHeader: string | null } | null {
   const db = getDatabase();
-  
-  const secret = db.prepare('SELECT * FROM custom_secrets WHERE id = ? AND user_id = ?')
-    .get(id, userId) as CustomSecret | undefined;
-  
+
+  const secret = db.prepare('SELECT * FROM custom_secrets WHERE user_id = ? AND name = ? COLLATE NOCASE')
+    .get(userId, name) as CustomSecret | undefined;
+
   if (!secret) {
     return null;
   }
-  
+
   try {
-    // Decrypt the API key (stored as encrypted:iv:salt)
     const [encrypted, iv, salt] = secret.api_key.split(':');
     const apiKey = decrypt(encrypted, iv, salt);
-    
+
     return {
       baseUrl: secret.base_url,
       apiKey,
@@ -350,7 +349,7 @@ export function getCustomSecretValue(userId: string, id: string): { baseUrl: str
       authHeader: secret.auth_header,
     };
   } catch (error) {
-    console.error(`Failed to decrypt custom secret ${id}:`, error);
+    console.error(`Failed to decrypt custom secret ${name}:`, error);
     return null;
   }
 }
@@ -415,7 +414,7 @@ export async function updateCustomSecret(
   
   // Validate name uniqueness if changing
   if (updates.name && updates.name !== existing.name) {
-    const duplicate = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ? AND id != ?')
+    const duplicate = db.prepare('SELECT id FROM custom_secrets WHERE user_id = ? AND name = ? COLLATE NOCASE AND id != ?')
       .get(userId, updates.name, id);
     if (duplicate) {
       throw new Error(`A custom API named "${updates.name}" already exists`);

@@ -261,6 +261,22 @@ Pre-configured proxy endpoints for common AI APIs:
 
 **Note**: `/proxy/onhyper` is a special "self-api" endpoint. Users must enable it in Settings. It uses the user's own API token, not a stored secret.
 
+### Custom Proxy Keys
+
+Custom APIs created via `/api/secrets/custom` are routed through the same proxy path pattern:
+
+- `POST /proxy/:name/*`
+
+Examples:
+
+- `/proxy/github-enterprise/api/v3/user`
+- `/proxy/internal-billing/v1/invoices`
+
+Important:
+
+- Custom names cannot collide with built-in proxy endpoints.
+- Route matching checks built-in endpoints first, then custom key names.
+
 ### ScoutOS Proxy Examples
 
 ```javascript
@@ -405,10 +421,11 @@ onhyper/
 
 1. Request arrives at `/proxy/:endpoint/*`
 2. User identified via JWT, API key, or App-Slug header
-3. Secret looked up from encrypted database
-4. Secret decrypted and injected into Authorization header
-5. Request forwarded to target API
-6. Response returned to client (with CORS headers)
+3. Endpoint resolved as built-in provider or custom key name
+4. Secret looked up from encrypted database
+5. Secret decrypted and injected into auth headers
+6. Request forwarded to target API
+7. Response returned to client (with CORS headers)
 
 ### Rate Limiting
 
