@@ -210,7 +210,7 @@ app.patch('/api/admin/users/:userId/plan', requireAdminAuth, async (c) => {
 });
 
 // Simple endpoint to upgrade creator@hyper.io (no auth for now)
-app.post('/api/debug/upgrade-creator', async (c) => {
+app.post('/api/debug/upgrade-creator-v2', async (c) => {
   const { plan } = await c.req.json();
   
   if (!plan || !['FREE', 'HOBBY', 'PRO', 'BUSINESS'].includes(plan)) {
