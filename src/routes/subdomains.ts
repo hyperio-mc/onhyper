@@ -82,7 +82,7 @@
 
 import { Hono } from 'hono';
 import { Context, Next } from 'hono';
-import { getAuthUser } from '../middleware/auth.js';
+import { getAuthUser, optionalAuth } from '../middleware/auth.js';
 import {
   validateSubdomain,
   isReserved,
@@ -94,6 +94,9 @@ import {
 } from '../lib/subdomains.js';
 
 const subdomains = new Hono();
+
+// Apply optionalAuth to all routes to parse Bearer token
+subdomains.use('*', optionalAuth);
 
 // In-memory rate limit storage for subdomain endpoints
 const subdomainRateLimitStore = new Map<string, { count: number; resetTime: number }>();
