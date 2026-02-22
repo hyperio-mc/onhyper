@@ -318,6 +318,11 @@ export const PROXY_ENDPOINTS = {
     secretKey: 'OPENAI_API_KEY',
     description: 'OpenAI API',
   },
+  'hypermicro': {
+    target: 'https://desirable-beauty-production-d4d8.up.railway.app',
+    secretKey: 'HYPERMICRO_API_KEY',
+    description: 'HyperMicro - Key-value database API for todos and data storage',
+  },
 } as const;
 
 export type ProxyEndpointName = keyof typeof PROXY_ENDPOINTS;
