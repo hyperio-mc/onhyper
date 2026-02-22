@@ -306,11 +306,13 @@ render.get('/:slug', async (c) => {
     // Negative lookahead ensures we don't match:
     //   - // (protocol-relative URLs like //cdn.example.com)
     //   - /. (paths like /./ or /../ which are already relative-ish)
-    //   - /a/ /api/ /proxy/ /_next/ /_vercel/ (app routes that must stay absolute)
+    //   - /a/ /api/ /proxy/ (OnHyper system routes that must stay absolute)
+    // Note: We DO transform /_next/ and /_vercel/ paths because they need
+    // to be relative when the app is deployed at /a/{slug}/
     function toRelative(html: string): string {
       return html
-        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './')
-        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './');
+        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './')
+        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './');
     }
     
     let modifiedHtml = toRelative(zipIndexHtml);
@@ -374,11 +376,13 @@ render.get('/:slug', async (c) => {
     // Negative lookahead ensures we don't match:
     //   - // (protocol-relative URLs like //cdn.example.com)
     //   - /. (paths like /./ or /../ which are already relative-ish)
-    //   - /a/ /api/ /proxy/ /_next/ /_vercel/ (app routes that must stay absolute)
+    //   - /a/ /api/ /proxy/ (OnHyper system routes that must stay absolute)
+    // Note: We DO transform /_next/ and /_vercel/ paths because they need
+    // to be relative when the app is deployed at /a/{slug}/
     function toRelative(html: string): string {
       return html
-        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './')
-        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/|_next\/|_vercel\/)/g, './');
+        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './')
+        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './');
     }
     
     let transformedHtml = toRelative(html);
