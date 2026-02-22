@@ -289,6 +289,9 @@ render.get('/:slug', async (c) => {
   const { AppFilesStore } = await import('../lib/lmdb.js');
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
+  console.log('[RENDER] zipIndexHtml found:', !!zipIndexHtml, 'len:', zipIndexHtml?.length);
+  console.log('[RENDER] app.id:', app.id);
+  
   if (zipIndexHtml) {
     // Inject ONHYPER config into the ZIP's index.html
     const onhyperConfig = `
