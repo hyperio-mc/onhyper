@@ -618,7 +618,7 @@ export function seedDefaultFeatureFlags(): void {
       description: 'Allow users to claim custom subdomains for their apps',
       enabled: true,
       rollout_percentage: 100,
-      min_plan_tier: 'PRO',
+      min_plan_tier: 'FREE',
     },
     {
       name: 'short_subdomains',
@@ -626,7 +626,7 @@ export function seedDefaultFeatureFlags(): void {
       description: 'Allow subdomains with fewer than 6 characters (premium feature)',
       enabled: true,
       rollout_percentage: 100,
-      min_plan_tier: 'BUSINESS',
+      min_plan_tier: 'PRO',
       custom_rules: {
         type: 'or',
         conditions: [
