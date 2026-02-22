@@ -282,6 +282,11 @@ export const config = {
  * Maps endpoint slugs to target URLs and secret key names
  */
 export const PROXY_ENDPOINTS = {
+  'hypermicro': {
+    target: 'https://desirable-beauty-production-d4d8.up.railway.app',
+    secretKey: 'HYPERMICRO_API_KEY',
+    description: 'hyper-micro LMDB API - key-value storage. Example: GET /proxy/hypermicro/api/dbs/{db}/docs',
+  },
   'scoutos': {
     target: 'https://api.scoutos.com',
     secretKey: 'SCOUT_API_KEY',
@@ -317,11 +322,6 @@ export const PROXY_ENDPOINTS = {
     target: 'https://api.openai.com/v1',
     secretKey: 'OPENAI_API_KEY',
     description: 'OpenAI API',
-  },
-  'hypermicro': {
-    target: 'https://desirable-beauty-production-d4d8.up.railway.app',
-    secretKey: 'HYPERMICRO_API_KEY',
-    description: 'HyperMicro - Key-value database API for todos and data storage',
   },
 } as const;
 
