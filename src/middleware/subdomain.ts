@@ -389,6 +389,15 @@ export async function subdomainRouter(c: Context, next: Next) {
     }
   }
   
+  // Check for ZIP upload - serve index.html if exists
+  const { AppFilesStore } = await import('../lib/lmdb.js');
+  const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
+  
+  if (zipIndexHtml) {
+    // Transform absolute paths for subdomain deployment (absolute paths work)
+    return c.html(zipIndexHtml);
+  }
+  
   // For all other paths - serve app HTML (pushstate/SPA support)
   // This lets the client-side router handle the route
   const html = renderAppHtml(app);
