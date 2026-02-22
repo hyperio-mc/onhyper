@@ -322,6 +322,9 @@ render.get('/:slug', async (c) => {
     
     let modifiedHtml = toRelative(zipIndexHtml);
     
+    // Add debug marker to verify transformation happened
+    modifiedHtml = modifiedHtml.replace('<head>', '<head><!--TRANSFORMED-->');
+    
     if (modifiedHtml.includes('</body>')) {
       modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
     } else {
