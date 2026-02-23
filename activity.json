@@ -642,10 +642,47 @@
     },
     "task-122": {
       "title": "Review all documentation changes for accuracy and completeness",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high",
       "createdAt": "2026-02-23T16:08:00Z",
+      "completedAt": "2026-02-23T11:30:00Z",
       "description": "Review all the documentation changes made in task-119, task-120, task-121 to ensure accuracy, consistency, and completeness. Verify subdomain-first messaging is consistent across all docs.",
+      "summary": "Reviewed 6 files. Found 5/6 items passing, 1 issue with well-known endpoint. Docs are consistent on subdomain-first messaging. Next.js config correct. ZIP instructions clear. One inconsistency found: GitHub org name differs between README.md (hyperio-mc) and skill.html/src/index.ts (hyperio-software). Well-known endpoint returning HTML instead of markdown - needs investigation.",
+      "findings": {
+        "consistency": {
+          "status": "pass",
+          "details": "All docs say 'subdomain-first' with consistent terminology. README.md, AGENTS.md, home.html, skill.html, blog post, and embedded skill all use same messaging."
+        },
+        "accuracy": {
+          "status": "pass",
+          "details": "Next.js config correct: output: 'export', images: { unoptimized: true }. Some docs include trailingSlash: true (optional)."
+        },
+        "completeness": {
+          "status": "pass",
+          "details": "ZIP publishing instructions clear in README.md (quickstart), AGENTS.md (detailed workflow), blog post (step-by-step guide)."
+        },
+        "links": {
+          "status": "issue",
+          "details": "GitHub org name inconsistent: README.md uses 'hyperio-mc', skill.html and src/index.ts use 'hyperio-software'. Need to verify correct org name and align."
+        },
+        "functionality": {
+          "status": "issue",
+          "details": "GET /.well-known/skill.md returns HTML (content-type: text/html) instead of markdown. Either deployment lag (commit just pushed) or route ordering issue. Recommend re-testing after Railway deployment completes."
+        }
+      },
+      "filesReviewed": [
+        "README.md",
+        "AGENTS.md",
+        "public/pages/home.html",
+        "public/pages/skill.html",
+        "blog/how-to-publish-nextjs-onhyper.md",
+        "src/index.ts"
+      ],
+      "recommendations": [
+        "Verify correct GitHub org name (hyperio-mc vs hyperio-software) and update all references",
+        "Re-test /.well-known/skill.md endpoint after Railway deployment completes",
+        "If endpoint still fails, check route ordering in src/index.ts - may need to add /.well-known to shouldBypassStatic()"
+      ],
       "successCriteria": [
         "README.md is accurate and complete",
         "AGENTS.md reflects current architecture",
@@ -653,6 +690,18 @@
         "Next.js guide is accurate",
         ".well-known/skill.md endpoint works",
         "All docs use consistent terminology (subdomain-first, ZIP publishing)"
+      ]
+    },
+    "task-123": {
+      "title": "Fix /.well-known/skill.md endpoint returning HTML",
+      "status": "pending",
+      "priority": "high",
+      "createdAt": "2026-02-23T16:30:00Z",
+      "description": "The /.well-known/skill.md endpoint returns HTML (SPA fallback) instead of markdown. Need to add /.well-known to shouldBypassStatic() or check route ordering.",
+      "successCriteria": [
+        "GET /.well-known/skill.md returns Content-Type: text/markdown",
+        "Endpoint works on production (onhyper.io)",
+        "Route is not caught by SPA fallback"
       ]
     }
   }

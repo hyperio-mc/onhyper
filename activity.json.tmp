@@ -1,0 +1,15 @@
+    "task-109": {
+      "title": "Create blog post: How to publish a Next.js app on OnHyper",
+      "status": "in_progress",
+      "priority": "medium",
+      "createdAt": "2026-02-22T09:45:00Z",
+      "description": "Write a step-by-step blog post documenting how to deploy a Next.js static export to OnHyper platform."
+    }
+, "task-110": {
+  "title": "Sign up for LinkedIn account with Google OAuth",
+  "status": "pending",
+  "priority": "medium",
+  "createdAt": "2026-02-22T10:05:00Z",
+  "description": "Create a LinkedIn account using Google OAuth for hyperio company page management.",
+  "notes": "Use mc@hyper.io Google account to sign up"
+}

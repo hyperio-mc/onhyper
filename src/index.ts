@@ -328,7 +328,7 @@ const matchesRoutePrefix = (path: string, prefix: string): boolean => {
 };
 
 const shouldBypassStatic = (path: string): boolean => {
-  return matchesRoutePrefix(path, '/api') || matchesRoutePrefix(path, '/proxy') || matchesRoutePrefix(path, '/a') || matchesRoutePrefix(path, '/unsubscribe');
+  return matchesRoutePrefix(path, '/api') || matchesRoutePrefix(path, '/proxy') || matchesRoutePrefix(path, '/a') || matchesRoutePrefix(path, '/unsubscribe') || matchesRoutePrefix(path, '/.well-known');
 };
 
 app.use('/*', async (c, next) => {
@@ -358,8 +358,8 @@ app.use('/*', async (c, next) => {
 app.get('*', async (c) => {
   const path = c.req.path;
   
-  // Don't fallback for API/proxy/render routes (they should have been handled above)
-  if (matchesRoutePrefix(path, '/api') || matchesRoutePrefix(path, '/proxy') || matchesRoutePrefix(path, '/a')) {
+  // Don't fallback for API/proxy/render/well-known routes (they should have been handled above)
+  if (matchesRoutePrefix(path, '/api') || matchesRoutePrefix(path, '/proxy') || matchesRoutePrefix(path, '/a') || matchesRoutePrefix(path, '/.well-known')) {
     return c.json({ error: 'Not found' }, 404);
   }
   
