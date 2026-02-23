@@ -110,7 +110,7 @@
  */
 
 import { Hono } from 'hono';
-import { storeSecret, listSecrets, deleteSecret, hasSecret, getSecretCount, createCustomSecret, listCustomSecrets, getCustomSecret, deleteCustomSecret, updateCustomSecret } from '../lib/secrets.js';
+import { storeSecret, listSecrets, deleteSecret, hasSecret, getSecretCount, updateSecret, createCustomSecret, listCustomSecrets, getCustomSecret, deleteCustomSecret, updateCustomSecret } from '../lib/secrets.js';
 import { getAuthUser } from '../middleware/auth.js';
 import { config, PROXY_ENDPOINTS } from '../config.js';
 import { logAuditEvent } from '../lib/db.js';
@@ -217,6 +217,56 @@ secrets.post('/', async (c) => {
       return c.json({ error: message }, 409);
     }
     
+    return c.json({ error: message }, 400);
+  }
+});
+
+/**
+ * PUT /api/secrets/:name
+ * Rotate/update an existing provider secret value
+ */
+secrets.put('/:name', async (c) => {
+  const user = getAuthUser(c);
+
+  if (!user) {
+    return c.json({ error: 'Not authenticated' }, 401);
+  }
+
+  const name = c.req.param('name');
+
+  try {
+    const body = await c.req.json();
+    const { value } = body;
+
+    if (!value || typeof value !== 'string') {
+      return c.json({ error: 'Secret value is required' }, 400);
+    }
+
+    const secret = await updateSecret(user.userId, name, value);
+
+    const metadata = getRequestMetadata(c);
+    logAuditEvent({
+      userId: user.userId,
+      action: 'secret_update',
+      resourceType: 'secret',
+      resourceId: secret.id,
+      details: { secret_name: secret.name },
+      ...metadata,
+    });
+
+    return c.json({
+      id: secret.id,
+      name: secret.name,
+      updated: true,
+      message: 'Secret updated successfully. The value cannot be retrieved after update.',
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to update secret';
+
+    if (message.includes('not found')) {
+      return c.json({ error: message }, 404);
+    }
+
     return c.json({ error: message }, 400);
   }
 });

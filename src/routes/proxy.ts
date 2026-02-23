@@ -135,6 +135,7 @@ function buildAuthHeader(endpoint: keyof typeof PROXY_ENDPOINTS, apiKey: string)
     case 'onhyper':
       // OnHyper uses X-API-Key header for its own API
       return { header: 'X-API-Key', value: apiKey };
+    case 'micro':
     case 'hypermicro':
       // hypermicro uses X-API-Key header
       return { header: 'X-API-Key', value: apiKey };

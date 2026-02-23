@@ -282,6 +282,11 @@ export const config = {
  * Maps endpoint slugs to target URLs and secret key names
  */
 export const PROXY_ENDPOINTS = {
+  'micro': {
+    target: 'https://desirable-beauty-production-d4d8.up.railway.app',
+    secretKey: 'HYPERMICRO_API_KEY',
+    description: 'Hyper-Micro LMDB API alias (same as hypermicro). Example: GET /proxy/micro/api/dbs/{db}/docs',
+  },
   'hypermicro': {
     target: 'https://desirable-beauty-production-d4d8.up.railway.app',
     secretKey: 'HYPERMICRO_API_KEY',

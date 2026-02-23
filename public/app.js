@@ -150,8 +150,36 @@ const PROVIDER_ICONS = {
   'OLLAMA_API_KEY': { icon: '🦙', name: 'Ollama', color: '#64748b' }
 };
 
+const SECRET_TO_PROXY_ENDPOINT = {
+  OPENAI_API_KEY: 'openai',
+  ANTHROPIC_API_KEY: 'anthropic',
+  OPENROUTER_API_KEY: 'openrouter',
+  OLLAMA_API_KEY: 'ollama',
+  SCOUT_API_KEY: 'scoutos',
+  HYPERMICRO_API_KEY: 'micro',
+  ONHYPER_API_KEY: 'onhyper',
+};
+
+let proxyTestSpinnerInterval = null;
+
 function getProviderInfo(keyName) {
   return PROVIDER_ICONS[keyName] || { icon: '🔑', name: keyName.replace('_API_KEY', ''), color: '#6b7280' };
+}
+
+function getProxyEndpointForSecret(secretName) {
+  return SECRET_TO_PROXY_ENDPOINT[secretName] || null;
+}
+
+function getDefaultProxyPath(endpoint) {
+  if (endpoint === 'micro' || endpoint === 'hypermicro') {
+    return '/api/dbs';
+  }
+
+  if (endpoint === 'openai' || endpoint === 'openrouter' || endpoint === 'ollama') {
+    return '/models';
+  }
+
+  return '/';
 }
 
 // ============================================================================
@@ -1820,6 +1848,11 @@ async function loadKeys() {
     } else {
       const regularMarkup = regularKeys.map(secret => {
         const provider = getProviderInfo(secret.name);
+        const endpoint = getProxyEndpointForSecret(secret.name);
+        const testButton = endpoint
+          ? `<button onclick="openProxyTestModal('${encodeURIComponent(endpoint)}')" class="btn-secondary btn-small">Test</button>`
+          : '';
+
         return `
           <div class="key-card" style="--provider-color: ${provider.color};">
             <div class="key-icon">${provider.icon}</div>
@@ -1828,7 +1861,11 @@ async function loadKeys() {
               <span class="key-value">${secret.preview}</span>
               <span class="key-auth">Type: Provider</span>
             </div>
-            <button onclick="deleteKey('${secret.name}')" class="btn-danger btn-small">Delete</button>
+            <div class="custom-key-actions">
+              ${testButton}
+              <button onclick="showEditProviderKeyModal('${secret.name}')" class="btn-secondary btn-small">Edit</button>
+              <button onclick="deleteKey('${secret.name}')" class="btn-danger btn-small">Delete</button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1839,12 +1876,14 @@ async function loadKeys() {
           <div class="key-info">
             <span class="key-name">${escapeHtml(secret.name)}</span>
             <span class="key-url">${escapeHtml(secret.base_url)}</span>
+            <span class="key-auth">API Key: Stored securely (hidden)</span>
             <span class="key-auth">Type: Custom (${secret.auth_type === 'bearer' ? 'Bearer' : escapeHtml(secret.auth_header || 'Header')})</span>
             ${secret.instructions ? `<span class="key-auth">Notes: ${escapeHtml(secret.instructions)}</span>` : ''}
             <span class="key-auth">Updated: ${escapeHtml(formatCustomKeyUpdatedAt(secret.updated_at))}</span>
           </div>
           <div class="custom-key-actions">
             <code class="endpoint-hint">/proxy/${encodeURIComponent(secret.name)}/</code>
+            <button onclick="openProxyTestModal('${encodeURIComponent(secret.name)}')" class="btn-secondary btn-small">Test</button>
             <button onclick="showEditCustomKeyModal('${secret.id}', '${encodeURIComponent(secret.name)}', '${encodeURIComponent(secret.base_url)}', '${secret.auth_type}', '${encodeURIComponent(secret.auth_header || '')}', '${encodeURIComponent(secret.instructions || '')}')" class="btn-secondary btn-small">Edit</button>
             <button onclick="deleteCustomKey('${secret.id}', '${escapeHtml(secret.name)}')" class="btn-danger btn-small">Delete</button>
           </div>
@@ -1873,6 +1912,53 @@ async function deleteKey(name) {
     loadKeys();
   } catch (err) {
     showError(err.message);
+  }
+}
+
+function showEditProviderKeyModal(name) {
+  const modalContent = `
+    <form id="provider-key-edit-form" onsubmit="updateProviderKey(event, '${name}')">
+      <div class="form-group">
+        <label>Provider Key</label>
+        <input type="text" value="${escapeHtml(name)}" disabled>
+      </div>
+      <div class="form-group">
+        <label for="edit-provider-key-value">New API Key</label>
+        <input type="password" id="edit-provider-key-value" name="value" required placeholder="Enter new API key">
+        <p class="form-hint">This replaces the existing key value. The previous value cannot be recovered.</p>
+      </div>
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
+        <button type="submit" class="btn-primary">Save Key</button>
+      </div>
+    </form>
+  `;
+
+  showModal('Edit Provider API Key', modalContent);
+}
+
+async function updateProviderKey(e, name) {
+  e.preventDefault();
+
+  const formData = new FormData(e.target);
+  const value = String(formData.get('value') || '').trim();
+
+  if (!value) {
+    showToast('API key value is required', 'error');
+    return;
+  }
+
+  try {
+    await api(`/secrets/${encodeURIComponent(name)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value }),
+    });
+
+    closeModal();
+    loadKeys();
+    showToast(`${name} updated`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
   }
 }
 
@@ -2081,6 +2167,7 @@ function showEditCustomKeyModal(id, encodedName, encodedBaseUrl, authType, encod
       <div class="form-group">
         <label for="edit-custom-api-key">API Key (optional)</label>
         <input type="password" id="edit-custom-api-key" name="api_key" placeholder="Leave blank to keep existing key">
+        <p class="form-hint">Current key is stored securely and intentionally hidden. Enter a new key only if you want to replace it.</p>
       </div>
       <div class="form-group">
         <label for="edit-custom-auth-type">Authentication Type</label>
@@ -2196,6 +2283,217 @@ async function deleteCustomKey(id, name) {
     showToast('Custom API deleted', 'success');
   } catch (err) {
     showToast(err.message, 'error');
+  }
+}
+
+function openProxyTestModal(encodedEndpoint) {
+  const endpoint = decodeURIComponent(encodedEndpoint || '').trim();
+  const defaultPath = getDefaultProxyPath(endpoint);
+
+  const modalContent = `
+    <form id="proxy-test-form" onsubmit="runProxyTest(event)">
+      <div class="form-group">
+        <label for="proxy-test-endpoint">Endpoint</label>
+        <input type="text" id="proxy-test-endpoint" name="endpoint" required value="${escapeHtml(endpoint)}" placeholder="micro or custom-api-name">
+      </div>
+
+      <div class="form-group">
+        <label for="proxy-test-path">Path</label>
+        <input type="text" id="proxy-test-path" name="path" required value="${escapeHtml(defaultPath)}" placeholder="/api/dbs">
+        <p class="form-hint">Final URL: /proxy/&lt;endpoint&gt;&lt;path&gt;</p>
+      </div>
+
+      <div class="form-group">
+        <label for="proxy-test-method">Method</label>
+        <select id="proxy-test-method" name="method" required>
+          <option value="GET" selected>GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="PATCH">PATCH</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="proxy-test-app-slug">App Slug (optional)</label>
+        <input type="text" id="proxy-test-app-slug" name="app_slug" placeholder="onhyper-demo-3a2dcfab">
+        <p class="form-hint">Adds X-App-Slug header when provided.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="proxy-test-body">JSON Body (optional)</label>
+        <textarea id="proxy-test-body" name="body" rows="5" placeholder='{"example": true}'></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" onclick="closeModal()" class="btn-secondary">Close</button>
+        <button id="proxy-test-submit" type="submit" class="btn-primary">
+          <span id="proxy-test-submit-label">Run Test</span>
+          <span id="proxy-test-submit-spinner" style="display:none;margin-left:8px;">...</span>
+        </button>
+      </div>
+
+      <div class="form-group" style="margin-top: 16px;">
+        <label for="proxy-test-result">Result</label>
+        <pre id="proxy-test-result" style="max-height: 320px; overflow: auto; white-space: pre-wrap; background: #0f172a; color: #e2e8f0; padding: 12px; border-radius: 8px;">Run a test to see status, headers, and response body.</pre>
+      </div>
+    </form>
+  `;
+
+  showModal('Test Proxy Endpoint', modalContent);
+}
+
+async function runProxyTest(e) {
+  e.preventDefault();
+
+  const formData = new FormData(e.target);
+  const endpoint = String(formData.get('endpoint') || '').trim();
+  let path = String(formData.get('path') || '').trim();
+  const method = String(formData.get('method') || 'GET').toUpperCase();
+  const appSlug = String(formData.get('app_slug') || '').trim();
+  const rawBody = String(formData.get('body') || '').trim();
+  const resultEl = document.getElementById('proxy-test-result');
+  const submitBtn = document.getElementById('proxy-test-submit');
+  const submitLabel = document.getElementById('proxy-test-submit-label');
+  const submitSpinner = document.getElementById('proxy-test-submit-spinner');
+
+  if (!endpoint) {
+    showToast('Endpoint is required', 'error');
+    return;
+  }
+
+  if (!path) {
+    path = '/';
+  }
+
+  if (!path.startsWith('/')) {
+    path = `/${path}`;
+  }
+
+  const token = localStorage.getItem('token');
+  if (!token) {
+    showToast('You must be logged in to run proxy tests', 'error');
+    return;
+  }
+
+  const headers = {
+    Accept: 'application/json, text/plain;q=0.9, */*;q=0.8',
+    Authorization: `Bearer ${token}`,
+  };
+
+  if (appSlug) {
+    headers['X-App-Slug'] = appSlug;
+  }
+
+  const request = {
+    method,
+    headers,
+  };
+
+  if (!['GET', 'HEAD'].includes(method) && rawBody) {
+    try {
+      JSON.parse(rawBody);
+      headers['Content-Type'] = 'application/json';
+      request.body = rawBody;
+    } catch {
+      showToast('Body must be valid JSON', 'error');
+      return;
+    }
+  }
+
+  const route = `/proxy/${encodeURIComponent(endpoint)}${path}`;
+  const start = performance.now();
+
+  try {
+    if (submitBtn) {
+      submitBtn.disabled = true;
+    }
+
+    if (submitLabel) {
+      submitLabel.textContent = 'Running';
+    }
+
+    if (submitSpinner) {
+      submitSpinner.style.display = 'inline-block';
+      const frames = ['|', '/', '-', '\\'];
+      let frameIndex = 0;
+      submitSpinner.textContent = frames[frameIndex];
+      proxyTestSpinnerInterval = setInterval(() => {
+        frameIndex = (frameIndex + 1) % frames.length;
+        submitSpinner.textContent = frames[frameIndex];
+      }, 100);
+    }
+
+    if (resultEl) {
+      resultEl.textContent = `Running ${method} ${route} ...`;
+      resultEl.scrollTop = resultEl.scrollHeight;
+    }
+
+    const response = await fetch(route, request);
+    const elapsedMs = Math.round(performance.now() - start);
+    const contentType = response.headers.get('content-type') || '';
+    const responseText = await response.text();
+
+    let formattedBody = responseText;
+    let parsedJson = null;
+
+    if (contentType.includes('application/json') && responseText) {
+      try {
+        parsedJson = JSON.parse(responseText);
+      } catch {
+        parsedJson = null;
+      }
+    }
+
+    if (parsedJson !== null) {
+      formattedBody = JSON.stringify(parsedJson, null, 2);
+    }
+
+    const htmlFallback = contentType.includes('text/html') || /^\s*<!doctype html/i.test(responseText) || /<html[\s>]/i.test(responseText);
+
+    const lines = [
+      `Request: ${method} ${route}`,
+      `Status: ${response.status} ${response.statusText}`,
+      `Latency: ${elapsedMs}ms`,
+      `Content-Type: ${contentType || 'unknown'}`,
+      `Classification: ${htmlFallback ? 'html_fallback (unexpected for proxy)' : (response.ok ? 'api_response' : 'proxy_error')}`,
+      '',
+      'Response body:',
+      formattedBody || '(empty)',
+    ];
+
+    if (resultEl) {
+      resultEl.textContent = lines.join('\n');
+      resultEl.scrollTop = resultEl.scrollHeight;
+    }
+
+    if (htmlFallback) {
+      showToast('Proxy returned HTML fallback. This is unexpected for /proxy/*.', 'error');
+    }
+  } catch (err) {
+    if (resultEl) {
+      resultEl.textContent = `Request failed: ${err.message || 'Unknown error'}`;
+      resultEl.scrollTop = resultEl.scrollHeight;
+    }
+    showToast(`Proxy test failed: ${err.message || 'Unknown error'}`, 'error');
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
+
+    if (submitLabel) {
+      submitLabel.textContent = 'Run Test';
+    }
+
+    if (submitSpinner) {
+      submitSpinner.style.display = 'none';
+      submitSpinner.textContent = '';
+    }
+
+    if (proxyTestSpinnerInterval) {
+      clearInterval(proxyTestSpinnerInterval);
+      proxyTestSpinnerInterval = null;
+    }
   }
 }
 

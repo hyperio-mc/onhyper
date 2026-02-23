@@ -243,7 +243,19 @@ app.route('/unsubscribe', unsubscribe);
 
 // Serve static frontend files from public/
 // This must come AFTER all API routes
+const matchesRoutePrefix = (path: string, prefix: string): boolean => {
+  return path === prefix || path.startsWith(`${prefix}/`);
+};
+
+const shouldBypassStatic = (path: string): boolean => {
+  return matchesRoutePrefix(path, '/api') || matchesRoutePrefix(path, '/proxy') || matchesRoutePrefix(path, '/a') || matchesRoutePrefix(path, '/unsubscribe');
+};
+
 app.use('/*', async (c, next) => {
+  if (shouldBypassStatic(c.req.path)) {
+    return next();
+  }
+
   await next();
   const contentType = c.res.headers.get('content-type') || '';
   // Add no-cache headers for all text-based files
@@ -252,14 +264,22 @@ app.use('/*', async (c, next) => {
     c.res.headers.set('Pragma', 'no-cache');
   }
 });
-app.use('/*', serveStatic({ root: PUBLIC_PATH }));
+
+const staticFileHandler = serveStatic({ root: PUBLIC_PATH });
+app.use('/*', async (c, next) => {
+  if (shouldBypassStatic(c.req.path)) {
+    return next();
+  }
+
+  return staticFileHandler(c, next);
+});
 
 // SPA fallback - serve index.html for unmatched routes (excluding API and proxy routes)
 app.get('*', async (c) => {
   const path = c.req.path;
   
   // Don't fallback for API/proxy/render routes (they should have been handled above)
-  if (path.startsWith('/api') || path.startsWith('/proxy') || path.startsWith('/a')) {
+  if (matchesRoutePrefix(path, '/api') || matchesRoutePrefix(path, '/proxy') || matchesRoutePrefix(path, '/a')) {
     return c.json({ error: 'Not found' }, 404);
   }
   
