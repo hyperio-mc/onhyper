@@ -626,15 +626,33 @@
     },
     "task-121": {
       "title": "Run tests and commit documentation updates to main",
-      "status": "in_progress",
+      "status": "completed",
       "priority": "high",
       "createdAt": "2026-02-23T16:05:00Z",
+      "completedAt": "2026-02-23T11:24:00Z",
+      "commit": "95458eb",
       "description": "Run all tests to verify the documentation updates and /.well-known/skill.md endpoint work correctly. If tests pass, commit all changes to main branch for production deployment.",
+      "summary": "All 199 tests passed. TypeScript build passed. Committed 13 files with docs: subdomain-first documentation + /.well-known/skill.md endpoint. Pushed to main (Railway will auto-deploy).",
       "successCriteria": [
         "npm test passes (all 199+ tests)",
         "npm run build passes",
         "All changes committed to main branch",
         "Ready for production deployment"
+      ]
+    },
+    "task-122": {
+      "title": "Review all documentation changes for accuracy and completeness",
+      "status": "in_progress",
+      "priority": "high",
+      "createdAt": "2026-02-23T16:08:00Z",
+      "description": "Review all the documentation changes made in task-119, task-120, task-121 to ensure accuracy, consistency, and completeness. Verify subdomain-first messaging is consistent across all docs.",
+      "successCriteria": [
+        "README.md is accurate and complete",
+        "AGENTS.md reflects current architecture",
+        "Landing page messaging is consistent",
+        "Next.js guide is accurate",
+        ".well-known/skill.md endpoint works",
+        "All docs use consistent terminology (subdomain-first, ZIP publishing)"
       ]
     }
   }
