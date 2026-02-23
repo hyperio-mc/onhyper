@@ -71,7 +71,7 @@ my-nextjs-app/
 
 ## Step 2: Configure for Static Export
 
-Next.js supports static exports out of the box, but you need to configure it. Open `next.config.ts` (or `next.config.js` if using JavaScript) and add the `output: 'export'` option:
+Next.js supports static exports out of the box, but you need to configure it. Open `next.config.ts` (or `next.config.js` if using JavaScript) and add the required options:
 
 ```typescript
 // next.config.ts
@@ -79,12 +79,20 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'export',
+  images: {
+    unoptimized: true, // Required: next/image optimization needs a server
+  },
+  trailingSlash: true, // Recommended: ensures consistent URL handling
 };
 
 export default nextConfig;
 ```
 
-**What this does:**
+**What each option does:**
+
+- **`output: 'export'`** — Generates a static site instead of a Node.js server
+- **`images.unoptimized: true`** — Serves images as-is (Next.js image optimization requires a server)
+- **`trailingSlash: true`** — Ensures URLs like `/about/` work consistently, avoiding 404s on refresh
 
 When you run `next build`, Next.js will generate a static site instead of a Node.js server. All your pages become plain HTML files that can be served from any static host.
 
@@ -205,13 +213,15 @@ You should see `index.html` at the root of the zip, not inside a subdirectory.
 
 ## Step 5: Upload to OnHyper
 
+**Subdomains are the default.** When you upload your app, OnHyper automatically assigns it a subdomain URL like `your-app.onhyper.io`. Path-based URLs (e.g., `onhyper.io/a/your-app`) are available as a fallback.
+
 ### Option A: Dashboard Upload
 
 1. **Sign in** to [onhyper.io](https://onhyper.io)
 2. **Create a new app** — Click "New App" in the dashboard
 3. **Give it a name** — This becomes your subdomain (e.g., `my-nextjs-app.onhyper.io`)
 4. **Upload your zip** — Drag and drop `my-nextjs-app.zip` or click to browse
-5. **Click Publish** — Your app goes live immediately
+5. **Click Publish** — Your app goes live immediately at your subdomain
 
 ### Option B: API Upload
 
@@ -294,17 +304,37 @@ Verify with `unzip -l app.zip` — you should see `index.html` at the root.
 
 **Cause:** Incorrect paths in your Next.js config.
 
-**Fix:** For static exports, avoid absolute paths. In `next.config.ts`:
+**Fix:** **Most apps don't need basePath or assetPrefix.** OnHyper defaults to subdomain URLs (e.g., `yourapp.onhyper.io`), so your app is served at the root and all asset paths work correctly out of the box.
+
+In `next.config.ts`:
 
 ```typescript
 const nextConfig: NextConfig = {
   output: 'export',
-  basePath: '', // Leave empty for OnHyper
-  assetPrefix: '', // Leave empty for OnHyper
+  images: {
+    unoptimized: true,
+  },
+  // basePath and assetPrefix are NOT needed for subdomain URLs
+  // Only set these if using path-based URLs like onhyper.io/a/your-app
 };
 ```
 
-If you need a base path, set it to match your OnHyper path URL, or use subdomains instead.
+**When do you need basePath/assetPrefix?**
+
+Only if you're using a **path-based URL** (e.g., `onhyper.io/a/your-app-slug`) instead of a subdomain. In that case:
+
+```typescript
+const nextConfig: NextConfig = {
+  output: 'export',
+  images: {
+    unoptimized: true,
+  },
+  basePath: '/a/your-app-slug', // Match your path-based URL
+  assetPrefix: '/a/your-app-slug/',
+};
+```
+
+**Recommendation:** Use subdomains (the default) to avoid path configuration headaches.
 
 ---
 
@@ -362,18 +392,18 @@ export function submitForm(data: FormData) {
 
 **Cause:** `next/image` with the default loader requires a server.
 
-**Fix:** Use the `unoptimized` option or a custom image loader:
+**Fix:** Add `images: { unoptimized: true }` to your config (as shown in Step 2):
 
 ```typescript
 const nextConfig: NextConfig = {
   output: 'export',
   images: {
-    unoptimized: true, // Serves images as-is, no optimization
+    unoptimized: true, // Already in Step 2 config
   },
 };
 ```
 
-Or use a CDN like Cloudinary:
+If you need image optimization, use a CDN like Cloudinary with a custom loader:
 
 ```typescript
 const nextConfig: NextConfig = {
@@ -394,10 +424,10 @@ Here's the complete workflow:
 | Step | Command | Purpose |
 |------|---------|---------|
 | 1 | `npx create-next-app@latest my-app` | Create project |
-| 2 | Add `output: 'export'` to config | Enable static export |
+| 2 | Configure `next.config.ts` (see above) | Enable static export |
 | 3 | `npm run build` | Generate static files |
 | 4 | `cd out && zip -r ../app.zip . && cd ..` | Package for deployment |
-| 5 | Upload to OnHyper (dashboard or API) | Publish your app |
+| 5 | Upload ZIP to OnHyper (dashboard or API) | Publish your app |
 | 6 | Visit `https://your-app.onhyper.io` | Done! |
 
 **What you get:**

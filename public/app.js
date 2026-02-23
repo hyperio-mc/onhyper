@@ -1181,7 +1181,7 @@ async function loadApps() {
         <div class="empty-state">
           <div class="empty-state-icon">🚀</div>
           <h3>Create Your First App</h3>
-          <p>Build web apps that securely call AI APIs. Your code runs in the browser, your keys stay safe on our servers.</p>
+          <p>Build web apps with secure API access. Your apps get automatic subdomains like <code>yourapp.onhyper.io</code>.</p>
           <button onclick="showCreateAppModal()" class="btn-primary btn-large">
             <span>Get Started</span>
           </button>
@@ -1524,14 +1524,18 @@ function showCreateAppModal() {
       <div class="form-group">
         <label for="modal-app-name">App Name</label>
         <input type="text" id="modal-app-name" name="name" required placeholder="My Awesome App">
+        <p class="form-hint">Your app will be live at <code>yourapp.onhyper.io</code> automatically.</p>
       </div>
       <div class="form-group">
-        <label for="modal-app-slug">URL Slug (optional)</label>
+        <label for="modal-app-slug">URL Slug (fallback path)</label>
         <div class="slug-preview">
           <span class="slug-prefix">onhyper.io/a/</span>
           <input type="text" id="modal-app-slug" name="slug" pattern="[a-z0-9-]+" placeholder="auto-generated">
         </div>
-        <p class="form-hint" style="margin-top: 4px; font-size: 0.85em;">Leave empty to auto-generate. Your app will be available at <code>yourapp.onhyper.io</code> (subdomain) and <code>onhyper.io/a/slug</code> (path).</p>
+        <p class="form-hint" style="margin-top: 4px; font-size: 0.85em;"><strong>Primary:</strong> <code>yourapp.onhyper.io</code> (auto-assigned) &nbsp;•&nbsp; <strong>Fallback:</strong> <code>onhyper.io/a/slug</code></p>
+      </div>
+      <div class="publish-notice">
+        <strong>📦 Publishing:</strong> After creating, use Edit to paste code or upload a ZIP of your <code>dist/</code> or <code>out/</code> folder (for Next.js, Vite, or other build output).
       </div>
       <div class="agent-notice">
         <strong>🤖 Agents:</strong> Read the skill docs at <a href="https://markdown.new/https://onhyper.io/pages/skill.html" target="_blank">markdown.new/.../skill.html</a>
@@ -1540,7 +1544,7 @@ function showCreateAppModal() {
         <button type="button" onclick="closeModal()" class="btn-secondary">Cancel</button>
         <button type="submit" class="btn-primary">Create App</button>
       </div>
-      <p class="form-hint">After creating, use the Edit button to add your HTML, CSS, and JavaScript code.</p>
+      <p class="form-hint">Subdomains are assigned automatically from your app name. PRO plans get custom subdomains.</p>
     </form>
     <style>
       .slug-preview {
@@ -1561,6 +1565,21 @@ function showCreateAppModal() {
         color: var(--text-muted);
         font-size: 0.9em;
         padding: 0 12px;
+      }
+      .publish-notice {
+        background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+        border: 1px solid #059669;
+        border-radius: 8px;
+        padding: 12px 16px;
+        margin: 16px 0;
+        font-size: 0.9rem;
+        color: #d1fae5;
+      }
+      .publish-notice code {
+        background: rgba(0,0,0,0.2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #6ee7b7;
       }
       .agent-notice {
         background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
@@ -1583,6 +1602,10 @@ function showCreateAppModal() {
         color: var(--text-muted);
         font-size: 0.85rem;
         margin-top: 12px;
+      }
+      .form-group .form-hint {
+        text-align: left;
+        margin-top: 4px;
       }
     </style>
   `;
@@ -1637,8 +1660,20 @@ async function editApp(appId) {
     const app = response.apps.find(a => a.id === appId);
     if (!app) throw new Error('App not found');
     
+    // Build URL info - subdomain is primary
+    const subdomainUrl = app.subdomain ? `${app.subdomain}.onhyper.io` : null;
+    const pathUrl = `onhyper.io/a/${app.slug}`;
+    
     const modalContent = `
       <form id="modal-app-form" onsubmit="updateAppFromModal(event, '${appId}')">
+        <div class="app-url-display">
+          <label>Live URL</label>
+          <div class="url-primary">
+            <a href="${subdomainUrl ? `https://${subdomainUrl}` : `https://${pathUrl}`}" target="_blank">${subdomainUrl || pathUrl}</a>
+            <button type="button" class="url-copy-btn" onclick="copyAppUrl('${subdomainUrl ? `https://${subdomainUrl}` : `https://${pathUrl}`}')" title="Copy URL">📋</button>
+          </div>
+          ${subdomainUrl ? `<div class="url-secondary"><span>Fallback: </span><a href="https://${pathUrl}" target="_blank">${pathUrl}</a></div>` : ''}
+        </div>
         <div class="form-group">
           <label for="modal-app-name">App Name</label>
           <input type="text" id="modal-app-name" name="name" value="${escapeHtml(app.name)}" required>
@@ -1646,10 +1681,14 @@ async function editApp(appId) {
         <div class="form-group">
           <label for="modal-app-slug">Slug (URL path)</label>
           <input type="text" id="modal-app-slug" name="slug" value="${app.slug}" required pattern="[a-z0-9-]+" readonly>
+          <p class="form-hint">The slug creates a fallback URL at <code>onhyper.io/a/${app.slug}</code></p>
         </div>
         <div class="form-group">
           <label for="modal-app-description">Description</label>
           <textarea id="modal-app-description" name="description" rows="2">${escapeHtml(app.description || '')}</textarea>
+        </div>
+        <div class="code-edit-notice">
+          <strong>📝 Code Editor:</strong> Paste HTML, CSS, and JS below, or <strong>upload a ZIP</strong> of your <code>dist/</code> or <code>out/</code> folder (for Next.js, Vite, or other build tools).
         </div>
         <div class="form-group">
           <label for="modal-app-html">HTML</label>
@@ -1668,6 +1707,64 @@ async function editApp(appId) {
           <button type="submit" class="btn-primary">Save Changes</button>
         </div>
       </form>
+      <style>
+        .app-url-display {
+          background: var(--bg-alt);
+          border-radius: 8px;
+          padding: 12px 16px;
+          margin-bottom: 16px;
+        }
+        .app-url-display label {
+          font-size: 0.8rem;
+          color: var(--text-muted);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+        }
+        .url-primary {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 4px;
+        }
+        .url-primary a {
+          font-size: 1.1rem;
+          font-weight: 600;
+          color: var(--accent-color);
+        }
+        .url-copy-btn {
+          background: transparent;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          padding: 4px 8px;
+          cursor: pointer;
+          font-size: 0.9rem;
+        }
+        .url-copy-btn:hover {
+          background: var(--bg);
+        }
+        .url-secondary {
+          margin-top: 8px;
+          font-size: 0.85rem;
+        }
+        .url-secondary a {
+          color: var(--text-muted);
+        }
+        .code-edit-notice {
+          background: var(--bg-alt);
+          border: 1px solid var(--border-color);
+          border-radius: 8px;
+          padding: 12px 16px;
+          margin: 16px 0;
+          font-size: 0.85rem;
+          color: var(--text-secondary);
+        }
+        .code-edit-notice code {
+          background: rgba(0,0,0,0.2);
+          padding: 2px 6px;
+          border-radius: 4px;
+          font-size: 0.8rem;
+        }
+      </style>
     `;
     showModal('Edit App', modalContent);
   } catch (err) {
@@ -1764,7 +1861,7 @@ async function checkSubdomainAvailability() {
   
   if (name.length < 3) {
     statusSpan.className = 'subdomain-status error';
-    statusSpan.textContent = '✗ Must be at least 3 characters';
+    statusSpan.textContent = '✗ Must be at least 3 characters. Try adding a prefix or suffix.';
     return;
   }
   
@@ -1773,15 +1870,27 @@ async function checkSubdomainAvailability() {
     
     if (result.available) {
       statusSpan.className = 'subdomain-status success';
-      statusSpan.textContent = '✓ Available!';
+      statusSpan.textContent = '✓ Available! Your app will be at ' + name + '.onhyper.io';
       currentSubdomain = name;
     } else {
       statusSpan.className = 'subdomain-status error';
-      statusSpan.textContent = `✗ ${result.message}`;
+      // Suggest alternatives
+      const suggestions = [
+        name + '-app',
+        'my-' + name,
+        name + '-hq',
+        'get-' + name
+      ];
+      statusSpan.textContent = `✗ ${result.message}. Try: ${suggestions.slice(0, 2).join(', ')}`;
     }
   } catch (err) {
     statusSpan.className = 'subdomain-status error';
-    statusSpan.textContent = `✗ ${err.message}`;
+    // Check if it's a plan restriction error
+    if (err.message && err.message.toLowerCase().includes('plan')) {
+      statusSpan.textContent = `✗ ${err.message}. Upgrade to PRO for custom subdomains.`;
+    } else {
+      statusSpan.textContent = `✗ ${err.message}`;
+    }
   }
 }
 

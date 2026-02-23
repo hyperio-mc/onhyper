@@ -6,15 +6,14 @@
       "priority": "high",
       "description": "Subdomains should require a paid (PRO) account. Free users can only use path-based URLs. Also restrict subdomains shorter than 6 characters to PRO+ only.",
       "completedAt": "2025-02-19",
-      "notes": "Fixed field name mismatches: projectDescription -> whatBuilding, referralCode -> referredBy"
+      "notes": "Integrated with feature flag system. Free users blocked from subdomains, PRO required for regular subdomains, BUSINESS required for short subdomains (<6 chars).",
       "successCriteria": [
         "Free tier users cannot claim subdomains - only get path-based URLs (/a/{slug})",
         "PRO tier and above can claim subdomains",
         "Subdomains with < 6 characters require PRO+ (e.g., 'app' blocked, 'myapp' allowed)",
         "Update pricing page to reflect subdomain restriction",
         "Existing subdomain reservations from free users should be released on next publish attempt"
-      ],
-      "notes": "Integrated with feature flag system. Free users blocked from subdomains, PRO required for regular subdomains, BUSINESS required for short subdomains (<6 chars)."
+      ]
     },
     "task-063": {
       "title": "Fix waitlist/signup form validation bug",
@@ -27,13 +26,13 @@
         "Error messages are clear and accurate"
       ]
     },
+    "task-062": {
       "title": "Implement feature flag system",
       "status": "completed",
       "priority": "medium",
       "description": "Add a feature flag system to enable/disable features without deploying code. Useful for gradual rollouts, A/B testing, and beta features.",
       "completedAt": "2025-02-19",
-      "notes": "Fixed field name mismatches: projectDescription -> whatBuilding, referralCode -> referredBy"
-      "notes": "Created: db tables (feature_flags, user_feature_overrides), lib/features.ts with isFeatureEnabled(), rollout %, custom rules, API routes, seed data. All 163 tests pass.",
+      "notes": "Fixed field name mismatches: projectDescription -> whatBuilding, referralCode -> referredBy. Created: db tables (feature_flags, user_feature_overrides), lib/features.ts with isFeatureEnabled(), rollout %, custom rules, API routes, seed data. All 163 tests pass.",
       "successCriteria": [
         "Database table for feature flags (name, enabled, rollout_percentage, user_tiers)",
         "API endpoint to check feature status for current user",
@@ -63,7 +62,7 @@
         {
           "id": "062-04",
           "title": "Create lib/features.ts module",
-          "description": "Build core module with: getFeatureFlag(), isFeatureEnabled(), checkCustomRules(). Decision logic: global enabled → rollout % → plan tier → custom rules → user overrides.",
+          "description": "Build core module with: getFeatureFlag(), isFeatureEnabled(), checkCustomRules(). Decision logic: global enabled \u2192 rollout % \u2192 plan tier \u2192 custom rules \u2192 user overrides.",
           "status": "completed"
         },
         {
@@ -329,7 +328,6 @@
       "file": "blog/analytics-guide.md",
       "summary": "Created comprehensive analytics guide (blog/analytics-guide.md) covering: (1) Analytics capture endpoint POST /api/analytics/capture with auth, (2) JavaScript code examples including helper class, (3) Common event types and properties tables, (4) How to view analytics in dashboard and via API, (5) Best practices for event naming, privacy, and offline handling."
     },
-{
     "task-108": {
       "title": "Make subdomains the default (change path-based to subdomain)",
       "status": "pending",
@@ -338,11 +336,40 @@
       "createdAt": "2026-02-22T09:26:00Z",
       "rationale": "Subdomains avoid asset/JS path issues, provide cleaner URLs, and differentiate from path-based free tier.",
       "steps": [
-        {"id": "108-01", "title": "Update app creation to default to subdomain", "status": "in_progress", "description": "Change POST /api/apps to automatically claim subdomain on creation if available, without requiring explicit publish step."},
-        {"id": "108-02", "title": "Update publish flow to use subdomain by default", "status": "completed", "completedAt": "2026-02-22T14:35:00Z", "description": "Modify POST /api/apps/:id/publish to attempt subdomain claim first before falling back to path-based.", "summary": "Modified POST /api/apps/:id/publish to auto-generate subdomain from app name, attempt to claim it with fallback (tries preferred, then with random suffix), and return urls.primary field with preferred URL. App creation (step 108-01) already adds subdomain on create. Added claimSubdomainWithFallback helper function. Build passes, core functionality works."}, 
-        {"id": "108-03", "title": "Update frontend to show subdomain as primary URL", "status": "pending", "description": "Change dashboard to display subdomain URL prominently, with path URL as secondary option."},
-        {"id": "108-04", "title": "Update docs and marketing copy", "status": "pending", "description": "Update landing page, pricing page, and documentation to reflect subdomain-first approach."},
-        {"id": "108-05", "title": "Add tests for subdomain default flow", "status": "completed", "completedAt": "2026-02-22T14:33:00Z", "description": "Write integration tests covering: app creation defaults to subdomain, publish uses subdomain, fallback to path works.", "summary": "Created src/routes/apps.subdomain.test.ts with 36 integration tests covering: App Creation (4 tests), Publish with Subdomain Default (6 tests), Subdomain Fallback to Path-Based (3 tests), Plan Tier Restrictions (5 tests), Path-Based URL Fallback (4 tests), Subdomain Validation Edge Cases (7 tests), User Subdomain Management (3 tests), Feature Flag Integration (3 tests), App List with Subdomains (1 test). All 199 tests pass (including existing tests)."}
+        {
+          "id": "108-01",
+          "title": "Update app creation to default to subdomain",
+          "status": "in_progress",
+          "description": "Change POST /api/apps to automatically claim subdomain on creation if available, without requiring explicit publish step."
+        },
+        {
+          "id": "108-02",
+          "title": "Update publish flow to use subdomain by default",
+          "status": "completed",
+          "completedAt": "2026-02-22T14:35:00Z",
+          "description": "Modify POST /api/apps/:id/publish to attempt subdomain claim first before falling back to path-based.",
+          "summary": "Modified POST /api/apps/:id/publish to auto-generate subdomain from app name, attempt to claim it with fallback (tries preferred, then with random suffix), and return urls.primary field with preferred URL. App creation (step 108-01) already adds subdomain on create. Added claimSubdomainWithFallback helper function. Build passes, core functionality works."
+        },
+        {
+          "id": "108-03",
+          "title": "Update frontend to show subdomain as primary URL",
+          "status": "pending",
+          "description": "Change dashboard to display subdomain URL prominently, with path URL as secondary option."
+        },
+        {
+          "id": "108-04",
+          "title": "Update docs and marketing copy",
+          "status": "pending",
+          "description": "Update landing page, pricing page, and documentation to reflect subdomain-first approach."
+        },
+        {
+          "id": "108-05",
+          "title": "Add tests for subdomain default flow",
+          "status": "completed",
+          "completedAt": "2026-02-22T14:33:00Z",
+          "description": "Write integration tests covering: app creation defaults to subdomain, publish uses subdomain, fallback to path works.",
+          "summary": "Created src/routes/apps.subdomain.test.ts with 36 integration tests covering: App Creation (4 tests), Publish with Subdomain Default (6 tests), Subdomain Fallback to Path-Based (3 tests), Plan Tier Restrictions (5 tests), Path-Based URL Fallback (4 tests), Subdomain Validation Edge Cases (7 tests), User Subdomain Management (3 tests), Feature Flag Integration (3 tests), App List with Subdomains (1 test). All 199 tests pass (including existing tests)."
+        }
       ],
       "successCriteria": [
         "New apps automatically get subdomains (if available) without separate publish step",
@@ -350,6 +377,264 @@
         "Dashboard displays subdomain URL as primary",
         "Documentation updated to show subdomain as default",
         "All existing tests pass + new subdomain default tests pass"
+      ]
+    },
+    "task-111": {
+      "title": "Post hello world intro on LinkedIn",
+      "status": "pending",
+      "priority": "medium",
+      "createdAt": "2026-02-22T10:31:00Z",
+      "description": "Create an intro post on LinkedIn introducing Master Control / hyper.io",
+      "notes": "Use the new LinkedIn account (mc@hyper.io)"
+    },
+    "task-112": {
+      "title": "Update LinkedIn profile with avatar and details",
+      "status": "pending",
+      "priority": "medium",
+      "createdAt": "2026-02-22T10:35:00Z",
+      "description": "Add profile photo, bio, and relevant details to the LinkedIn profile",
+      "notes": "Use hyper.io branding, include CEO title, mention hyper.io"
+    },
+    "task-113": {
+      "title": "Find and reply to 5 interesting posts on X.com",
+      "status": "pending",
+      "priority": "medium",
+      "createdAt": "2026-02-22T11:05:00Z",
+      "description": "Browse X.com home timeline and find 5 interesting posts to reply to. Focus on tech, AI, devrel, or startup topics relevant to hyper.io.",
+      "notes": "Use @hyperio_mc account"
+    },
+    "task-114": {
+      "title": "Return 404 for unmatched proxy routes instead of index.html",
+      "status": "completed",
+      "priority": "high",
+      "createdAt": "2026-02-22T11:35:00Z",
+      "description": "When users call proxy endpoints directly (e.g., /proxy/openai/v1/chat/completions), do not fall back to returning index.html (SPA push state). Instead return a proper 404 or error indicating the route is not found.",
+      "notes": "Verified: The SPA fallback in src/index.ts already returns 404 for /proxy routes. Line 260 checks path.startsWith(\"/proxy\") and returns 404 JSON.",
+      "completedAt": "2026-02-22T12:10:00Z"
+    },
+    "task-115": {
+      "title": "Investigate proxy API key authorization returning 401",
+      "status": "completed",
+      "priority": "high",
+      "createdAt": "2026-02-22T12:05:00Z",
+      "description": "When client apps call proxy endpoints with X-App-Slug header set, it's returning 401 unauthorized. App course-creator-4473b404 has keys setup but proxy returns 401. Need to investigate how the X-App-Slug header is being matched against the app/keys.",
+      "notes": "Investigated: Proxy is working correctly. X-App-Slug header is properly identifying app and looking up user secrets. Error \"No SCOUT_API_KEY configured\" means the secret needs to be added in Dashboard > Secrets. The app owner needs to add SCOUT_API_KEY secret.",
+      "completedAt": "2026-02-22T12:10:00Z"
+    },
+    "task-116": {
+      "title": "Verify custom API keys work and document how they work",
+      "status": "completed",
+      "priority": "medium",
+      "createdAt": "2026-02-22T14:05:00Z",
+      "description": "Test that custom API keys (X-API-Key header) work for proxy authentication. Document how they work: how they're created, how they're validated, what endpoints they can access.",
+      "notes": "Custom API keys work as follows:\n1. Create: POST /api/dashboard/api-keys (requires JWT auth)\n2. Format: oh_live_ + 32-char hex (no dashes)\n3. Usage: Send X-API-Key: oh_live_xxx header in requests\n4. Lookup: getApiKeyByKey() queries api_keys table, returns user_id\n5. The API key inherits the user's plan tier\n6. Works for proxy routes: identifies user and uses their secrets\n7. Tests exist in src/lib/users.test.ts (getApiKeyByKey, listApiKeysByUser)",
+      "completedAt": "2026-02-22T14:10:00Z"
+    },
+    "task-118": {
+      "title": "Code review: Latest build (Feb 23, 2026)",
+      "status": "completed",
+      "priority": "high",
+      "createdAt": "2026-02-23T14:00:00Z",
+      "completedAt": "2026-02-23T14:58:00Z",
+      "commit": "e93dff0",
+      "description": "Code review of the latest changes pulled from GitHub (e93dff0). Review the 7 changed files: AGENTS.md, public/app.js, public/index.html, src/config.ts, src/index.ts, src/routes/proxy.ts, src/routes/secrets.ts. Check for security issues, code quality, and test coverage.",
+      "summary": "Code review completed. Build passes. All 199 tests pass. No critical security issues found.",
+      "filesReviewed": {
+        "AGENTS.md": {
+          "linesChanged": 166,
+          "summary": "Documentation refactoring - clarified conventions and commands. No functional changes.",
+          "issues": []
+        },
+        "public/app.js": {
+          "linesChanged": 300,
+          "summary": "Added proxy endpoint testing UI in dashboard. New functions: openProxyTestModal(), runProxyTest(), showEditProviderKeyModal(), updateProviderKey(). Added SECRET_TO_PROXY_ENDPOINT mapping. Users can now test proxy endpoints directly from the Keys tab.",
+          "issues": [
+            {
+              "severity": "low",
+              "type": "code-quality",
+              "description": "Switch case fallthrough in buildAuthHeader() for 'micro' lacks comment (line 138 in proxy.ts). Falls through to 'hypermicro' which is intentional but could be confusing."
+            }
+          ],
+          "securityNotes": [
+            "Uses encodeURIComponent() for URL parameters - prevents injection",
+            "Uses escapeHtml() for user input in modal - prevents XSS",
+            "Uses JWT Bearer token from localStorage for auth - safe from CSRF",
+            "Proper error handling with try/catch and user feedback"
+          ]
+        },
+        "public/index.html": {
+          "linesChanged": 18,
+          "summary": "Modified PostHog analytics to skip initialization on localhost/127.0.0.1. Refactored to IIFE pattern.",
+          "issues": [],
+          "securityNotes": ["No security impact - analytics only"]
+        },
+        "src/config.ts": {
+          "linesChanged": 7,
+          "summary": "Added 'micro' endpoint alias for hypermicro proxy target.",
+          "issues": []
+        },
+        "src/index.ts": {
+          "linesChanged": 24,
+          "summary": "Improved static file handling with shouldBypassStatic() and matchesRoutePrefix() helpers. Now properly bypasses static serving for /api, /proxy, /a, /unsubscribe routes.",
+          "issues": [],
+          "securityNotes": ["Good fix - prevents SPA fallback from catching /proxy/* routes that should 404"]
+        },
+        "src/routes/proxy.ts": {
+          "linesChanged": 1,
+          "summary": "Added 'micro' case to buildAuthHeader() switch statement. Falls through to 'hypermicro' case (same auth header).",
+          "issues": [
+            {
+              "severity": "low",
+              "type": "code-quality",
+              "line": 138,
+              "description": "Switch case fallthrough without comment. Add '// falls through' comment for clarity."
+            }
+          ]
+        },
+        "src/routes/secrets.ts": {
+          "linesChanged": 52,
+          "summary": "Added PUT /api/secrets/:name endpoint for rotating provider API keys. Uses existing updateSecret() function which regenerates salt on each update. Includes audit logging.",
+          "issues": [],
+          "securityNotes": [
+            "Proper authentication via getAuthUser()",
+            "Returns 404 for non-existent secrets (no information leakage)",
+            "Audit logging for secret_update action",
+            "Key rotation regenerates encryption salt (good practice)"
+          ]
+        }
+      },
+      "recommendations": [
+        {
+          "priority": "low",
+          "description": "Add '// falls through' comment to switch case in proxy.ts line 138",
+          "file": "src/routes/proxy.ts",
+          "line": 138
+        },
+        {
+          "priority": "low",
+          "description": "Consider adding client-side validation for endpoint names in proxy test modal before making request",
+          "file": "public/app.js"
+        },
+        {
+          "priority": "low",
+          "description": "Consider rate limiting on the proxy test endpoint (currently only requires auth)",
+          "file": "public/app.js"
+        }
+      ],
+      "testResults": {
+        "passed": 199,
+        "failed": 0,
+        "total": 199,
+        "todo": 8,
+        "files": 5,
+        "duration": "2.43s"
+      },
+      "buildResult": "passed"
+    },
+    "task-119": {
+      "title": "Update documentation for subdomain-first approach and ZIP publishing",
+      "status": "in_progress",
+      "priority": "high",
+      "createdAt": "2026-02-23T15:05:00Z",
+      "description": "Update all documentation to reflect: (1) Subdomains are now the default, (2) ZIP file publishing workflow, (3) Next.js/Vercel compatibility settings, (4) Clear onboarding guidance for new users.",
+      "steps": [
+        {
+          "id": "119-01",
+          "title": "Update SKILL.md/SKILL.html for agent onboarding",
+          "status": "completed",
+          "completedAt": "2026-02-23T15:17:00Z",
+          "description": "Update the agent skill documentation at ~/.agents/skills/onhyper/SKILL.md to reflect subdomain-first approach, ZIP publishing, and Next.js settings.",
+          "summary": "Updated SKILL.md with: (1) Subdomains as default URLs, path-based as fallback, (2) ZIP file publishing as primary deployment method, (3) Next.js settings (output: 'export', images: { unoptimized: true }, basePath/assetPrefix for path-based URLs), (4) PostHog analytics via /api/analytics/capture, (5) Reorganized content for better onboarding flow, (6) Preserved proxy endpoints, secrets, self-API sections."
+        },
+        {
+          "id": "119-02",
+          "title": "Update README.md for GitHub",
+          "status": "completed",
+          "completedAt": "2026-02-23T15:17:00Z",
+          "description": "Update project README with subdomain defaults, ZIP publishing instructions, and quickstart guide.",
+          "summary": "Rewrote README.md with: (1) Quickstart section - 2-minute deployment with ZIP upload, (2) Subdomain-first URLs as default, (3) ZIP publishing as primary method, (4) Next.js compatibility with required config, (5) Features overview (proxy, secrets, analytics), (6) Development setup. Reorganized for new user friendliness with emojis and clear sections."
+        },
+        {
+          "id": "119-03",
+          "title": "Update inline code comments in proxy/render routes",
+          "status": "completed",
+          "completedAt": "2026-02-23T15:23:00Z",
+          "description": "Add/update comments in src/routes/proxy.ts, src/routes/render.ts, src/routes/apps.ts explaining subdomain behavior and ZIP handling."
+        },
+        {
+          "id": "119-04",
+          "title": "Update AGENTS.md workspace conventions",
+          "status": "completed",
+          "completedAt": "2026-02-23T15:20:00Z",
+          "description": "Ensure AGENTS.md reflects current subdomain-first approach and any relevant conventions for agents working on the codebase.",
+          "summary": "Added comprehensive sections for: Subdomain-first architecture, ZIP publishing workflow, Next.js compatibility (output: export, images unoptimized), Proxy endpoint patterns (/proxy/openai/*, /proxy/anthropic/*, etc.), X-App-Slug header auth, LMDB storage patterns, and testing conventions (npm test, coverage)."
+        },
+        {
+          "id": "119-05",
+          "title": "Create/update user-facing docs for Next.js apps",
+          "status": "completed",
+          "completedAt": "2026-02-23T15:30:00Z",
+          "description": "Document Next.js-specific settings needed for HYPR deployment: basePath, assetPrefix, output: 'export', image unoptimized, etc.",
+          "summary": "Updated blog/how-to-publish-nextjs-onhyper.md with: (1) Added images: { unoptimized: true } and trailingSlash: true to main next.config.ts example in Step 2, (2) Added explicit note that subdomains are the default at top of Step 5, (3) Updated assets troubleshooting to explain basePath/assetPrefix are only needed for path-based URLs (not subdomains), (4) Updated Summary table to say 'Configure next.config.ts' and 'Upload ZIP', (5) Cleaned up image troubleshooting to reference Step 2 config."
+        },
+        {
+          "id": "119-06",
+          "title": "Update landing page and pricing page copy",
+          "status": "completed",
+          "completedAt": "2026-02-23T15:25:00Z",
+          "description": "Ensure marketing pages reflect subdomain-first messaging (e.g., 'yourapp.onhyper.io' as default URL).",
+          "summary": "Updated home.html landing page: (1) Hero section now shows 'ZIP upload → subdomain' workflow, (2) Feature grid highlights ZIP publishing, clean subdomain URLs, and secure API access, (3) Three-step process updated to ZIP-focused, (4) Final CTA emphasizes subdomain URLs. Updated skill.html: Reordered feature highlights to put ZIP publishing and subdomain URLs first. Already existing: app.js form hints show subdomain as primary, README.md has comprehensive subdomain-first messaging."
+        },
+        {
+          "id": "119-07",
+          "title": "Update dashboard help text and tooltips",
+          "status": "pending",
+          "description": "Update in-app help text, tooltips, and placeholder text to guide users toward subdomain and ZIP workflow."
+        }
+      ],
+      "successCriteria": [
+        "SKILL.md reflects subdomain-first approach",
+        "README.md has clear quickstart with ZIP publishing",
+        "Next.js deployment guide exists with all required settings",
+        "Landing/pricing pages show subdomain URLs",
+        "Dashboard help text guides users correctly"
+      ]
+    },
+    "task-117": {
+      "title": "Pull onhyper source and review",
+      "status": "completed",
+      "priority": "medium",
+      "createdAt": "2026-02-22T17:40:00Z",
+      "description": "Pull the latest onhyper source code and review for any issues, improvements, or security concerns.",
+      "notes": "Pulled latest code (79b7ed3). Review findings:\n- TypeScript compiles clean (no errors)\n- Recent commits: Unified keys tab UX for provider/custom credentials\n- Changes: public/app.js, public/pages/dashboard.html, public/styles.css\n- Build/test: need to run full test suite (timeout earlier)\n- No security issues or TODOs noted",
+      "completedAt": "2026-02-22T18:00:00Z"
+    },
+    "task-120": {
+      "title": "Add /.well-known/skill.md endpoint for OnHyper",
+      "status": "completed",
+      "priority": "medium",
+      "createdAt": "2026-02-23T16:00:00Z",
+      "completedAt": "2026-02-23T16:05:00Z",
+      "description": "Add a GET /.well-known/skill.md endpoint that serves the OnHyper SKILL.md file. This allows agents/developers to discover the project's capabilities and conventions programmatically.",
+      "summary": "Added /.well-known/skill.md route in src/index.ts. Reads from ~/.agents/skills/onhyper/SKILL.md if available (localhost), falls back to embedded content (production). Returns Content-Type: text/markdown; charset=utf-8 with 1-hour cache.",
+      "successCriteria": [
+        "GET /.well-known/skill.md returns the SKILL.md content",
+        "Content-type: text/markdown",
+        "File sourced from ~/.agents/skills/onhyper/SKILL.md or embedded in app",
+        "Works on both onhyper.io and localhost"
+      ]
+    },
+    "task-121": {
+      "title": "Run tests and commit documentation updates to main",
+      "status": "in_progress",
+      "priority": "high",
+      "createdAt": "2026-02-23T16:05:00Z",
+      "description": "Run all tests to verify the documentation updates and /.well-known/skill.md endpoint work correctly. If tests pass, commit all changes to main branch for production deployment.",
+      "successCriteria": [
+        "npm test passes (all 199+ tests)",
+        "npm run build passes",
+        "All changes committed to main branch",
+        "Ready for production deployment"
       ]
     }
   }

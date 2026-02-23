@@ -151,10 +151,26 @@ function buildAuthHeader(endpoint: keyof typeof PROXY_ENDPOINTS, apiKey: string)
 
 /**
  * Identify the user making the request
- * Supports three methods:
- * 1. Bearer token (JWT)
- * 2. X-API-Key header
- * 3. X-App-Slug header (looks up app owner)
+ * Supports four authentication methods (tried in order):
+ * 
+ * 1. Bearer token (JWT) - Standard auth for logged-in users
+ *    Header: Authorization: Bearer <token>
+ *    Use case: Dashboard, direct API access
+ * 
+ * 2. X-API-Key header - Direct API key authentication
+ *    Header: X-API-Key: oh_live_xxx
+ *    Use case: Programmatic access, CLI tools
+ * 
+ * 3. X-App-Slug header - App-based authentication (most common for published apps)
+ *    Header: X-App-Slug: my-app
+ *    Flow: Slug → App lookup → App owner's ID & secrets
+ *    Use case: Published HYPR apps making proxy requests
+ * 
+ * 4. X-App-ID header - Same as #3 but using app UUID instead of slug
+ *    Header: X-App-ID: uuid
+ *    Use case: Internal use, when slug might change
+ * 
+ * @returns User ID and optionally the app ID if authenticated via app context
  */
 async function identifyUser(c: any): Promise<{ userId: string; appId?: string } | null> {
   const authHeader = c.req.header('authorization');
@@ -201,6 +217,27 @@ async function identifyUser(c: any): Promise<{ userId: string; appId?: string } 
 /**
  * ALL /proxy/:endpoint/*
  * Forward requests to the target API with injected authentication
+ * 
+ * ## Endpoint Resolution Flow
+ * 
+ * 1. Built-in endpoint check: Is :endpoint in PROXY_ENDPOINTS? (scoutos, openai, etc.)
+ *    - YES → Use provider config (target URL, secret key name, auth format)
+ *    - NO → Treat as custom key name (user-defined endpoint)
+ * 
+ * 2. For built-in endpoints:
+ *    - Look up user's secret by secretKey (e.g., SCOUT_API_KEY)
+ *    - Decrypt secret value, build appropriate auth header (Bearer vs x-api-key)
+ *    - Some endpoints (like 'onhyper') are self-endpoints that use user's own API key
+ * 
+ * 3. For custom endpoints:
+ *    - Look up user's custom secret by endpoint name
+ *    - Custom secrets include baseUrl and authType (bearer or header-based)
+ * 
+ * ## Response Handling
+ * 
+ * - Regular responses: Parsed as JSON if possible, returned with CORS headers
+ * - SSE streams: Piped directly back to client (for agent chat, etc.)
+ * - Errors: JSON error with details (401=auth, 404=unknown, 502=api error, 504=timeout)
  */
 proxy.all('/:endpoint/*', async (c) => {
   const startTime = Date.now();
@@ -215,13 +252,24 @@ proxy.all('/:endpoint/*', async (c) => {
     }, 401);
   }
   
-  // Resolve built-in endpoint first, then fall back to user custom key name.
+  // =========================================================================
+  // Endpoint Resolution: Built-in vs Custom
+  // =========================================================================
+  // Built-in endpoints (PROXY_ENDPOINTS) are predefined providers like 
+  // scoutos, openai, anthropic. Custom endpoints are user-defined API keys
+  // stored in the custom_secrets table with a user-provided name.
+  
   const builtInEndpoint = PROXY_ENDPOINTS[endpoint as keyof typeof PROXY_ENDPOINTS];
   let targetBaseUrl: string;
   let authHeader: { header: string; value: string };
   let analyticsEndpoint = endpoint;
 
   if (builtInEndpoint) {
+    // =======================================================================
+    // Built-in Provider Endpoint
+    // =======================================================================
+    // Uses provider config from PROXY_ENDPOINTS: target URL, secret key name,
+    // and auth header format (Bearer vs x-api-key vs X-API-Key)
     // Get the secret value for this endpoint
     let secretValue: string | null;
 
@@ -260,6 +308,12 @@ proxy.all('/:endpoint/*', async (c) => {
     targetBaseUrl = builtInEndpoint.target;
     authHeader = buildAuthHeader(endpoint as keyof typeof PROXY_ENDPOINTS, secretValue);
   } else {
+    // =======================================================================
+    // Custom User-Defined Endpoint
+    // =======================================================================
+    // Users can add custom API keys through Dashboard > Keys > Custom Keys.
+    // These are stored in custom_secrets table with: name, api_key, base_url, auth_type
+    // Example: User adds "my-api" → POST /proxy/my-api/endpoint → uses their custom config
     const customSecret = getCustomSecretValueByName(identity.userId, endpoint);
 
     if (!customSecret) {

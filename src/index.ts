@@ -36,6 +36,9 @@ import { updateUserPlan } from './lib/users.js';
 import { getDatabase } from './lib/db.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { subdomainRouter } from './middleware/subdomain.js';
+import { readFileSync, existsSync } from 'fs';
+import { homedir } from 'os';
+import { join } from 'path';
 
 const app = new Hono();
 
@@ -54,6 +57,83 @@ app.get('/health', (c) => {
     status: 'ok', 
     timestamp: new Date().toISOString(),
     version: '1.0.0'
+  });
+});
+
+// Well-known endpoint - serve OnHyper SKILL.md for agent discoverability
+app.get('/.well-known/skill.md', (c) => {
+  // Try to read from skill file location
+  const skillPath = join(homedir(), '.agents', 'skills', 'onhyper', 'SKILL.md');
+  
+  try {
+    if (existsSync(skillPath)) {
+      const content = readFileSync(skillPath, 'utf-8');
+      return c.text(content, 200, {
+        'Content-Type': 'text/markdown; charset=utf-8',
+        'Cache-Control': 'public, max-age=3600'
+      });
+    }
+  } catch (err) {
+    console.error('Failed to read skill file:', err);
+  }
+  
+  // Fallback: embedded skill content (for production environments)
+  const embeddedSkill = `---
+name: onhyper
+description: Build and deploy web apps with secure API proxying on OnHyper.io. Use when the user wants to (1) create web apps with AI features without exposing API keys, (2) securely proxy requests to OpenAI/Anthropic/OpenRouter/ScoutOS/Ollama, (3) host static HTML/CSS/JS apps, (4) store API secrets server-side with encryption, or (5) build AI-powered tools that need server-side key management. Triggers: "build an app", "secure API proxy", "hide API keys", "OnHyper", "host my app", "create a web app with AI".
+---
+
+# OnHyper
+
+OnHyper is a platform for building and deploying web apps with **secure API key management**. API keys are encrypted with AES-256-GCM and never exposed to browsers—apps call APIs through OnHyper's proxy endpoints.
+
+## Key Features
+
+- **Secure secret storage** - API keys encrypted server-side, never in client code
+- **Proxy endpoints** - Pre-configured for OpenAI, Anthropic, OpenRouter, ScoutOS, Ollama, HyperMicro
+- **Subdomain URLs (default)** - Apps get \`yourapp.onhyper.io\` automatically
+- **ZIP file publishing** - Upload a ZIP with \`index.html\` to deploy
+- **Analytics** - PostHog analytics via \`/api/analytics/capture\`
+- **Free tier** - 100 requests/day, 3 apps
+
+## Quick Start
+
+1. Create account at https://onhyper.io
+2. Store API keys in Dashboard > Secrets
+3. Build your app (HTML/CSS/JS or Next.js static export)
+4. Upload ZIP file with index.html at root
+5. App is live at https://yourapp.onhyper.io!
+
+## Proxy Endpoints
+
+| Endpoint | Routes To |
+|----------|-----------|
+| \`/proxy/openai/*\` | OpenAI API |
+| \`/proxy/anthropic/*\` | Anthropic API |
+| \`/proxy/openrouter/*\` | OpenRouter API |
+| \`/proxy/scoutos/*\` | ScoutOS API |
+| \`/proxy/ollama/*\` | Ollama API |
+| \`/proxy/hypermicro/*\` | HyperMicro API |
+
+Always include \`X-App-Slug\` header in proxy requests.
+
+## API
+
+- \`POST /api/auth/signup\` - Create account
+- \`POST /api/auth/login\` - Login
+- \`GET /api/apps\` - List your apps
+- \`POST /api/apps\` - Create app
+- \`POST /api/apps/:id/zip\` - Upload ZIP
+- \`POST /api/apps/:id/publish\` - Publish live
+- \`GET /api/secrets\` - List your secrets
+- \`POST /api/secrets\` - Store a secret
+
+Full documentation: https://github.com/hyperio-software/onhyper
+`;
+  
+  return c.text(embeddedSkill, 200, {
+    'Content-Type': 'text/markdown; charset=utf-8',
+    'Cache-Control': 'public, max-age=3600'
   });
 });
 

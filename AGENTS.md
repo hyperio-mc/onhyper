@@ -165,3 +165,163 @@ Checked in this repository:
 - `.github/copilot-instructions.md`: not found.
 
 If any of these files are added later, update this AGENTS.md to include and enforce their rules.
+
+## Subdomain-First Architecture
+
+Apps get subdomain URLs by default: `yourapp.onhyper.io`
+
+### Default URL generation
+- New apps automatically receive a subdomain based on the app name (slugified)
+- If subdomain is taken, fallback adds random suffix (e.g., `myapp-abc123.onhyper.io`)
+- Path-based URLs (`/a/{slug}`) exist but are secondary/legacy
+
+### Subdomain claiming
+- Subdomains require PRO tier or higher (enforced via feature flags)
+- Short subdomains (<6 chars) require BUSINESS tier
+- Claim logic in `src/routes/apps.ts` POST `/:id/publish`
+- Validation in `src/lib/validation.ts` subdomain schema
+
+## ZIP Publishing Workflow
+
+ZIP file upload is the primary deployment method.
+
+### Upload endpoint
+- POST `/api/apps/:id/upload` accepts multipart/form-data with ZIP file
+- ZIP is extracted to app storage directory
+- Entry point defaults to `index.html` at root
+
+### ZIP structure expectations
+```
+your-app.zip/
+├── index.html        # Required entry point
+├── assets/           # Static assets (CSS, JS, images)
+├── _next/            # Next.js static export output
+└── ...
+```
+
+### File handling
+- Max ZIP size: 50MB (configurable via `MAX_ZIP_SIZE_MB`)
+- Files stored in LMDB under app slug key
+- Previous deployment files are replaced atomically
+
+## Next.js Compatibility
+
+Next.js apps require specific configuration for static export.
+
+### Required `next.config.js`
+```javascript
+module.exports = {
+  output: 'export',
+  images: { unoptimized: true },
+  trailingSlash: true,  // Optional but recommended
+}
+```
+
+### Build command
+```bash
+npm run build  # Creates out/ directory
+cd out && zip -r ../app.zip . && cd ..
+```
+
+### Known limitations
+- No server-side features (API routes, ISR, SSR)
+- Image optimization disabled (`images.unoptimized: true`)
+- Dynamic routes must use `generateStaticParams()`
+- Runtime config not available (`publicRuntimeConfig`)
+
+## Proxy Endpoints
+
+OnHyper provides proxy endpoints for API forwarding with credential injection.
+
+### Endpoint patterns
+| Service | Pattern | Target |
+|---------|---------|--------|
+| OpenAI | `/proxy/openai/*` | `https://api.openai.com/*` |
+| Anthropic | `/proxy/anthropic/*` | `https://api.anthropic.com/*` |
+| Scout | `/proxy/scout/*` | `https://api.scoutos.com/*` |
+| HyperMicro | `/proxy/hypermicro/*` or `/proxy/micro/*` | `https://api.hyper.io/*` |
+
+### X-App-Slug header
+Client apps authenticate via the `X-App-Slug` header:
+```http
+GET /proxy/openai/v1/chat/completions
+X-App-Slug: my-app-slug
+Authorization: Bearer sk-xxx  // Optional, injected if missing
+```
+
+### Auth header injection
+- Route handler: `src/routes/proxy.ts`
+- Looks up user secrets by app slug → user ID → secret name
+- Injects `Authorization` header from stored credentials
+- Headers: `Authorization: Bearer {secret}` or `x-api-key: {secret}`
+
+### Secret naming convention
+| Proxy endpoint | Secret name | Header format |
+|----------------|-------------|---------------|
+| `/proxy/openai/*` | `OPENAI_API_KEY` | `Authorization: Bearer {key}` |
+| `/proxy/anthropic/*` | `ANTHROPIC_API_KEY` | `x-api-key: {key}` |
+| `/proxy/scout/*` | `SCOUT_API_KEY` | `Authorization: Bearer {key}` |
+| `/proxy/hypermicro/*` | `HYPERMICRO_API_KEY` | `Authorization: Bearer {key}` |
+
+## LMDB Storage Patterns
+
+Apps store files in LMDB (Lightning Memory-Mapped Database).
+
+### Key structure
+```
+file:{appSlug}:{path}     → File content (Buffer)
+metadata:{appSlug}        → App metadata (JSON)
+```
+
+### Access patterns
+```typescript
+import { getLMDB, putFile, getFile, deleteFile, listFiles } from './lib/lmdb.js';
+
+// Store a file
+await putFile(appSlug, 'index.html', Buffer.from(htmlContent));
+
+// Retrieve a file
+const content = await getFile(appSlug, 'index.html');
+
+// List all files for an app
+const files = await listFiles(appSlug);
+
+// Delete app storage
+await deleteAppFiles(appSlug);
+```
+
+### Testing with LMDB
+- Tests use in-memory or temp directory for isolation
+- LMDB instance created per-test-run via `enableTestMode()`
+- Use `resetDatabase()` between tests for clean state
+
+## Testing Conventions
+
+### Run tests
+```bash
+npm test              # Watch mode (default)
+npm test -- --run     # Single run, no watch
+npm test -- --coverage  # With coverage report
+```
+
+### Test structure
+- Tests live alongside source: `src/**/*.test.ts`
+- Use Vitest primitives: `describe`, `it`, `expect`, `beforeEach`, `afterEach`
+- Isolated test DB via `enableTestMode()` + `resetDatabase()`
+
+### Coverage expectations
+- Aim for meaningful coverage on critical paths
+- Focus on auth, proxy, secrets, and app lifecycle
+- Run coverage before major PRs: `npm test -- --coverage`
+
+### Running specific tests
+```bash
+# Single test file
+npm test -- src/routes/proxy.test.ts
+
+# By test name pattern
+npm test -- -t "should forward request to OpenAI"
+
+# Combined
+npm test -- src/routes/proxy.test.ts -t "should inject auth header"
+```

@@ -40,7 +40,7 @@
   <div class="tab-content">
   <div id="tab-apps" class="tab-panel active" role="tabpanel">
     <h2>My Apps</h2>
-    <p class="text-muted">Publish web apps with secure API access</p>
+    <p class="text-muted">Publish web apps with automatic subdomains (<code>yourapp.onhyper.io</code>) and secure API access</p>
 
     <div id="app-list">
       <p>Loading...</p>
@@ -51,7 +51,7 @@
 
   <div id="tab-keys" class="tab-panel" role="tabpanel">
     <h2>API Keys</h2>
-    <p class="text-muted">Manage provider keys and custom API credentials in one place. All keys are encrypted and never exposed to browsers.</p>
+    <p class="text-muted">Manage provider keys and custom API credentials. Keys are encrypted and injected server-side via secure proxy endpoints.</p>
 
     <div id="key-list">
       <p>Loading...</p>
@@ -123,8 +123,9 @@
 
     <div class="info-box">
       <h4>Using Your Keys in Apps</h4>
-      <p>Your apps call APIs through secure proxy endpoints. Auth credentials are injected server-side.</p>
+      <p>Your apps call APIs through secure proxy endpoints. Auth credentials are injected server-side—your keys never reach the browser.</p>
       <code>fetch('/proxy/openai/chat/completions', { method: 'POST', body: ... })</code>
+      <p class="info-box-detail">Each provider is mapped to a proxy path: <code>/proxy/openai/...</code>, <code>/proxy/anthropic/...</code>, <code>/proxy/openrouter/...</code>. Custom APIs use the name you set: <code>/proxy/your-api-name/...</code></p>
     </div>
   </div>
 

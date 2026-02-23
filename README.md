@@ -1,59 +1,65 @@
 # OnHyper.io
 
-> Secure Proxy Service for API-Backed Web Apps
+> Deploy web apps in 2 minutes with secure API key management
 
-OnHyper is a platform for publishing web applications that securely call external APIs. It solves the problem of exposing API keys in client-side code by providing a secure proxy layer that holds secrets server-side and injects them at request time.
+OnHyper is a platform for publishing static web apps that securely call external APIs. Upload a ZIP file, get a subdomain, and your app is live — with API keys stored server-side and injected securely at request time.
 
-## Quick Start
+## ⚡ Quickstart: Deploy in 2 Minutes
+
+### 1. Build Your App
+
+Export your static site. For Next.js:
 
 ```bash
-# Clone and install
-git clone https://github.com/hyperio-mc/onhyper.git
-cd onhyper
-npm install
-
-# Set up environment (development defaults are provided)
-cp .env.example .env
-
-# Start development server
-npm run dev
+# next.config.js
+module.exports = {
+  output: 'export',
+  images: { unoptimized: true }
+}
 ```
 
-The server will start at `http://localhost:3000`.
-
-## Features
-
-- **Secure Secret Storage**: API keys encrypted at rest with AES-256-GCM
-- **Proxy Service**: Forward requests to external APIs with automatic auth injection
-- **App Publishing**: Deploy static apps that can call APIs securely
-- **ZIP Upload**: Deploy entire static sites with a single API call
-- **Pushstate Routing**: SPAs work natively with client-side routing
-- **Next.js Support**: Static exports work out of the box
-- **Static File Serving**: CSS, JS, images, fonts served automatically
-- **User Authentication**: JWT-based auth with email/password
-- **Usage Tracking**: Monitor API calls per app and endpoint
-- **Waitlist System**: Managed access with referral bonuses
-
-## Static Site Hosting
-
-### ZIP Upload
-
-Upload your entire static site with a single API call:
-
 ```bash
-# Build your app
 npm run build
-
-# Create a ZIP of the output directory
-cd dist && zip -r ../site.zip . && cd ..
-
-# Upload to OnHyper
-curl -X POST https://onhyper.io/api/apps/{app_id}/zip \
-  -H "Authorization: Bearer YOUR_TOKEN" \
-  -F "file=@site.zip"
+# Creates 'out/' directory with static files
 ```
 
-**Supported file types:**
+### 2. Create a ZIP
+
+```bash
+cd out && zip -r ../my-app.zip . && cd ..
+```
+
+### 3. Upload & Get Your URL
+
+```bash
+curl -X POST https://onhyper.io/api/apps/my-app/zip \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "file=@my-app.zip"
+```
+
+**That's it!** Your app is now live at `my-app.onhyper.io`
+
+---
+
+## 🌐 Subdomain-First URLs
+
+Every app gets a clean subdomain by default:
+
+```
+your-app-name.onhyper.io
+```
+
+- **No path prefixes** — your assets and routes work naturally
+- **HTTPS included** — SSL certificates auto-provisioned
+- **Custom domains** — add your own domain (PRO plan)
+
+Legacy path-based URLs (`onhyper.io/a/your-app`) still work for backward compatibility.
+
+## 📦 ZIP Publishing
+
+ZIP upload is the primary way to deploy:
+
+**Supported files:**
 - HTML, CSS, JavaScript
 - Images: PNG, JPG, GIF, SVG, WebP, ICO
 - Fonts: WOFF, WOFF2, TTF, OTF, EOT
@@ -61,408 +67,222 @@ curl -X POST https://onhyper.io/api/apps/{app_id}/zip \
 
 **Endpoint:** `POST /api/apps/:id/zip`
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| file | File | ZIP file containing static assets |
+### SPA Routing (Automatic)
 
-### Pushstate Routing (SPA Support)
-
-Published apps on subdomains (`yourapp.onhyper.io`) support client-side routing automatically:
+Published apps support client-side routing out of the box:
 
 ```
 yourapp.onhyper.io/           → serves index.html
 yourapp.onhyper.io/dashboard  → serves index.html (SPA handles route)
 yourapp.onhyper.io/settings   → serves index.html (SPA handles route)
-yourapp.onhyper.io/_next/...  → serves actual static files
+yourapp.onhyper.io/assets/... → serves actual static files
 ```
 
-**How it works:**
-1. Static files (CSS, JS, images, fonts) are served directly
-2. Internal framework paths (`/_next/`, etc.) route to actual files
-3. All other paths serve `index.html` for client-side routing
+Works with: Next.js, Vite, React, Vue, Svelte, Angular, and any SPA framework.
 
-**Supported frameworks:**
-- Next.js (static export)
-- Vite
-- Create React App
-- Vue CLI
-- Any SPA with client-side routing
+## ⚛️ Next.js Compatibility
 
-### Next.js Static Export
+To deploy a Next.js app, you need static export mode:
 
 ```javascript
 // next.config.js
 module.exports = {
   output: 'export',
-  trailingSlash: true,
+  images: { unoptimized: true }
 }
 ```
 
+Then build and deploy:
+
 ```bash
-npm run build  # Creates 'out/' directory
-cd out && zip -r ../app.zip . && cd ..
+npm run build          # Creates 'out/' directory
+cd out
+zip -r ../app.zip .
 # Upload via /api/apps/:id/zip
 ```
 
-Your Next.js app will work with:
-- Client-side routing on refresh
-- `/_next/static/` assets
-- Image optimization (static images)
-- No Node.js server required
+**What works:**
+- ✅ Client-side routing (pushstate)
+- ✅ Static assets (`/_next/static/...`)
+- ✅ API routes via OnHyper proxy
+- ✅ Image imports (unoptimized)
 
-## Architecture Overview
+**What doesn't work:**
+- ❌ Server-side rendering (SSR)
+- ❌ Server components
+- ❌ API routes (use OnHyper proxy instead)
 
-```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                              Client Browser                              │
-│                                                                          │
-│   ┌────────────────────────────────────────────────────────────────┐    │
-│   │                        Published App                             │    │
-│   │                                                                 │    │
-│   │   fetch('/proxy/scoutos/world/{id}/_interact', {                │    │
-│   │     method: 'POST',                                             │    │
-│   │     headers: { 'X-App-Slug': 'my-app' },                        │    │
-│   │     body: JSON.stringify({ messages: [...] })                   │    │
-│   │   })                                                            │    │
-│   │                                                                 │    │
-│   └─────────────────────────────┬──────────────────────────────────┘    │
-│                                 │                                        │
-└─────────────────────────────────┼────────────────────────────────────────┘
-                                  │
-                                  │ 1. Request to /proxy/{endpoint}
-                                  │    (no API key exposed)
-                                  ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                          OnHyper.io Server                               │
-│                                                                          │
-│   ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐      │
-│   │   Auth Layer     │  │  Secret Vault    │  │  Usage Tracker   │      │
-│   │  (JWT + API Key) │  │  (AES-256-GCM)   │  │   (SQLite)       │      │
-│   └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘      │
-│            │                     │                     │                 │
-│            └─────────────────────┼─────────────────────┘                 │
-│                                  │                                       │
-│   ┌──────────────────────────────▼──────────────────────────────────┐   │
-│   │                        Proxy Service                              │   │
-│   │                                                                  │   │
-│   │   1. Identify user (JWT, API key, or App-Slug)                   │   │
-│   │   2. Look up encrypted secret for endpoint                       │   │
-│   │   3. Decrypt and inject Authorization header                     │   │
-│   │   4. Forward request to target API                               │   │
-│   │   5. Return response (with CORS headers)                         │   │
-│   │                                                                  │   │
-│   └──────────────────────────────┬──────────────────────────────────┘   │
-│                                  │                                       │
-└──────────────────────────────────┼───────────────────────────────────────┘
-                                   │
-                                   │ 2. Forward with secret
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                           External APIs                                  │
-│                                                                          │
-│   api.scoutos.com    ollama.com/v1    openrouter.ai    anthropic.com    │
-│                                                                          │
-└─────────────────────────────────────────────────────────────────────────┘
+## 🔑 Features
+
+### Secure Proxy Service
+
+Call external APIs without exposing keys in client code:
+
+```javascript
+// Your app code
+fetch('/proxy/openai/v1/chat/completions', {
+  method: 'POST',
+  headers: {
+    'X-App-Slug': 'my-app',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ messages: [...] })
+})
 ```
 
-## API Reference
+API keys are stored encrypted server-side and injected at request time.
+
+**Supported endpoints:**
+
+| Endpoint | Target API |
+|----------|-----------|
+| `/proxy/openai` | OpenAI API |
+| `/proxy/anthropic` | Anthropic API |
+| `/proxy/openrouter` | OpenRouter API |
+| `/proxy/scoutos` | ScoutOS Platform |
+| `/proxy/ollama` | Ollama API |
+
+Add custom APIs via the Secrets tab in your dashboard.
+
+### Secrets Management
+
+Store API keys securely:
+
+```bash
+# Add a secret
+curl -X POST https://onhyper.io/api/secrets \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -d '{"name": "OPENAI_API_KEY", "value": "sk-..."}'
+```
+
+Secrets are encrypted with AES-256-GCM and never exposed to clients.
+
+### Analytics
+
+Track events from your apps:
+
+```javascript
+// In your app
+fetch('/api/analytics/capture', {
+  method: 'POST',
+  headers: {
+    'X-App-Slug': 'my-app',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    event: 'button_clicked',
+    properties: { button: 'signup' }
+  })
+})
+```
+
+View analytics in your dashboard or query via API.
+
+## 🛠 Development
+
+```bash
+# Clone and install
+git clone https://github.com/hyperio-mc/onhyper.git
+cd onhyper
+npm install
+
+# Set up environment
+cp .env.example .env
+
+# Start dev server
+npm run dev
+```
+
+Server runs at `http://localhost:3000`.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `ONHYPER_JWT_SECRET` | **Yes** | JWT signing secret (32+ chars) |
+| `ONHYPER_MASTER_KEY` | **Yes** | Encryption master key (32+ chars) |
+| `PORT` | No | Server port (default: 3000) |
+| `DATA_DIR` | No | Data directory (default: ./data) |
+
+Generate secure secrets:
+```bash
+openssl rand -hex 32
+```
+
+## 📋 Pricing
+
+| Plan | Requests/Day | Apps | Secrets | Subdomains |
+|------|-------------|------|---------|------------|
+| FREE | 100 | 3 | 5 | Path-based only |
+| HOBBY | 1,000 | 10 | 20 | ✅ |
+| PRO | 10,000 | 50 | 50 | ✅ Custom domains |
+| BUSINESS | Unlimited | Unlimited | Unlimited | ✅ Short + custom |
+
+## 🔐 Security
+
+- **AES-256-GCM encryption** for all stored secrets
+- **PBKDF2 key derivation** (100k iterations)
+- **JWT authentication** with bcrypt password hashing
+- **Rate limiting** on sensitive endpoints
+
+## 🚀 Deployment
+
+Designed for single-server deployment (Railway, Render, Fly.io):
+
+```bash
+# Build
+npm run build
+
+# Start production
+npm start
+```
+
+Required environment variables:
+- `ONHYPER_JWT_SECRET`
+- `ONHYPER_MASTER_KEY`
+- `DATA_DIR` (for persistent storage)
+
+## 📚 API Reference
 
 ### Authentication
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/auth/signup` | POST | Create new account |
-| `/api/auth/login` | POST | Authenticate and get JWT |
-| `/api/auth/token` | POST | Validate JWT token |
-| `/api/auth/me` | GET | Get current user info |
-
-### Secrets Management
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/secrets` | GET | List user's secrets (masked) |
-| `/api/secrets` | POST | Store a new secret |
-| `/api/secrets/:name` | DELETE | Delete a secret |
-| `/api/secrets/check/:name` | GET | Check if secret exists |
+| `/api/auth/signup` | POST | Create account |
+| `/api/auth/login` | POST | Get JWT token |
+| `/api/auth/me` | GET | Current user |
 
 ### Apps
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/api/apps` | GET | List user's apps |
-| `/api/apps` | POST | Create new app |
-| `/api/apps/:id` | GET | Get app details |
+| `/api/apps` | GET | List your apps |
+| `/api/apps` | POST | Create app |
+| `/api/apps/:id` | GET | App details |
 | `/api/apps/:id` | PUT | Update app |
 | `/api/apps/:id` | DELETE | Delete app |
-| `/api/apps/:id/zip` | POST | Upload static site as ZIP |
+| `/api/apps/:id/zip` | POST | Upload ZIP |
+| `/api/apps/:id/publish` | POST | Publish (get subdomain) |
+
+### Secrets
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/secrets` | GET | List secrets (masked) |
+| `/api/secrets` | POST | Store secret |
+| `/api/secrets/:name` | PUT | Update secret |
+| `/api/secrets/:name` | DELETE | Delete secret |
 
 ### Proxy
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/proxy` | GET | List available endpoints |
-| `/proxy/:endpoint/*` | ALL | Proxy request to external API |
+| `/proxy/:endpoint/*` | ALL | Proxy to external API |
 
-### App Rendering
+## 📄 License
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/a/:slug` | GET | Render published app |
-| `/a/:slug/raw` | GET | Get raw HTML |
-| `/a/:slug/css` | GET | Get app CSS |
-| `/a/:slug/js` | GET | Get app JavaScript |
+MIT — See [LICENSE](LICENSE) for details.
 
-### Waitlist (Public)
+## 🤝 Contributing
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/waitlist` | POST | Submit waitlist application |
-| `/api/waitlist/position` | GET | Get position in queue |
-| `/api/waitlist/referral` | POST | Process a referral |
-| `/api/waitlist/invite/:code` | GET | Validate invite code |
-| `/api/waitlist/stats` | GET | Get global waitlist stats |
-
-### Chat (Public)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/chat/message` | POST | Send message to support agent |
-| `/api/chat/lead` | POST | Capture lead from chat |
-| `/api/chat/status` | GET | Check chat service status |
-
-### Blog (Public)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/blog` | GET | List all posts |
-| `/api/blog/:slug` | GET | Get single post |
-| `/api/blog/rss` | GET | RSS feed |
-
-### Dashboard (Protected)
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/dashboard/stats` | GET | Get user statistics |
-
-## Proxy Endpoints
-
-Pre-configured proxy endpoints for common AI APIs:
-
-| Endpoint | Target API | Secret Key |
-|----------|-----------|------------|
-| `/proxy/scoutos` | ScoutOS Platform (Agents, Tables, Drive, Workflows) | `SCOUT_API_KEY` |
-| `/proxy/openai` | OpenAI API | `OPENAI_API_KEY` |
-| `/proxy/anthropic` | Anthropic API | `ANTHROPIC_API_KEY` |
-| `/proxy/openrouter` | OpenRouter API | `OPENROUTER_API_KEY` |
-| `/proxy/ollama` | Ollama API | `OLLAMA_API_KEY` |
-| `/proxy/onhyper/*` | OnHyper API (self-API) | `ONHYPER_API_KEY` |
-
-**Note**: `/proxy/scout-atoms` is deprecated - use `/proxy/scoutos` instead.
-
-**Note**: `/proxy/onhyper` is a special "self-api" endpoint. Users must enable it in Settings. It uses the user's own API token, not a stored secret.
-
-### Custom Proxy Keys
-
-Custom APIs created via `/api/secrets/custom` are routed through the same proxy path pattern:
-
-- `POST /proxy/:name/*`
-
-Examples:
-
-- `/proxy/github-enterprise/api/v3/user`
-- `/proxy/internal-billing/v1/invoices`
-
-Important:
-
-- Custom names cannot collide with built-in proxy endpoints.
-- Route matching checks built-in endpoints first, then custom key names.
-- You can store optional per-key usage instructions in the dashboard for team context.
-
-### ScoutOS Proxy Examples
-
-```javascript
-// Agent chat (streaming)
-fetch('/proxy/scoutos/world/{agent_id}/_interact', {
-  method: 'POST',
-  headers: {
-    'X-App-Slug': window.ONHYPER.appSlug,
-    'Content-Type': 'application/json',
-    'Accept': 'text/event-stream'
-  },
-  body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] })
-})
-
-// Scout Tables
-fetch('/proxy/scoutos/v2/collections/{collection_id}/rows', {
-  headers: { 'X-App-Slug': window.ONHYPER.appSlug }
-})
-
-// Drive
-fetch('/proxy/scoutos/drive/download/{file_id}', {
-  headers: { 'X-App-Slug': window.ONHYPER.appSlug }
-})
-```
-
-The proxy supports three authentication methods:
-
-1. **JWT Token**: `Authorization: Bearer <token>`
-2. **API Key**: `X-API-Key: oh_live_...`
-3. **App Slug**: `X-App-Slug: my-app` (for published apps)
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `PORT` | No | Server port (default: 3000) |
-| `HOST` | No | Server host (default: 0.0.0.0) |
-| `BASE_URL` | No | Public URL (default: http://localhost:3000) |
-| `DATA_DIR` | No | Data storage directory (default: ./data) |
-| `STATIC_PATH` | No | Frontend files path (default: ./public) |
-| **`ONHYPER_JWT_SECRET`** | **Yes** | Secret for JWT signing (32+ chars) |
-| **`ONHYPER_MASTER_KEY`** | **Yes** | Master key for secret encryption (32+ chars) |
-| `SCOUTOS_API_KEY` | No | ScoutOS API key for chat support |
-| `SCOUTOS_SUPPORT_AGENT_ID` | No | ScoutOS agent ID for support chat |
-
-### Security Note
-
-In production, `ONHYPER_JWT_SECRET` and `ONHYPER_MASTER_KEY` **must** be set to secure random values. The server will fail to start if these are left as defaults in production mode.
-
-Generate secure values:
-```bash
-# Generate JWT secret
-openssl rand -hex 32
-
-# Generate master key
-openssl rand -hex 32
-```
-
-## Project Structure
-
-```
-onhyper/
-├── src/
-│   ├── index.ts              # Server entry point
-│   ├── config.ts             # Configuration and validation
-│   ├── routes/
-│   │   ├── auth.ts           # Authentication endpoints
-│   │   ├── apps.ts           # App management
-│   │   ├── secrets.ts        # Secret management
-│   │   ├── proxy.ts          # Proxy service
-│   │   ├── render.ts         # App rendering
-│   │   ├── dashboard.ts      # Dashboard stats
-│   │   ├── waitlist.ts       # Waitlist system
-│   │   ├── chat.ts           # Support chat
-│   │   ├── blog.ts           # Blog endpoints
-│   │   └── unsubscribe.ts    # Email unsubscribe
-│   ├── lib/
-│   │   ├── db.ts             # SQLite database
-│   │   ├── lmdb.ts           # LMDB key-value store
-│   │   ├── encryption.ts     # AES-256-GCM encryption
-│   │   ├── secrets.ts        # Secret management
-│   │   ├── users.ts          # User operations
-│   │   ├── apps.ts           # App operations
-│   │   ├── usage.ts          # Usage tracking
-│   │   ├── analytics.ts      # PostHog analytics
-│   │   └── email.ts          # Email sending (Resend)
-│   ├── middleware/
-│   │   ├── auth.ts           # JWT/API key authentication
-│   │   └── rateLimit.ts      # Rate limiting
-│   └── emails/               # React Email templates
-├── public/
-│   ├── index.html            # SPA entry point
-│   ├── app.js                # Frontend application
-│   ├── styles.css            # Styles
-│   └── pages/                # SPA page templates
-├── data/                     # SQLite + LMDB data (gitignored)
-├── blog/                     # Markdown blog posts
-└── dist/                     # Compiled JavaScript
-```
-
-## Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with hot reload |
-| `npm run build` | Compile TypeScript to JavaScript |
-| `npm start` | Run production server |
-| `npm test` | Run tests with Vitest |
-
-## Pricing Plans
-
-| Plan | Requests/Day | Apps | Secrets |
-|------|-------------|------|---------|
-| FREE | 100 | 3 | 5 |
-| HOBBY | 1,000 | 10 | 20 |
-| PRO | 10,000 | 50 | 50 |
-| BUSINESS | Unlimited | Unlimited | Unlimited |
-
-## Tech Stack
-
-- **Runtime**: Node.js 20+
-- **Framework**: Hono (fast web framework)
-- **Language**: TypeScript
-- **Database**: SQLite (users, secrets, apps) + LMDB (content cache)
-- **Encryption**: AES-256-GCM with PBKDF2 key derivation
-- **Auth**: JWT with bcrypt password hashing
-- **Email**: Resend
-- **Analytics**: PostHog
-- **Frontend**: Vanilla JS SPA
-
-## Security Model
-
-### Secret Encryption
-
-1. Secrets are encrypted with AES-256-GCM
-2. Each secret has a unique random salt (32 bytes)
-3. Encryption key derived from master key + salt via PBKDF2 (100k iterations)
-4. Auth tags ensure integrity
-5. Master key stored in environment variable (never in code)
-
-### Request Flow
-
-1. Request arrives at `/proxy/:endpoint/*`
-2. User identified via JWT, API key, or App-Slug header
-3. Endpoint resolved as built-in provider or custom key name
-4. Secret looked up from encrypted database
-5. Secret decrypted and injected into auth headers
-6. Request forwarded to target API
-7. Response returned to client (with CORS headers)
-
-### Rate Limiting
-
-- Daily request limits per plan
-- Strict rate limiting on auth endpoints (10/min)
-- In-memory tracking (use Redis for production)
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Start dev server
-npm run dev
-
-# Build for production
-npm run build
-
-# Run production server
-npm start
-```
-
-## Deployment
-
-OnHyper is designed for single-server deployment (Railway, Render, Fly.io).
-
-Required environment variables for production:
-- `ONHYPER_JWT_SECRET` - Must be set (no default)
-- `ONHYPER_MASTER_KEY` - Must be set (no default)
-- `DATA_DIR` or `RAILWAY_VOLUME_MOUNT_PATH` - For persistent storage
-
-## License
-
-MIT
-
-## Contributing
-
-Issues and pull requests welcome at [github.com/hyperio-mc/onhyper](https://github.com/hyperio-mc/onhyper)
+Issues and PRs welcome at [github.com/hyperio-mc/onhyper](https://github.com/hyperio-mc/onhyper)

@@ -2,14 +2,47 @@
  * App Rendering Routes for OnHyper.io
  * 
  * Serves published web applications with injected configuration.
- * Each app gets a unique URL: `https://onhyper.io/a/{slug}`
  * 
- * ## URL Structure
+ * ## URL Structure (Path-Based)
  * 
+ * Apps are primarily accessed via subdomain URLs (handled at the routing layer):
+ *   `https://my-app.onhyper.io/` → App served by Host header matching
+ * 
+ * This module handles path-based URLs as a fallback:
+ *   `https://onhyper.io/a/{slug}` → Alternative access for apps
+ * 
+ * Route structure:
  * - `/a/:slug` - Render full HTML page with app
  * - `/a/:slug/raw` - Get raw HTML content
  * - `/a/:slug/css` - Get CSS stylesheet
  * - `/a/:slug/js` - Get JavaScript code
+ * - `/a/:slug/*` - Static files from ZIP uploads (catch-all)
+ * 
+ * ## Subdomain Resolution
+ * 
+ * Subdomain routing is handled at the request level (see src/index.ts):
+ * 1. Extract subdomain from Host header (e.g., "my-app.onhyper.io")
+ * 2. Look up app by subdomain in apps table
+ * 3. Route to renderer with app context
+ * 
+ * This file handles the path-based fallback for:
+ * - Apps without subdomains (free tier)
+ * - Direct access by slug
+ * - Static file serving for ZIP uploads
+ * 
+ * ## ZIP Upload Handling
+ * 
+ * Apps deployed from ZIP files get their contents stored in LMDB (AppFilesStore):
+ * - ZIP is extracted, stripping common root folder
+ * - Files stored with relative paths: index.html, assets/main.js, etc.
+ * - _next/ and _vercel/ folders preserved for framework compatibility
+ * - index.html becomes app's main entry point
+ * 
+ * Static file serving:
+ * - `/a/:slug/_next/*` - Next.js static assets
+ * - `/a/:slug/_vercel/*` - Vercel static assets  
+ * - `/a/:slug/:file` - Root-level assets (favicon, etc.)
+ * - `/a/:slug/*` - Catch-all for nested paths
  * 
  * ## Rendering Flow
  * 
@@ -130,7 +163,15 @@ function escapeJs(str: string): string {
 
 /**
  * Content-Security-Policy header for sandboxed app rendering
- * Allows inline scripts and styles but restricts external resources
+ * 
+ * Security model:
+ * - Apps run in isolated iframes (frame-ancestors 'none')
+ * - Inline scripts allowed (required for user code)
+ * - External connections allowed via HTTPS (for API calls)
+ * - Images allowed from data: URIs and HTTPS sources
+ * 
+ * This allows published HYPR apps to make API calls while
+ * preventing clickjacking and other embedding attacks.
  */
 const CSP_HEADER = [
   "default-src 'self'",
@@ -155,7 +196,18 @@ function setSecurityHeaders(c: any): void {
 }
 
 /**
- * GET /a/:slug/_next/* - Serve app _next assets
+ * GET /a/:slug/_next/* - Serve Next.js static assets
+ * 
+ * Next.js apps exported with `output: 'export'` place build artifacts
+ * in _next/ directory. This route serves those files directly from
+ * the ZIP upload stored in AppFilesStore.
+ * 
+ * Examples:
+ * - /a/my-app/_next/static/abc123/_buildManifest.js
+ * - /a/my-app/_next/static/chunks/main.js
+ * 
+ * Files are cached with max-age=31536000 (1 year) since they include
+ * content hashes in filenames for cache busting.
  */
 render.get('/:slug/_next/:path*', async (c) => {
   const slug = c.req.param('slug');
@@ -190,7 +242,12 @@ render.get('/:slug/_next/:path*', async (c) => {
 });
 
 /**
- * GET /a/:slug/:file - Serve root-level assets (favicon, svg, etc.)
+ * GET /a/:slug/:file - Serve root-level static assets
+ * 
+ * Handles single files at the root level of a ZIP upload:
+ * - favicon.ico, logo.svg, robots.txt, etc.
+ * 
+ * Security: Path traversal prevented by checking for '..' and '/'
  */
 render.get('/:slug/:file', async (c) => {
   const slug = c.req.param('slug');
@@ -223,7 +280,10 @@ render.get('/:slug/:file', async (c) => {
 });
 
 /**
- * GET /a/:slug/_vercel/* - Serve app _vercel assets
+ * GET /a/:slug/_vercel/* - Serve Vercel-build static assets
+ * 
+ * Vercel builds place certain assets in _vercel/ directory.
+ * Served same as _next/ with aggressive caching.
  */
 render.get('/:slug/_vercel/:path*', async (c) => {
   const slug = c.req.param('slug');
@@ -254,6 +314,24 @@ render.get('/:slug/_vercel/:path*', async (c) => {
 /**
  * GET /a/:slug
  * Render a published app
+ * 
+ * ## Render Flow
+ * 
+ * 1. Look up app by slug in SQLite database
+ * 2. Check for ZIP upload (index.html in AppFilesStore)
+ *    - If ZIP: Transform paths to relative, inject ONHYPER config
+ *    - If no ZIP: Render inline HTML/CSS/JS from database
+ * 3. Set security headers (CSP, X-Frame-Options, etc.)
+ * 4. Track page view analytics
+ * 
+ * ## Path Transformation (for ZIP uploads)
+ * 
+ * ZIP uploads may have absolute paths that need to be made relative
+ * when deployed at /a/{slug}/:
+ * 
+ * - `/assets/main.js` → `./assets/main.js`
+ * - Keeps /a/, /api/, /proxy/ paths absolute (OnHyper system routes)
+ * - Keeps //protocol URLs absolute (CDN links, etc.)
  */
 render.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
@@ -518,7 +596,22 @@ render.get('/:slug/js', async (c) => {
 
 /**
  * Catch-all route for static files from ZIP uploads
- * Serves files at /a/:slug/* for apps with ZIP uploads
+ * 
+ * ## File Resolution Strategy
+ * 
+ * This catch-all handles requests for any file within a ZIP upload:
+ * 
+ * 1. Exact match: /a/my-app/images/logo.png → images/logo.png
+ * 2. HTML fallback: /a/my-app/about → about.html (if no extension)
+ * 3. Index fallback: /a/my-app/about → about/index.html
+ * 4. Filename fallback: /a/my-app/assets/logo.png → logo.png (strips path)
+ * 
+ * This supports various export patterns from different frameworks:
+ * - Next.js: _next/static/..., pages as .html files
+ * - Vite: assets/index.js, assets/index.css
+ * - Plain HTML: Direct file references
+ * 
+ * Content types auto-detected from file extension.
  */
 render.get('/:slug/*', async (c) => {
   const slug = c.req.param('slug');
