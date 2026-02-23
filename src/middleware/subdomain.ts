@@ -332,74 +332,111 @@ export async function subdomainRouter(c: Context, next: Next) {
     return c.text(html, 200, { 'Content-Type': 'text/html' });
   }
   
-  // Try to serve static file from ZIP upload
-  // Check if path has a file extension OR is an underscore-prefixed path
-  // (covers _next, _vercel, and other framework special paths)
-  const isUnderscorePath = path.startsWith('/_');
-  const fileMatch = path.match(/\.([^/]+)$/);
+  // Import AppFilesStore once for all file lookups
+  const { AppFilesStore } = await import('../lib/lmdb.js');
   
-  if (fileMatch || isUnderscorePath) {
-    // Try to get file from app files store
-    const { AppFilesStore } = await import('../lib/lmdb.js');
-    let filePath = path.slice(1); // Remove leading slash
+  // Determine if this is a static asset request
+  const isUnderscorePath = path.startsWith('/_'); // _next, _vercel, etc.
+  const hasExtension = path.match(/\.([^/]+)$/);
+  
+  // Helper to serve a file with correct content type
+  const serveFile = (content: string, filePath: string): Response | null => {
+    if (!content) return null;
     
-    // For Next.js _next paths, try as-is first
-    let file = AppFilesStore.get(app.id, filePath);
+    const ext = filePath.split('.').pop()?.toLowerCase() || '';
+    const contentTypes: Record<string, string> = {
+      'html': 'text/html',
+      'css': 'text/css',
+      'js': 'application/javascript',
+      'mjs': 'application/javascript',
+      'json': 'application/json',
+      'png': 'image/png',
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'gif': 'image/gif',
+      'svg': 'image/svg+xml',
+      'woff': 'font/woff',
+      'woff2': 'font/woff2',
+      'ttf': 'font/ttf',
+      'ico': 'image/x-icon',
+      'webp': 'image/webp',
+      'avif': 'image/avif',
+      'map': 'application/json',
+      'txt': 'text/plain',
+      'xml': 'application/xml',
+    };
+    const contentType = contentTypes[ext] || 'application/octet-stream';
     
-    // If not found and has no extension, try adding .html (Next.js static pages)
-    if (!file && !fileMatch && !isUnderscorePath) {
-      file = AppFilesStore.get(app.id, filePath + '.html');
-      if (file) filePath = filePath + '.html';
-    }
-    
-    // If still not found, try /index.html (nested routes)
-    if (!file && !fileMatch && !isUnderscorePath && !filePath.endsWith('/index.html')) {
-      file = AppFilesStore.get(app.id, filePath + '/index.html');
-      if (file) filePath = filePath + '/index.html';
-    }
-    
-    if (file) {
-      const ext = fileMatch ? fileMatch[1].toLowerCase() : path.split('.').pop() || '';
-      const contentTypes: Record<string, string> = {
-        'html': 'text/html',
-        'css': 'text/css',
-        'js': 'application/javascript',
-        'mjs': 'application/javascript',
-        'json': 'application/json',
-        'png': 'image/png',
-        'jpg': 'image/jpeg',
-        'jpeg': 'image/jpeg',
-        'gif': 'image/gif',
-        'svg': 'image/svg+xml',
-        'woff': 'font/woff',
-        'woff2': 'font/woff2',
-        'ttf': 'font/ttf',
-        'ico': 'image/x-icon',
-        'webp': 'image/webp',
-        'avif': 'image/avif',
-      };
-      const contentType = contentTypes[ext] || 'application/octet-stream';
-      
-      // Handle SVG specially - it's XML but should be image
-      if ((ext === 'svg') && (file.startsWith('<?xml') || file.includes('<svg'))) {
-        return c.text(file, 200, { 'Content-Type': 'image/svg+xml' });
-      }
-      
-      return c.text(file, 200, { 'Content-Type': contentType });
-    }
+    return c.text(content, 200, { 'Content-Type': contentType });
+  };
+  
+  // 1. Try exact path match (for assets like _next/static/..., images, etc.)
+  let filePath = path.slice(1); // Remove leading slash
+  
+  // Handle root path
+  if (!filePath || filePath === '/') {
+    filePath = 'index.html';
   }
   
-  // Check for ZIP upload - serve index.html if exists
-  const { AppFilesStore } = await import('../lib/lmdb.js');
+  let file = AppFilesStore.get(app.id, filePath);
+  
+  // 2. If path has an extension and not found, return 404 for assets
+  if (hasExtension && !file) {
+    // For underscore paths (_next, _vercel), be strict - return 404 if not found
+    if (isUnderscorePath) {
+      return c.text('Asset not found', 404);
+    }
+    // For other assets, continue to SPA fallback
+  }
+  
+  // 3. For paths without extension, try .html and /index.html (static page routes)
+  if (!file && !hasExtension) {
+    // Try path.html (e.g., /about -> about.html)
+    file = AppFilesStore.get(app.id, filePath + '.html');
+    if (file) filePath = filePath + '.html';
+  }
+  
+  if (!file && !hasExtension) {
+    // Try path/index.html (e.g., /docs/guide -> docs/guide/index.html)
+    const indexPath = filePath.endsWith('/') ? filePath + 'index.html' : filePath + '/index.html';
+    file = AppFilesStore.get(app.id, indexPath);
+    if (file) filePath = indexPath;
+  }
+  
+  // 4. If found a file, serve it
+  if (file) {
+    const response = serveFile(file, filePath);
+    if (response) return response;
+  }
+  
+  // 5. Check for ZIP upload index.html for SPA fallback
   const zipIndexHtml = AppFilesStore.get(app.id, 'index.html');
   
   if (zipIndexHtml) {
-    // Transform absolute paths for subdomain deployment (absolute paths work)
-    return c.html(zipIndexHtml);
+    // For ZIP uploads (SPAs like Nextra), serve root index.html as fallback
+    // This enables client-side routing for paths like /docs/getting-started
+    const onhyperConfig = `
+      <script>
+        window.ONHYPER = {
+          proxyBase: '/proxy',
+          appSlug: '${app.slug}',
+          appId: '${app.id}',
+          subdomain: '${app.subdomain || ''}'
+        };
+      </script>
+    `;
+    
+    let modifiedHtml = zipIndexHtml;
+    if (modifiedHtml.includes('</body>')) {
+      modifiedHtml = modifiedHtml.replace('</body>', `${onhyperConfig}</body>`);
+    } else {
+      modifiedHtml = modifiedHtml + onhyperConfig;
+    }
+    
+    return c.html(modifiedHtml);
   }
   
-  // For all other paths - serve app HTML (pushstate/SPA support)
-  // This lets the client-side router handle the route
+  // 6. Fallback to inline HTML from database (legacy apps)
   const html = renderAppHtml(app);
   return c.html(html);
 }
