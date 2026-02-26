@@ -260,7 +260,12 @@ app.route('/api/features', featuresRouter);
 // Settings routes (uses own auth - supports JWT and API key)
 app.route('/api/settings', settings);
 
-// Protected API routes
+// Admin API routes (require admin key - uses requireAdminAuth in routes)
+// Must be registered BEFORE protectedApi to avoid being caught by requireAuth
+app.route('/api/admin/features', adminFeaturesRouter);
+app.route('/api/admin/users', adminUsers);
+
+// Protected API routes (require user auth)
 const protectedApi = new Hono();
 protectedApi.use('*', requireAuth);
 protectedApi.route('/secrets', secrets);
@@ -273,10 +278,6 @@ protectedApi.route('/analytics', analytics);
 protectedApi.route('/apps/:appId/features', appFeaturesRouter);
 
 app.route('/api', protectedApi);
-
-// Admin API routes (require admin key - uses requireAdminAuth in routes)
-app.route('/api/admin/features', adminFeaturesRouter);
-app.route('/api/admin/users', adminUsers);
 
 // Proxy routes (uses own auth mechanism)
 app.route('/proxy', proxy);
