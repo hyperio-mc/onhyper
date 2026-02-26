@@ -1160,6 +1160,62 @@ h2 {
   font-size: 0.9rem;
 }
 
+/* Account Bar (User Info) */
+.account-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1.5rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.account-email {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.account-plan {
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.account-plan.plan-free { background: #e2e8f0; color: #475569; }
+.account-plan.plan-hobby { background: #dbeafe; color: #1e40af; }
+.account-plan.plan-pro { background: #d1fae5; color: #065f46; }
+.account-plan.plan-business { background: #fef3c7; color: #92400e; }
+.account-plan.plan-internal { background: #ede9fe; color: #5b21b6; }
+
+.account-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-muted);
+}
+
+.id-label {
+  font-size: 0.8rem;
+}
+
+.id-value {
+  font-family: monospace;
+  font-size: 0.8rem;
+  background: var(--bg-alt);
+  padding: 0.2rem 0.4rem;
+  border-radius: 3px;
+}
+
 /* Overview Bar (Sticky Stats Bar) */
 .overview-bar {
   display: flex;

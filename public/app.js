@@ -761,6 +761,9 @@ async function loadDashboard() {
     return;
   }
 
+  // Display account info
+  displayAccountInfo();
+
   try {
     const stats = await api('/dashboard/stats');
     document.getElementById('stat-apps').textContent = stats.appCount || 0;
@@ -781,6 +784,48 @@ async function loadDashboard() {
   } catch (err) {
     document.getElementById('stats').innerHTML = '<p>Failed to load stats</p>';
   }
+}
+
+/**
+ * Display account info in the dashboard header
+ */
+function displayAccountInfo() {
+  const emailEl = document.getElementById('account-email');
+  const planEl = document.getElementById('account-plan');
+  const userIdEl = document.getElementById('account-user-id');
+  
+  if (!currentUser) return;
+  
+  if (emailEl) {
+    emailEl.textContent = currentUser.email || 'Unknown';
+  }
+  
+  if (planEl) {
+    const plan = (currentUser.plan || 'FREE').toLowerCase();
+    planEl.textContent = currentUser.plan || 'FREE';
+    planEl.className = `account-plan badge plan-${plan}`;
+  }
+  
+  if (userIdEl) {
+    // Show truncated user ID with full ID in title
+    const userId = currentUser.id || '';
+    userIdEl.textContent = userId.length > 12 ? `${userId.slice(0, 8)}...${userId.slice(-4)}` : userId;
+    userIdEl.title = userId;
+  }
+}
+
+/**
+ * Copy user ID to clipboard
+ */
+function copyUserId() {
+  const userId = currentUser?.id;
+  if (!userId) return;
+  
+  navigator.clipboard.writeText(userId).then(() => {
+    showToast('User ID copied!');
+  }).catch(() => {
+    showToast('Failed to copy', 'error');
+  });
 }
 
 async function loadSettings() {

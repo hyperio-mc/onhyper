@@ -5,6 +5,19 @@
 </section>
 
 <section class="dashboard-shell">
+  <!-- Account info bar -->
+  <div class="account-bar">
+    <div class="account-info">
+      <span class="account-email" id="account-email">Loading...</span>
+      <span class="account-plan badge" id="account-plan">-</span>
+    </div>
+    <div class="account-id">
+      <span class="id-label">User ID:</span>
+      <code id="account-user-id" class="id-value">-</code>
+      <button onclick="copyUserId()" class="btn-icon" title="Copy user ID">📋</button>
+    </div>
+  </div>
+  
   <div class="overview-bar">
     <div class="overview-stat">
       <span class="stat-value" id="stat-apps">0</span>
