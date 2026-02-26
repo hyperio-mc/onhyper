@@ -3,6 +3,9 @@
     <div class="home-hero-copy">
       <span class="home-pill">New: Upload a ZIP, get yourapp.onhyper.io</span>
       <h1>Ship Apps with Agents</h1>
+      <p class="home-stats" id="home-stats">
+        <span id="stats-apps"><strong>--</strong> apps published</span>
+      </p>
       <p>
         OnHyper is the fastest path for AI-generated apps to go live. Upload a ZIP file,
         get a clean subdomain URL like <code>myapp.onhyper.io</code>, and your secrets stay
@@ -94,4 +97,27 @@
     </p>
     <p class="copyright">© 2026 OnHyper</p>
   </footer>
+
+  <script>
+    // Fetch and display platform stats
+    (async function loadStats() {
+      try {
+        const response = await fetch('/api/stats');
+        if (!response.ok) throw new Error('Failed to load stats');
+        const data = await response.json();
+        
+        const statsEl = document.getElementById('stats-apps');
+        if (statsEl && typeof data.published === 'number') {
+          statsEl.innerHTML = '<strong>' + data.published.toLocaleString() + '</strong> apps published';
+        }
+      } catch (err) {
+        // Graceful fallback: hide stats section on error
+        console.log('Stats unavailable:', err.message);
+        const statsContainer = document.getElementById('home-stats');
+        if (statsContainer) {
+          statsContainer.style.display = 'none';
+        }
+      }
+    })();
+  </script>
 </div>

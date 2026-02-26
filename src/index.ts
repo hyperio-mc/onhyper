@@ -31,6 +31,7 @@ import { settings } from './routes/settings.js';
 import { audit } from './routes/audit.js';
 import { featuresRouter, adminFeaturesRouter, appFeaturesRouter } from './routes/features.js';
 import { analytics } from './routes/analytics.js';
+import { stats } from './routes/stats.js';
 import { requireAuth, requireAdminAuth } from './middleware/auth.js';
 import { updateUserPlan } from './lib/users.js';
 import { getDatabase } from './lib/db.js';
@@ -241,6 +242,9 @@ app.route('/api/auth', auth);
 
 // Blog routes (public)
 app.route('/api/blog', blog);
+
+// Stats route (public)
+app.route('/api/stats', stats);
 
 // Chat routes (public - anonymous support chat)
 app.route('/api/chat', chat);
