@@ -330,8 +330,10 @@ auth.put('/password', requireAuth, validateBody(authSchemas.changePassword), asy
     
     // Map specific errors to status codes
     if (message.includes('incorrect')) {
-      return c.json({ error: 'Token validation failed' }, 401);
+      return c.json({ error: 'Current password is incorrect' }, 401);
     }
+    
+    return c.json({ error: message }, 500);
   }
 });
 

@@ -17,6 +17,7 @@ import {
   listApiKeysByUser,
   deleteApiKey,
   deleteUserAccount,
+  changeUserPassword,
 } from './users.js';
 import { initDatabase, closeDatabase, getDatabase, enableTestMode, resetDatabase } from './db.js';
 import { initLMDB, closeLMDB } from './lmdb.js';
@@ -415,6 +416,55 @@ describe('users', () => {
       // user2 should be deleted
       expect(getUserById(user2.id)).toBeNull();
       expect(listApiKeysByUser(user2.id)).toHaveLength(0);
+    });
+  });
+
+  describe('changeUserPassword', () => {
+    it('should change password successfully', async () => {
+      const user = await createUser('change-pw@example.com', 'oldpassword123');
+      
+      // Change password
+      const result = await changeUserPassword(user.id, 'oldpassword123', 'newpassword456');
+      expect(result).toBe(true);
+      
+      // Should be able to authenticate with new password
+      const authResult = await authenticateUser('change-pw@example.com', 'newpassword456');
+      expect(authResult).not.toBeNull();
+      expect(authResult?.id).toBe(user.id);
+      
+      // Old password should no longer work
+      const oldAuthResult = await authenticateUser('change-pw@example.com', 'oldpassword123');
+      expect(oldAuthResult).toBeNull();
+    });
+
+    it('should throw error for incorrect current password', async () => {
+      const user = await createUser('wrong-pw@example.com', 'correctpassword');
+      
+      await expect(
+        changeUserPassword(user.id, 'wrongpassword', 'newpassword123')
+      ).rejects.toThrow('Current password is incorrect');
+    });
+
+    it('should throw error for non-existent user', async () => {
+      await expect(
+        changeUserPassword('non-existent-id', 'oldpassword', 'newpassword123')
+      ).rejects.toThrow('User not found');
+    });
+
+    it('should throw error for new password too short', async () => {
+      const user = await createUser('short-pw@example.com', 'oldpassword123');
+      
+      await expect(
+        changeUserPassword(user.id, 'oldpassword123', 'short')
+      ).rejects.toThrow('New password must be at least');
+    });
+
+    it('should throw error when new password is same as current', async () => {
+      const user = await createUser('same-pw@example.com', 'samepassword123');
+      
+      await expect(
+        changeUserPassword(user.id, 'samepassword123', 'samepassword123')
+      ).rejects.toThrow('New password must be different from current password');
     });
   });
 });

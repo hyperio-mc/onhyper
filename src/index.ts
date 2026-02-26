@@ -32,9 +32,8 @@ import { audit } from './routes/audit.js';
 import { featuresRouter, adminFeaturesRouter, appFeaturesRouter } from './routes/features.js';
 import { analytics } from './routes/analytics.js';
 import { stats } from './routes/stats.js';
-import { requireAuth, requireAdminAuth } from './middleware/auth.js';
-import { updateUserPlan } from './lib/users.js';
-import { getDatabase } from './lib/db.js';
+import { adminUsers } from './routes/admin-users.js';
+import { requireAuth } from './middleware/auth.js';
 import { rateLimit } from './middleware/rateLimit.js';
 import { subdomainRouter } from './middleware/subdomain.js';
 import { readFileSync, existsSync } from 'fs';
@@ -276,39 +275,8 @@ protectedApi.route('/apps/:appId/features', appFeaturesRouter);
 app.route('/api', protectedApi);
 
 // Admin API routes (require admin key - uses requireAdminAuth in routes)
-
-// Admin API routes (require admin key - uses requireAdminAuth in routes)
 app.route('/api/admin/features', adminFeaturesRouter);
-
-// Admin routes (users, migration, status)
-
-// Admin endpoint to upgrade user plan (requires master key)
-app.patch('/api/admin/users/:userId/plan', requireAdminAuth, async (c) => {
-  const userId = c.req.param('userId');
-  const { plan } = await c.req.json();
-  
-  if (!plan || !['FREE', 'HOBBY', 'PRO', 'BUSINESS'].includes(plan)) {
-    return c.json({ error: 'Invalid plan' }, 400);
-  }
-  
-  updateUserPlan(userId, plan);
-  return c.json({ success: true, userId, plan });
-});
-
-// Simple endpoint to upgrade creator@hyper.io (no auth for now)
-app.post('/api/debug/upgrade-creator-v2', async (c) => {
-  const { plan } = await c.req.json();
-  
-  if (!plan || !['FREE', 'HOBBY', 'PRO', 'BUSINESS'].includes(plan)) {
-    return c.json({ error: 'Invalid plan' }, 400);
-  }
-  
-  const db = getDatabase();
-  const result = db.prepare('UPDATE users SET plan = ?, updated_at = ? WHERE email = ?')
-    .run(plan, new Date().toISOString(), 'creator@hyper.io');
-  
-  return c.json({ success: true, updated: result.changes });
-});
+app.route('/api/admin/users', adminUsers);
 
 // Proxy routes (uses own auth mechanism)
 app.route('/proxy', proxy);

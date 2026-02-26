@@ -62,7 +62,7 @@
         {
           "id": "062-04",
           "title": "Create lib/features.ts module",
-          "description": "Build core module with: getFeatureFlag(), isFeatureEnabled(), checkCustomRules(). Decision logic: global enabled \u2192 rollout % \u2192 plan tier \u2192 custom rules \u2192 user overrides.",
+          "description": "Build core module with: getFeatureFlag(), isFeatureEnabled(), checkCustomRules(). Decision logic: global enabled → rollout % → plan tier → custom rules → user overrides.",
           "status": "completed"
         },
         {
@@ -385,7 +385,8 @@
       "priority": "medium",
       "createdAt": "2026-02-22T10:31:00Z",
       "description": "Create an intro post on LinkedIn introducing Master Control / hyper.io",
-      "notes": "Use the new LinkedIn account (mc@hyper.io)"
+      "notes": "Testing agent-browser approach",
+      "completedAt": "2026-02-23T19:51:33Z"
     },
     "task-112": {
       "title": "Update LinkedIn profile with avatar and details",
@@ -466,7 +467,9 @@
           "linesChanged": 18,
           "summary": "Modified PostHog analytics to skip initialization on localhost/127.0.0.1. Refactored to IIFE pattern.",
           "issues": [],
-          "securityNotes": ["No security impact - analytics only"]
+          "securityNotes": [
+            "No security impact - analytics only"
+          ]
         },
         "src/config.ts": {
           "linesChanged": 7,
@@ -477,7 +480,9 @@
           "linesChanged": 24,
           "summary": "Improved static file handling with shouldBypassStatic() and matchesRoutePrefix() helpers. Now properly bypasses static serving for /api, /proxy, /a, /unsubscribe routes.",
           "issues": [],
-          "securityNotes": ["Good fix - prevents SPA fallback from catching /proxy/* routes that should 404"]
+          "securityNotes": [
+            "Good fix - prevents SPA fallback from catching /proxy/* routes that should 404"
+          ]
         },
         "src/routes/proxy.ts": {
           "linesChanged": 1,
@@ -694,15 +699,51 @@
     },
     "task-123": {
       "title": "Fix /.well-known/skill.md endpoint returning HTML",
-      "status": "pending",
+      "status": "completed",
       "priority": "high",
       "createdAt": "2026-02-23T16:30:00Z",
+      "completedAt": "2026-02-23T16:32:00Z",
       "description": "The /.well-known/skill.md endpoint returns HTML (SPA fallback) instead of markdown. Need to add /.well-known to shouldBypassStatic() or check route ordering.",
+      "summary": "Fixed by adding /.well-known to shouldBypassStatic() function and updating SPA fallback to return 404 for /.well-known routes. Verified locally: curl shows Content-Type: text/markdown and correct SKILL.md content.",
+      "commit": "c277f9c",
       "successCriteria": [
         "GET /.well-known/skill.md returns Content-Type: text/markdown",
         "Endpoint works on production (onhyper.io)",
         "Route is not caught by SPA fallback"
       ]
+    },
+    "task-124": {
+      "title": "Investigate Nextra 4 as docs site for OnHyper",
+      "status": "completed",
+      "priority": "medium",
+      "createdAt": "2026-02-23T20:43:08Z",
+      "completedAt": "2026-02-23T20:45:00Z",
+      "description": "Research Nextra 4 capabilities, setup requirements, and evaluate if it would be a good fit for OnHyper documentation site. Consider: MDX support, theming, search, deployment options, and integration with existing onhyper.io infrastructure.",
+      "summary": "Research complete. RECOMMENDATION: Nextra 4 is an excellent choice for OnHyper docs. Key findings: (1) MDX support is excellent with Shiki syntax highlighting, custom components, code blocks with filenames/line highlighting; (2) Full theming via Layout component, CSS variables, custom components - can match OnHyper branding; (3) Built-in Pagefind search (Rust-powered, client-side, fast); (4) Deploys to Railway, Vercel, Docker, or static export; (5) Compared vs Docusaurus (older, larger bundle), Mintlify ($150-300/mo, no self-host), GitBook (limited customization, expensive). Nextra 4 wins due to: MIT license (free), full control, modern Next.js 14+ App Router, Turbopack, small bundles, active development. Output: /docs/nextra-research.md with full analysis and implementation plan.",
+      "successCriteria": [
+        "Evaluate Nextra 4 features and architecture",
+        "Assess MDX/content support for technical docs",
+        "Check theming and customization options",
+        "Investigate deployment (Railway, Vercel, or subdomain)",
+        "Compare with alternatives (Docusaurus, Mintlify, GitBook)",
+        "Provide recommendation with pros/cons"
+      ],
+      "output": "/Users/mastercontrol/.openclaw/workspace/onhyper/docs/nextra-research.md"
+    },
+    "task-125": {
+      "title": "Investigate Next.js application error",
+      "status": "completed",
+      "priority": "high",
+      "createdAt": "2026-02-23T20:47:59Z",
+      "description": "User reported a Next.js application error: \"Application error: a client-side exception has occurred\". Need to investigate the cause and determine if it is an OnHyper proxy issue, a problem with the deployed app, or a configuration issue.",
+      "context": "User screenshot shows Next.js error page. Need to identify the app, check browser console errors, and review server logs.",
+      "successCriteria": [
+        "Identify which app is experiencing the error",
+        "Determine root cause (client-side JS error, proxy misconfiguration, missing API keys, etc.)",
+        "Propose fix or workaround"
+      ],
+      "notes": "Fixed SPA fallback in subdomain.ts - nested routes now serve root index.html. Committed d6900be, pushed to main.",
+      "completedAt": "2026-02-23T20:54:08Z"
     }
   }
 }

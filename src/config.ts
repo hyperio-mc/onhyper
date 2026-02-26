@@ -274,6 +274,7 @@ export const config = {
     HOBBY: { requestsPerDay: 3000, maxApps: 10, maxSecrets: 20 },
     PRO: { requestsPerDay: 10000, maxApps: 50, maxSecrets: 50 },
     BUSINESS: { requestsPerDay: 100000, maxApps: -1, maxSecrets: -1 }, // -1 = unlimited
+    INTERNAL: { requestsPerDay: -1, maxApps: -1, maxSecrets: -1 }, // Unlimited for internal use
   },
 } as const;
 
@@ -341,6 +342,7 @@ export const PLAN_TIERS = {
   HOBBY: 1,
   PRO: 2,
   BUSINESS: 3,
+  INTERNAL: 4, // Highest tier - for internal/team use
 } as const;
 
 export type PlanTier = keyof typeof PLAN_TIERS;
@@ -348,7 +350,7 @@ export type PlanTier = keyof typeof PLAN_TIERS;
 /**
  * Array of plan tier names in order
  */
-export const PLAN_TIER_NAMES: PlanTier[] = ['FREE', 'HOBBY', 'PRO', 'BUSINESS'];
+export const PLAN_TIER_NAMES: PlanTier[] = ['FREE', 'HOBBY', 'PRO', 'BUSINESS', 'INTERNAL'];
 
 /**
  * Get the numeric tier value for a plan name

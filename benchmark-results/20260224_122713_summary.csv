@@ -1,0 +1,13 @@
+endpoint,requests_per_sec,mean_latency_ms,p50_ms,p95_ms,p99_ms,failed_requests
+api_info,20874.65,0.479,0,1,1,0
+api_status,19082.88,0.524,1,1,1,0
+chat_status,24443.30,0.409,0,1,1,0
+clerk_info,24743.29,0.404,0,1,1,0
+features,22681.39,0.441,0,1,1,0
+health,11677.88,0.856,1,1,4,100
+homepage,21341.53,0.469,0,1,1,0
+proxy_info,25288.29,0.395,0,0,1,0
+subdomain_check,23744.51,0.421,0,1,1,0
+waitlist_stats,22980.58,0.435,0,1,1,0
+wellknown_skill,22394.41,0.447,0,1,1,0
+workos_info,24291.30,0.412,0,1,1,0
