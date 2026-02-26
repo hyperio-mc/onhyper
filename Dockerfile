@@ -1,5 +1,6 @@
 # OnHyper.io - Single-Server Deployment
 # Plain HTML/JS/CSS frontend served by Hono backend
+# v2 - admin API update
 
 FROM node:20-bookworm-slim
 
