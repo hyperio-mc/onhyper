@@ -906,15 +906,46 @@ apps.post('/:id/zip', async (c) => {
     const zip = new AdmZip(buffer);
     const entries = zip.getEntries();
     
-    // Find root folder (common prefix), but skip underscore-prefixed folders
-    // (like _next, _vercel) as they are framework-specific and should be preserved
+    // Find root folder (common prefix), but only strip build output folders
+    // Preserves common asset directories like assets/, static/, images/
+    const PRESERVE_FOLDERS = new Set(['assets', 'static', 'images', 'img', 'fonts', 'css', 'js', 'media', 'icons', 'svg']);
+    const STRIP_FOLDERS = new Set(['dist', 'out', 'build', 'public', 'www']);
+    
     let rootFolder: string | null = null;
+    
+    // First, check for common build output folders
     for (const entry of entries) {
       if (!entry.isDirectory && !entry.entryName.includes('__MACOSX') && !entry.entryName.startsWith('.')) {
         const parts = entry.entryName.split('/');
-        // Only use as root if it doesn't start with underscore AND isn't a Next.js special folder
-        if (parts.length > 1 && !rootFolder && !parts[0].startsWith('_') && parts[0] !== '404') {
+        if (parts.length > 1) {
+          const firstFolder = parts[0];
+          // Check if it's a known strip folder
+          if (STRIP_FOLDERS.has(firstFolder)) {
+            rootFolder = firstFolder;
+            break;
+          }
+        }
+      }
+    }
+    
+    // If no known strip folder, check if first folder contains index.html at root
+    if (!rootFolder) {
+      const firstFolders = new Set<string>();
+      for (const entry of entries) {
+        if (!entry.isDirectory && !entry.entryName.includes('__MACOSX') && !entry.entryName.startsWith('.')) {
+          const parts = entry.entryName.split('/');
+          if (parts.length > 1 && !parts[0].startsWith('_') && !PRESERVE_FOLDERS.has(parts[0])) {
+            firstFolders.add(parts[0]);
+          }
+        }
+      }
+      // Check if any first folder has index.html inside it (e.g., myapp/index.html)
+      for (const entry of entries) {
+        const parts = entry.entryName.split('/');
+        if (parts.length === 2 && parts[1] === 'index.html' && firstFolders.has(parts[0])) {
+          // This folder has index.html at root, so it's likely a build output
           rootFolder = parts[0];
+          break;
         }
       }
     }
