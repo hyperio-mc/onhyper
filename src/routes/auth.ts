@@ -377,7 +377,7 @@ auth.post('/forgot-password', strictRateLimit, validateBody(authSchemas.forgotPa
         console.error('[AUTH] Failed to send password reset email:', emailResult.error);
       }
     } else {
-      console.log(`[AUTH] Email not configured - password reset token for ${email}: ${result.token}`);
+      console.log(`[AUTH] Email not configured - password reset requested for ${email}`);
     }
     
     // Track password reset request
