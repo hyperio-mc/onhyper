@@ -329,6 +329,11 @@ export const PROXY_ENDPOINTS = {
     secretKey: 'OPENAI_API_KEY',
     description: 'OpenAI API',
   },
+  'elevenlabs': {
+    target: 'https://api.elevenlabs.io/v1',
+    secretKey: 'ELEVENLABS_API_KEY',
+    description: 'ElevenLabs Text-to-Speech API. Example: POST /proxy/elevenlabs/text-to-speech/{voice_id}',
+  },
 } as const;
 
 export type ProxyEndpointName = keyof typeof PROXY_ENDPOINTS;

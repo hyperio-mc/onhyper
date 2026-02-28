@@ -132,6 +132,9 @@ function buildAuthHeader(endpoint: keyof typeof PROXY_ENDPOINTS, apiKey: string)
   switch (endpoint) {
     case 'anthropic':
       return { header: 'x-api-key', value: apiKey };
+    case 'elevenlabs':
+      // ElevenLabs uses xi-api-key header
+      return { header: 'xi-api-key', value: apiKey };
     case 'onhyper':
       // OnHyper uses X-API-Key header for its own API
       return { header: 'X-API-Key', value: apiKey };
