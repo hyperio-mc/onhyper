@@ -27,4 +27,5 @@ Thumbs.db
 npm-debug.log*
 
 # Testing
-coverage/
+coverage/.db
+*.db
