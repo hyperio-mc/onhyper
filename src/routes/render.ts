@@ -432,97 +432,63 @@ render.get('/:slug', async (c) => {
   const css = content?.css || app.css || '';
   const js = content?.js || app.js || '';
   
-  // Check if HTML is a full document (has DOCTYPE or html tag)
-  // If so, serve it directly without wrapping (for ZIP uploads)
-  const isFullDocument = html.trim().toLowerCase().startsWith('<!doctype') || 
-                         html.trim().toLowerCase().startsWith('<html');
+  // Check if HTML is a full document (has DOCTYPE, html tag, or body tags)
+  // More lenient detection to avoid wrapping complete documents
+  const normalizedHtml = html.trim().toLowerCase();
+  const isFullDocument = 
+    normalizedHtml.startsWith('<!doctype') ||
+    normalizedHtml.startsWith('<html') ||
+    normalizedHtml.includes('<html ') ||
+    normalizedHtml.includes('</html>') ||
+    normalizedHtml.includes('</body>');
   
-  if (isFullDocument) {
-    // Inject ONHYPER config into full document
-    const onhyperConfig = `
-      <script>
-        window.ONHYPER = {
-          proxyBase: '/proxy',
-          appSlug: '${escapeJs(app.slug)}',
-          appId: '${escapeJs(app.id)}'
-        };
-      </script>
-    `;
-    
-    // Transform absolute paths to relative for sub-path deployment
-    // Uses lookbehind to find / right after href=" or src="
-    // Negative lookahead ensures we don't match:
-    //   - // (protocol-relative URLs like //cdn.example.com)
-    //   - /. (paths like /./ or /../ which are already relative-ish)
-    //   - /a/ /api/ /proxy/ (OnHyper system routes that must stay absolute)
-    // Note: We DO transform /_next/ and /_vercel/ paths because they need
-    // to be relative when the app is deployed at /a/{slug}/
-    function toRelative(html: string): string {
-      return html
-        .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './')
-        .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './');
-    }
-    
-    let transformedHtml = toRelative(html);
-    
-    // Inject before </body> or at end of document
-    let modifiedHtml = transformedHtml;
-    if (transformedHtml.includes('</body>')) {
-      modifiedHtml = transformedHtml.replace('</body>', `${onhyperConfig}</body>`);
-    } else {
-      modifiedHtml = transformedHtml + onhyperConfig;
-    }
-    
-    // Set security headers
-    setSecurityHeaders(c);
-    return c.html(modifiedHtml, 200);
+  // ONHYPER config to inject
+  const onhyperConfig = `
+    <script>
+      window.ONHYPER = {
+        proxyBase: '/proxy',
+        appSlug: '${escapeJs(app.slug)}',
+        appId: '${escapeJs(app.id)}'
+      };
+    </script>
+  `;
+  
+  // Transform absolute paths to relative for sub-path deployment
+  function toRelative(html: string): string {
+    return html
+      .replace(/(?<=href=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './')
+      .replace(/(?<=src=")\/(?!\/|\.|a\/|api\/|proxy\/)/g, './');
   }
   
-  // Escape user-controlled values for safe interpolation
-  const escapedAppName = escapeHtml(app.name);
-  const escapedAppSlug = escapeJs(app.slug);
-  const escapedAppId = escapeJs(app.id);
+  if (isFullDocument) {
+    // Full HTML document - inject ONHYPER config and serve as-is
+    let transformedHtml = toRelative(html);
+    
+    // Inject before </body> or at end
+    if (transformedHtml.includes('</body>')) {
+      transformedHtml = transformedHtml.replace('</body>', `${onhyperConfig}</body>`);
+    } else if (transformedHtml.includes('</html>')) {
+      transformedHtml = transformedHtml.replace('</html>', `${onhyperConfig}</html>`);
+    } else {
+      transformedHtml = transformedHtml + onhyperConfig;
+    }
+    
+    setSecurityHeaders(c);
+    return c.html(transformedHtml, 200);
+  }
   
-  // Render the app with injected styles and scripts
-  const renderedHtml = `
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-      <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>${escapedAppName} | OnHyper.io</title>
-      <style>
-        /* Base reset */
-        *, *::before, *::after { box-sizing: border-box; }
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif; }
-        
-        /* User CSS */
-        ${css}
-      </style>
-    </head>
-    <body>
-      ${html}
-      
-      <!-- Proxy base URL for API calls -->
-      <script>
-        // Configure proxy base
-        window.ONHYPER = {
-          proxyBase: '/proxy',
-          appSlug: '${escapedAppSlug}',
-          appId: '${escapedAppId}'
-        };
-      </script>
-      
-      <!-- User JS -->
-      <script>${js}</script>
-    </body>
-    </html>
-  `;
+  // For fragments, serve HTML directly without wrapper template
+  // This allows agents to publish HTML/JS/CSS that works as-is
+  // CSS and JS can be referenced via /a/:slug/css and /a/:slug/js endpoints
+  let fragmentHtml = toRelative(html);
+  
+  // Just append ONHYPER config to the fragment
+  fragmentHtml = fragmentHtml + onhyperConfig;
   
   // Set security headers
   setSecurityHeaders(c);
   
-  return c.html(renderedHtml);
+  return c.html(fragmentHtml);
 });
 
 /**
