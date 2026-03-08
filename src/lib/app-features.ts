@@ -133,7 +133,7 @@ export function createAppFeatureFlag(
   
   const now = new Date().toISOString();
   
-  const result = db.prepare(`
+  db.prepare(`
     INSERT INTO app_feature_flags (app_id, name, value, description, created_at, updated_at)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(appId, params.name, params.value, params.description || null, now, now);

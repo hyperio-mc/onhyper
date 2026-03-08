@@ -90,7 +90,6 @@ import { Hono } from 'hono';
 import { createUser, authenticateUser, generateToken, verifyToken, getUserById, changeUserPassword, resetUserPassword, createPasswordResetToken, validatePasswordResetToken, deletePasswordResetToken } from '../lib/users.js';
 import { strictRateLimit } from '../middleware/rateLimit.js';
 import { requireAuth } from '../middleware/auth.js';
-import { config } from '../config.js';
 import { identifyServerUser, trackServerEvent } from '../lib/analytics.js';
 import { sendWelcomeEmail, sendPasswordResetEmail, isEmailConfigured } from '../lib/email.js';
 import { logAuditEvent } from '../lib/db.js';
@@ -391,7 +390,6 @@ auth.post('/forgot-password', strictRateLimit, validateBody(authSchemas.forgotPa
     });
     
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to process request';
     // Don't reveal internal errors
     return c.json({ 
       success: true, 

@@ -46,14 +46,10 @@ import {
 } from '../lib/features.js';
 import {
   createAppFeatureFlag,
-  getAppFeatureFlag,
   getAppFeatureFlags,
-  getPublicAppFeatureFlags,
   updateAppFeatureFlag,
   deleteAppFeatureFlag,
   getAppFeatureFlagsAsObject,
-  CreateAppFeatureFlagParams,
-  UpdateAppFeatureFlagParams,
 } from '../lib/app-features.js';
 import { getAuthUser, requireAdminAuth } from '../middleware/auth.js';
 import { getUserById } from '../lib/users.js';

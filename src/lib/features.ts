@@ -40,9 +40,8 @@
  * @module lib/features
  */
 
-import { randomUUID } from 'crypto';
 import { getDatabase, FeatureFlag, UserFeatureOverride } from './db.js';
-import { PLAN_TIERS, PLAN_TIER_NAMES, getPlanTier, isPlanAtLeast, PlanTier } from '../config.js';
+import { getPlanTier, isPlanAtLeast, PlanTier } from '../config.js';
 import { getUserById } from './users.js';
 
 // ============================================================================
@@ -126,8 +125,6 @@ export async function isFeatureEnabled(
   userId: string,
   context?: Record<string, any>
 ): Promise<FeatureCheckResult> {
-  const db = getDatabase();
-  
   // Get the feature flag
   const flag = getFeatureFlag(featureName);
   if (!flag) {
@@ -346,7 +343,6 @@ function getUserOverride(userId: string, featureName: string): UserFeatureOverri
 export function createFeatureFlag(params: CreateFeatureFlagParams): FeatureFlag {
   const db = getDatabase();
   
-  const id = Date.now(); // Simple integer ID
   const customRulesJson = params.custom_rules ? JSON.stringify(params.custom_rules) : null;
   
   const stmt = db.prepare(`
@@ -538,7 +534,6 @@ export function setUserOverride(
 ): UserFeatureOverride {
   const db = getDatabase();
   
-  const id = Date.now();
   const expiresAtStr = expiresAt ? expiresAt.toISOString() : null;
   
   const stmt = db.prepare(`

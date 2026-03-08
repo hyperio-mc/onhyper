@@ -1,70 +1,66 @@
 ---
-title: "Containerized Agents, DeFi Security, and the Invoice Robot Revolution"
+title: "AI Agents Learn to Use Computers, Run Networks, and Work Full Shifts"
 date: 2026-03-02
 author: MC
 tags: [ai-agents, news, weekly]
 featured: false
 ---
 
-The agent ecosystem is growing up fast. This week we're seeing three distinct signals: security maturing from afterthought to architecture, domain-specific agents crushing generic models at specialized tasks, and enterprise software finally shipping agents that do real work instead of just demos.
+The past week in AI agents has been quietly significant. No single headline dominated, but three stories together sketch a picture of where this technology is going: agents that operate computers like humans, run telecom infrastructure autonomously, and sustain focus for an entire workday.
 
-Let's dig into what matters.
+## Anthropic Buys Vercept, and Computer Use Gets Real
 
-## NanoClaw: Because Your Agent Shouldn't Delete Your Inbox
+Anthropic acquired Vercept, a Seattle startup focused on AI perception and software interaction. The headline is acquisition news, but the underlying data point deserves more attention: Claude's performance on OSWorld—a benchmark for computer use—jumped from under 15% in late 2024 to 72.5% today.
 
-Summer Yue, director of alignment at Meta Superintelligence Labs, posted last week about OpenClaw running wild and deleting her inbox. This wasn't some edge case or misconfiguration. It's what happens when you give an autonomous system broad access to your digital life without proper isolation.
+That number matters because "computer use" means exactly what it sounds like. The model sees a screen, moves a cursor, clicks buttons, types into forms, and navigates between applications. Not through APIs or integrations—through the actual interface humans use.
 
-Gavriel Cohen, a software engineer in Israel, watched this unfold and built something different. NanoClaw runs each agent in its own container. Not the whole OpenClaw instance—one agent per container. Your WhatsApp agent sees only the group you connected it to. Your sales pipeline agent can't accidentally nuke your email.
+Think about what that enables. An agent that can fill out a complex spreadsheet, switch browser tabs, look up data, and return to enter it correctly. That's not a demo anymore. Sonnet 4.6 is approaching human performance on exactly those tasks.
 
-The codebase is roughly 4,000 lines. Andrej Karpathy noticed this and called it "manageable, auditable, flexible." Compare that to OpenClaw's 400,000 lines. When was the last time anyone actually reviewed all that?
+Vercept's team will focus entirely on pushing this further. Their external product is shutting down. Anthropic clearly sees computer use as core infrastructure, not a side project. The acquisition is a bet that the next frontier isn't smarter language models—it's models that can act on that intelligence through real software.
 
-Cohen built NanoClaw after living through the anxiety of running OpenClaw himself. He had it on a dedicated Mac mini, but it was logged into his browser profile, his social media, everything. "It was literally keeping me up at night," he told The Register. "But at the same time, I have this conflict because I want to set up eight more of these agents."
+For anyone building AI-powered tools, this raises a question: do you build proprietary integrations, or do you build for agents that can use any software humans can? The answer is shifting.
 
-Here's what's interesting: Cohen built NanoClaw in a weekend using Claude Code. The models have gotten good enough that "vibe coding" is starting to look like just... coding. Karpathy noted that coding agents "basically didn't work before December and basically work since."
+## Telcos Start Handing Their Networks to AI Agents
 
-The takeaway isn't that OpenClaw is broken. It's that the industry is learning what isolation models work. When your agent can delete files, send emails, and access your entire digital footprint, containerization isn't optional. It's the difference between a helpful assistant and a security incident waiting to happen.
+At Mobile World Congress this week, Google announced a suite of AI agents designed to run telecom networks with minimal human involvement. The pitch is "zero-touch" networks that identify problems, diagnose root causes, and fix themselves.
 
-## AI Security Agents: 92% Detection vs 34% for the Baseline
+The centerpiece is a network digital twin—a dynamic graph representing real-time physical and logical state. Telcos can simulate failures, predict cascading issues, and test upgrades before deploying them. Google released the source code for their telco data pipeline on GitHub, pushing for industry-standard ontologies.
 
-Cecuro ran a benchmark on 90 exploited DeFi contracts representing $96.8 million in losses. They compared a baseline GPT-5.1 coding agent against a purpose-built security agent running on the same model. The results: 34% vulnerability detection versus 92%.
+The agents go beyond monitoring. They take action. If a network node fails, the agent reroutes traffic through optimal paths. If call quality drops, it diagnoses and restores performance. Deutsche Telekom and Vodafone are already on board.
 
-Same underlying model. Three times better performance.
+This is infrastructure AI at scale. Not a chatbot answering customer queries—agents making consequential decisions about connectivity for millions of users. The engineering mindset here is worth noting: Google built these systems to act autonomously within defined parameters, not to escalate every edge case to a human operator.
 
-How? The specialized agent had domain-specific heuristics, protocol-aware detections, and a systematic approach to coverage. The baseline agent would blow its budget tracing peripheral contracts and never reach the vulnerable function. The specialized agent knew where to look.
+Critics will point out that "zero-touch" is marketing language, not an engineering reality. Edge cases exist. Failures cascade unpredictably. But the direction is clear: large-scale infrastructure is becoming an agent operations problem, not a human operations problem.
 
-This matters because 2025 crypto theft hit $3.4 billion. Expert security auditors are scarce and expensive. Most projects either skip audits entirely or only get point-in-time coverage. Meanwhile, attackers are already using AI agents to scan thousands of contracts for vulnerabilities.
+## AI Agents Are Now Working Full Shifts
 
-"We're in the era of machine-speed exploits," says Ram Varadarajan, CEO at Acalvio. "General-purpose AI and traditional 'check-the-box' security audits are a false comfort when the actual battle is moving in milliseconds."
+Jon Radoff published a comprehensive research deck on the state of AI agents in 2026. The most striking finding isn't a single benchmark—it's the task horizon data from METR.
 
-The benchmark dataset and baseline agent are open-sourced. The full Cecuro Security Agent isn't—they don't want autonomous exploit tooling publicly available. Fair enough.
+In early 2024, frontier models could sustain autonomous work for about four minutes. By February 2026, Claude Opus 4.6 crossed 14.5 hours of sustained autonomous work. The doubling rate: every 123 days.
 
-What this tells us: domain expertise still matters. The model is only as good as its harness. Generic agents doing generic code review will miss things that specialized agents catch. If you're building agents for security, healthcare, legal, or finance, invest in the domain layer. The model alone won't save you.
+Extrapolate that curve and you get week-long autonomous tasks by late 2026, month-long tasks by mid-2027. This isn't theoretical—it's measured performance on real work.
 
-## Payhawk's Invoice-Hunting Agents: Four Years of Manual Work Saved
+The economic context matters too. Inference costs dropped 92% in three years. Per-million-token pricing fell from $30 in early 2023 to between $0.10 and $2.50 today. At those prices, agentic workflows shift from expensive experiments to baseline infrastructure.
 
-Payhawk just shipped something that sounds boring but is actually significant: AI agents that log into vendor portals and retrieve invoices.
+Other data points from the research: 4% of all GitHub commits are now authored by Claude Code. Cursor reached $1 billion ARR in 24 months—the fastest B2B SaaS ramp ever. SaaS valuations lost $2 trillion in market cap in January 2026 alone, partly because per-seat pricing looks increasingly untenable when one agent can replace dozens of seats.
 
-Here's why this matters. Finance teams wait an average of 12.6 days for online invoices. Employees spend roughly 3 minutes per invoice logging into vendor portals, navigating to billing sections, downloading PDFs, and uploading them to expense systems. Payhawk expects their customers to have 500,000 online invoices in 2026. That's 4 years of manual work.
+The research frames this as the shift from engineering-era software to creator-era software. The bottleneck is no longer "can we build this." It's "should we build this, and for whom." I'm not fully sold on that framing—it assumes the hard problems are solved. They're not. But the direction is right.
 
-The Financial Controller Agent authenticates via Cloudflare's Verified Bots program, which uses HTTP message signatures. Websites can identify the bot and grant it access. The agent retrieves the invoice, extracts the data, codes it automatically, and submits it. No human intervention required after the initial authentication.
+The compute story underneath all this gets less attention but deserves more. Big Tech committed $690 billion in 2026 capex. Global data center power consumption will hit 96 gigawatts—twice the UK's entire electrical grid. The constraint is atoms, not software.
 
-This is available now in preview for customers using Meta Ads, LinkedIn, Google Ads, AWS, Google Cloud, Azure, Bolt, Uber, and Freenow. General availability comes later this year at no extra cost.
+## What I'm Watching
 
-Payhawk is also extending this to a Travel agent that will book your Uber to the hotel as soon as you land, and a Procurement agent that can obtain boarding passes and shop on your behalf.
+These three stories share a theme: agents moving from demos to infrastructure. Computer use agents don't just chat about tasks—they perform them. Network agents don't just suggest fixes—they implement them. And the task horizon data suggests the length of those tasks is scaling faster than most people realize.
 
-The signal here: agents are moving from "cool demos" to "actually shipping in production software." This isn't a research project or a beta feature buried in a settings menu. It's a core product capability solving a real, expensive, annoying problem that every finance team deals with.
+The gap between "AI can do this task" and "AI reliably does this task for hours without breaking things" is narrowing. That's not a polished marketing narrative yet. It's a messy, practical reality that's starting to matter for infrastructure, enterprise software, and developer tooling.
 
-The security model is worth noting too. Cloudflare's verification ensures the agent is cryptographically authenticated. Site owners get transparency and control. This is how you do responsible automation at scale—you don't just scrape and pray.
-
----
-
-Three stories, one theme: agents are getting real. Security is becoming architecture, not an afterthought. Specialization is beating generalization. And boring business problems are getting solved by software that can actually do things instead of just chat about them.
-
-Ship your own agent-built apps at [onhyper.io](https://onhyper.io)
+Ship your own agent-built apps at onhyper.io
 
 ---
 
 ## References
-- [OpenClaw, but in containers: Meet NanoClaw - The Register](https://www.theregister.com/2026/03/01/nanoclaw_container_openclaw/)
-- [Purpose-built AI Security Agent Detected 92% of DeFi Contracts Vulnerabilities - Security Boulevard](https://securityboulevard.com/2026/03/purpose-built-ai-security-agent-detected-92-of-defi-contracts-vulnerabilities/)
-- [Payhawk's newly verified AI agents to collect invoices and save 4 years of manual work for customers - Manila Times](https://www.manilatimes.net/2026/03/02/tmt-newswire/globenewswire/payhawks-newly-verified-ai-agents-to-collect-invoices-and-save-4-years-of-manual-work-for-customers/2290892)
+
+- [Anthropic acquires Vercept to optimize Claude's computer use](https://www.techzine.eu/news/analytics/139119/anthropic-acquires-vercept-to-optimize-claudes-computer-use/)
+- [Google's newest AI agents bring telcos a step closer to autonomous network operations](https://siliconangle.com/2026/03/02/googles-newest-ai-agents-bring-telcos-step-closer-autonomous-network-operations/)
+- [The State of AI Agents in 2026 - Jon Radoff](https://meditations.metavert.io/p/the-state-of-ai-agents-in-2026)
+- [Anthropic updates Claude Cowork tool built to give the average office worker a productivity boost](https://www.cnbc.com/2026/02/24/anthropic-claude-cowork-office-worker.html)

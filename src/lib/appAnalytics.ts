@@ -36,7 +36,7 @@
  */
 
 import { randomUUID, createHash } from 'crypto';
-import { getDatabase, AppAnalyticsEvent, AppAnalyticsDaily } from './db.js';
+import { getDatabase } from './db.js';
 
 export interface ViewData {
   referrer?: string;

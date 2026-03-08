@@ -429,8 +429,6 @@ render.get('/:slug', async (c) => {
   });
   
   const html = content?.html || app.html || '';
-  const css = content?.css || app.css || '';
-  const js = content?.js || app.js || '';
   
   // Check if HTML is a full document (has DOCTYPE, html tag, or body tags)
   // More lenient detection to avoid wrapping complete documents

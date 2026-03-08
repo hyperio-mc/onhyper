@@ -658,8 +658,8 @@ apps.post('/:id/publish', async (c) => {
       });
     }
     
-    // Check feature flag for subdomains (respect plan restrictions)
-    const subdomainFeature = await isFeatureEnabled('subdomains', user.userId, { subdomain: preferredSubdomain });
+    // Check if user can use subdomains feature (respect plan restrictions)
+    await isFeatureEnabled('subdomains', user.userId, { subdomain: preferredSubdomain });
     
     // Try to claim a subdomain with fallbacks
     const claimResult = await claimSubdomainWithFallback(user.userId, appId, preferredSubdomain);
@@ -891,8 +891,7 @@ apps.post('/:id/zip', async (c) => {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    // Import unzipper dynamically
-    const unzipper = await import('unzipper');
+    // Import LMDB store for file storage
     const { AppFilesStore } = await import('../lib/lmdb.js');
     
     // Delete existing files first

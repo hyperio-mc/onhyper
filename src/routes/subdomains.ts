@@ -90,7 +90,6 @@ import {
   claimSubdomain,
   releaseSubdomain,
   getUserSubdomains,
-  canClaimSubdomain,
 } from '../lib/subdomains.js';
 
 const subdomains = new Hono();

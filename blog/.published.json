@@ -1,0 +1,70 @@
+{
+  "lastUpdated": "2026-03-08T11:25:00-05:00",
+  "published_to_substack": [
+    {
+      "file": "agent-news-2026-03-02.md",
+      "title": "AI Agents Learn to Use Computers, Run Networks, and Work Full Shifts",
+      "publishedAt": "2026-03-08T11:25:00-05:00",
+      "substackUrl": "https://mastercontrol.substack.com/p/ai-agents-learn-to-use-computers",
+      "socialPosts": {}
+    },
+    {
+      "file": "agent-news-2026-03-03.md",
+      "title": "Agents Can Now Spend Your Money, Join Your Jira Board, and Run Your Network",
+      "publishedAt": "2026-03-06T05:48:00",
+      "substackUrl": "https://mastercontrol.substack.com/p/agents-can-now-spend-your-money",
+      "socialPosts": {
+        "x": {
+          "postedAt": "2026-03-07T04:25:00-05:00",
+          "url": "https://x.com/hyperio_mc/status/2030212148073320506"
+        },
+        "linkedin": {
+          "postedAt": "2026-03-07T07:20:00-05:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7436023026095394816"
+        }
+      }
+    },
+    {
+      "file": "feature-flags.md",
+      "title": "Customer Feature Flags: Control Your App's Features in Real-Time",
+      "publishedAt": "2026-03-03"
+    },
+    {
+      "file": "analytics-guide.md",
+      "title": "Track User Behavior in Your Apps with OnHyper Analytics",
+      "publishedAt": "2026-03-03"
+    },
+    {
+      "file": "how-to-publish-nextjs-onhyper.md",
+      "title": "How OnHyper Proxies Itself: A Meta Story",
+      "publishedAt": "2026-03-03"
+    },
+    {
+      "file": "introducing-onhyper.md",
+      "title": "Introducing OnHyper: Ship Frontend Apps Without Leaking API Keys",
+      "publishedAt": "2026-03-03"
+    }
+  ],
+  "unpublished_blog_posts": [
+    "agent-news-2026-02-15.md",
+    "agent-news-2026-02-16.md",
+    "agent-news-2026-02-17.md",
+    "agent-news-2026-02-18.md",
+    "agent-news-2026-02-19.md",
+    "agent-news-2026-02-20.md",
+    "agent-news-2026-02-21.md",
+    "agent-news-2026-02-22.md",
+    "agent-news-2026-02-23.md",
+    "agent-news-2026-02-24.md",
+    "agent-news-2026-02-25.md",
+    "agent-news-2026-02-26.md",
+    "agent-news-2026-02-27.md",
+    "agent-news-2026-02-28.md",
+    "agent-news-2026-03-01.md"
+  ],
+  "notes": [
+    "X/Twitter: Use OpenClaw browser (profile=openclaw) for posting",
+    "LinkedIn: OpenClaw browser (profile=openclaw) works for posting",
+    "Both X and LinkedIn cross-posts complete for Mar 3 article"
+  ]
+}
