@@ -56,4 +56,10 @@ This trend ties back to something bigger: agents becoming economic actors. If an
 
 ---
 
-Ship your own agent-built apps at onhyper.io.
+## References
+
+- [What Is ERC-8004? Ethereum’s New Agent Standard Powers Thousands of Onchain AI Identities](https://coinspectator.com/bitcoin-com/2026/02/14/what-is-erc-8004-ethereums-new-agent-standard-powers-thousands-of-onchain-ai-identities/) - CoinSpectator
+- [ERC-8004: Trustless Agents - Ethereum Improvement Proposals](https://eips.ethereum.org/EIPS/eip-8004) - Ethereum Foundation
+- [How Companies Like Canva Are Seeing AI Agents Alter What Coders Do](https://www.businessinsider.com/canva-ai-agents-are-changing-engineering-work-2026-2) - Business Insider
+- [ERC-8004: A Standard for Trustless Agents](https://oasis.net/blog/erc-8004-trustless-agents) - Oasis
+- [Agentic Collaboration: Why 2026 Will Redefine Publisher Operations](https://www.mytotalretail.com/article/agentic-collaboration-why-2026-will-redefine-publisher-operations/) - Total Retail

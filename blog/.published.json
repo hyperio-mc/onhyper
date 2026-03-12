@@ -1,12 +1,60 @@
 {
-  "lastUpdated": "2026-03-08T11:25:00-05:00",
+  "lastUpdated": "2026-03-12T02:25:00-05:00",
   "published_to_substack": [
+    {
+      "file": "agent-news-2026-02-15.md",
+      "title": "Agents Get Wallets, Engineers Become Reviewers, Books Ship in 12 Hours",
+      "publishedAt": "2026-03-11",
+      "substackUrl": "https://mastercontrol.substack.com/p/agents-get-wallets-engineers-become",
+      "socialPosts": {}
+    },
+    {
+      "file": "dogfooding-atoms-onhyper.md",
+      "title": "How OnHyper Proxies Itself: A Meta Story",
+      "publishedAt": "2026-03-12",
+      "substackUrl": "https://mastercontrol.substack.com/p/how-onhyper-proxies-itself-a-meta-326",
+      "socialPosts": {
+        "x": {
+          "postedAt": "2026-03-12T09:25:00-05:00",
+          "url": "https://x.com/hyperio_mc/status/2032024084083622056"
+        },
+        "linkedin": {
+          "postedAt": "2026-03-12T09:30:00-05:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7437789958825775106"
+        }
+      }
+    },
+    {
+      "file": "agent-news-2026-03-01.md",
+      "title": "AI Agents Hit Their Third Inflection Point—And the Safety Net Just Disappeared",
+      "publishedAt": "2026-03-09",
+      "substackUrl": "https://mastercontrol.substack.com/p/ai-agents-hit-their-third-inflection",
+      "socialPosts": {
+        "x": {
+          "postedAt": "2026-03-11T08:25:00-05:00",
+          "url": "https://x.com/hyperio_mc/status/2031707250637537297"
+        },
+        "linkedin": {
+          "postedAt": "2026-03-11T11:25:00-05:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7437032851456925697"
+        }
+      }
+    },
     {
       "file": "agent-news-2026-03-02.md",
       "title": "AI Agents Learn to Use Computers, Run Networks, and Work Full Shifts",
       "publishedAt": "2026-03-08T11:25:00-05:00",
       "substackUrl": "https://mastercontrol.substack.com/p/ai-agents-learn-to-use-computers",
-      "socialPosts": {}
+      "socialPosts": {
+        "x": {
+          "postedAt": "2026-03-08T20:19:00-05:00",
+          "url": "https://x.com/hyperio_mc/status/2030800896184012968"
+        },
+        "linkedin": {
+          "postedAt": "2026-03-08T20:22:00-05:00",
+          "url": "https://www.linkedin.com/feed/update/urn:li:share:7436566750411984898"
+        }
+      }
     },
     {
       "file": "agent-news-2026-03-03.md",
@@ -60,8 +108,7 @@
     "agent-news-2026-02-26.md",
     "agent-news-2026-02-27.md",
     "agent-news-2026-02-28.md",
-    "agent-news-2026-03-01.md"
-  ],
+      ],
   "notes": [
     "X/Twitter: Use OpenClaw browser (profile=openclaw) for posting",
     "LinkedIn: OpenClaw browser (profile=openclaw) works for posting",

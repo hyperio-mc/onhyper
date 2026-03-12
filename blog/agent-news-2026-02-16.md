@@ -46,4 +46,15 @@ None of this means agents are bad. It means the people deploying them have to th
 
 ---
 
+## References
+
+- [OpenClaw Creator Joins OpenAI, Says It Could've Been a 'Huge Company'](https://www.businessinsider.com/sam-altman-hires-openclaw-creator-peter-steinberger-personal-ai-agents-2026-2) - Business Insider
+- [Sam Altman's Hire of OpenClaw's Peter Steinberger May Redefine ChatGPT](https://observer.com/2026/02/openclaw-founder-perter-steinberger-join-openai/) - Observer
+- [Agentic AI Adoption in Insurance: Scaling Efficiency and Operations](https://www.microsoft.com/en-us/industry/blog/financial-services/insurance/2026/02/09/microsoft-and-cognizant-delivering-on-the-promise-of-agentic-ai-adoption-in-insurance/) - Microsoft Industry Blogs
+- [How Agentic AI is Redefining Claims Processing](https://www.cognizant.com/us/en/insights/insights-blog/agentic-ai-for-claims-processing) - Cognizant
+- [Finance worker pays out $25 million after video call with deepfake 'chief financial officer'](https://www.cnn.com/2024/02/04/asia/deepfake-cfo-scam-hong-kong-intl-hnk) - CNN
+- [A deepfake 'CFO' tricked the British design firm behind the Sydney Opera House in $25 million fraud](https://fortune.com/europe/2024/05/17/arup-deepfake-fraud-scam-victim-hong-kong-25-million-cfo/) - Fortune
+
+---
+
 Ship your own agent-built apps at [onhyper.io](https://onhyper.io)
